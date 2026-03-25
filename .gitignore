@@ -1,0 +1,17 @@
+# Archivos de entorno y secretos
+.env
+.env.local
+.env.*.local
+
+# Dependencias
+node_modules/
+.vercel
+
+# Archivos de sistema y temporales
+.DS_Store
+Thumbs.db
+*.log
+
+# Herramientas locales de Vivotv
+tools/import_movies.sql
+tools/tmdb_results.json

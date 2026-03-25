@@ -7,10 +7,25 @@ export const TMDB_SERVICE = {
 
     // Fix #8: Object.entries() en lugar de for...in (más robusto, evita props heredadas)
     async fetchFromTMDB(endpoint, params = {}) {
-        const url = new URL(`${CONFIG.TMDB_BASE_URL}${endpoint}`);
-        url.searchParams.append('api_key', CONFIG.TMDB_API_KEY);
-        url.searchParams.append('language', 'es-ES');
+        let url;
+        
+        if (CONFIG.USE_PROXY) {
+            // En Vercel: La API Key está en el servidor, el cliente no la ve.
+            url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
+            // Limpiamos el slash inicial si existe para pasarlo como parámetro 'path'
+            const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+            url.searchParams.append('path', cleanPath);
+        } else {
+            // En Local: Llamada directa (Usar llave manual o fallback de desarrollo)
+            // NOTA: Para producción, esta llave ya no existirá aquí.
+            const localKey = '743275e25bcea0a320b87d2af271a136'; 
+            url = new URL(`${CONFIG.TMDB_BASE_URL}${endpoint}`);
+            url.searchParams.append('api_key', localKey);
+            url.searchParams.append('language', 'es-ES');
+        }
+
         Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, val));
+
         try {
             const res = await fetch(url.toString());
             if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
