@@ -48,6 +48,20 @@ window.addEventListener('scroll', () => {
     if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 50);
 });
 
+// NUEVO: Toggle de búsqueda para móviles/táctil
+if (searchBox) {
+    searchBox.addEventListener('click', (e) => {
+        searchBox.classList.add('active');
+        if (searchInput) searchInput.focus();
+        e.stopPropagation();
+    });
+    document.addEventListener('click', (e) => {
+        if (searchBox && !searchBox.contains(e.target)) {
+            searchBox.classList.remove('active');
+        }
+    });
+}
+
 // ================================================
 // SUPABASE AUTH
 // ================================================
@@ -137,7 +151,12 @@ async function toDashboard(user) {
             if (document.getElementById('popularTVCarousel'))
                 CATALOG_UI.renderCarousel('popularTVCarousel', popularTV.results, 'tv', availableIds);
 
-        } catch (e) { console.error('Error cargando catálogo:', e); }
+        } catch (e) { 
+            console.error('Error cargando catálogo:', e); 
+            const heroTitle = document.getElementById('heroTitle');
+            if (heroTitle) heroTitle.textContent = 'Error al cargar contenido ⚠️';
+            showToast('Error de conexión con el servidor de películas.');
+        }
     }
 
     await loadMyList();

@@ -10,6 +10,12 @@ export const CONFIG = {
     TMDB_IMAGE_BASE: 'https://image.tmdb.org/t/p/original',
     TMDB_IMAGE_CARD: 'https://image.tmdb.org/t/p/w500',
     
-    // Detección automática de entorno
-    USE_PROXY: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    // Detección automática de entorno (Evita el proxy en redes locales)
+    USE_PROXY: (
+        window.location.hostname !== 'localhost' && 
+        window.location.hostname !== '127.0.0.1' && 
+        !window.location.hostname.startsWith('192.168.') &&
+        !window.location.hostname.startsWith('10.') &&
+        !window.location.hostname.endsWith('.local')
+    )
 };
