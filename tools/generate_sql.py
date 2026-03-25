@@ -3,6 +3,7 @@ import json
 import urllib.parse
 import sys
 import codecs
+import re
 
 # Configuración de salida UTF-8 para Windows
 if sys.stdout.encoding != 'utf-8':
@@ -11,106 +12,294 @@ if sys.stdout.encoding != 'utf-8':
 TMDB_API_KEY = "743275e25bcea0a320b87d2af271a136"
 
 movies_list = [
-    {"title": "Finge Estar Muerta", "year": "2025", "embed": "https://vimeos.net/embed-e1eyigr6twqi.html"},
-    {"title": "A Timeless Christmas", "year": "2020", "embed": "https://vimeos.net/embed-tip5lqrd9mzc.html"},
-    {"title": "El grillo y la hormiga", "year": "2023", "embed": "https://vimeos.net/embed-jlukge766tm2.html"},
-    {"title": "Bad Cat", "year": "2016", "embed": "https://vimeos.net/embed-kur3mys3rioo.html"},
-    {"title": "Boyfriends of Christmas Past", "year": "2021", "embed": "https://vimeos.net/embed-owjvnsivrk18.html"},
-    {"title": "Algea: God of Pain", "year": "2024", "embed": "https://vimeos.net/embed-xaua1uibo44t.html"},
-    {"title": "Atrapada en Mi Propia Casa", "year": "2024", "embed": "NOT_FOUND"},
-    {"title": "Bibi", "year": "2023", "embed": "NOT_FOUND"},
-    {"title": "De sombra y silencio", "year": "2023", "embed": "https://vimeos.net/embed-ox49bxcr99xi.html"},
-    {"title": "Odd Thomas: Cazador de fantasmas", "year": "2013", "embed": "https://vimeos.net/embed-1yye772oo0hg.html"},
-    {"title": "Fackham Hall", "year": "2025", "embed": "https://goodstream.one/embed-x05fkx4utrzo.html"},
-    {"title": "Soundtrack to Sixteen", "year": "2020", "embed": "https://vimeos.net/embed-h7n3unh07xq5.html"},
-    {"title": "La Night Del Fantasma", "year": "2013", "embed": "https://vimeos.net/embed-gb1vtvo1zq3n.html"},
-    {"title": "El Guardián: Último refugio", "year": "2026", "embed": "https://vimeos.net/embed-wzzqe2tyb7t3.html"},
-    {"title": "El granero Parte 2", "year": "2022", "embed": "https://vimeos.net/embed-3of7etg2it5i.html"},
-    {"title": "The Breach", "year": "2022", "embed": "https://vimeos.net/embed-46y2h9njoopv.html"},
-    {"title": "Parque Lezama", "year": "2026", "embed": "https://vimeos.net/embed-fimx9yhvhv9b.html"},
-    {"title": "Nuremberg: El juicio del siglo", "year": "2025", "embed": "https://vimeos.net/embed-gnqfef0trvy9.html"},
-    {"title": "Matar Vengar Repetir", "year": "2026", "embed": "https://vimeos.net/embed-qk5s8kjebp3g.html"},
-    {"title": "Vida privada", "year": "2025", "embed": "https://vimeos.net/embed-16v8pago5fds.html"},
-    {"title": "Amor en Costa Rica", "year": "2025", "embed": "https://vimeos.net/embed-o8hyi7o9f88e.html"},
-    {"title": "Las Chicas de Wall", "year": "2025", "embed": "https://vimeos.net/embed-xhn9zpxkp58b.html"},
-    {"title": "Catch Me If You Claus", "year": "2023", "embed": "https://vimeos.net/embed-t1kvgcy60fhc.html"},
-    {"title": "A Fabled Holiday", "year": "2022", "embed": "https://vimeos.net/embed-h8hk7wrdv85u.html"},
-    {"title": "Paradise Cove", "year": "2021", "embed": "https://vimeos.net/embed-3f7abafqf273.html"},
-    {"title": "Amor Fuera De Tiempo", "year": "2025", "embed": "https://vimeos.net/embed-xhwzjz4gx6h3.html"},
-    {"title": "Las Chicas Superpoderosas: La película", "year": "2002", "embed": "https://vimeos.net/embed-7iubbgskwuzp.html"},
-    {"title": "Terror en Silent Hill: Regreso al infierno", "year": "2026", "embed": "https://vimeos.net/embed-2hyj4sw0xcor.html"},
-    {"title": "El Plan Perfecto", "year": "2006", "embed": "https://vimeos.net/embed-xsowbcd6l7lf.html"},
-    {"title": "Jinxed: Cuestión de Suerte", "year": "2013", "embed": "https://vimeos.net/embed-3mad2lf9eh1j.html"},
-    {"title": "Venganza", "year": "2026", "embed": "https://vimeos.net/embed-edo65cxw6aj9.html"},
-    {"title": "过家家", "year": "2026", "embed": "https://vimeos.net/embed-wbsmaefe1st1.html"},
-    {"title": "Twenty One Pilots: More Than We Ever Imagined", "year": "2026", "embed": "https://vimeos.net/embed-p21de333e6vu.html"},
-    {"title": "El umbral", "year": "2005", "embed": "https://vimeos.net/embed-vqm42cwpd3po.html"},
-    {"title": "The Observance", "year": "2026", "embed": "https://vimeos.net/embed-4vk1ic1yupl1.html"},
-    {"title": "The Dreadful", "year": "2026", "embed": "https://vimeos.net/embed-4w41obx2zm2n.html"},
-    {"title": "¡La novia!", "year": "2026", "embed": "https://vimeos.net/embed-nt0d365ljgls.html"},
-    {"title": "Psycho Killer", "year": "2026", "embed": "https://vimeos.net/embed-zjvvwgcblrim.html"},
-    {"title": "Petaka Gunung Gede", "year": "2025", "embed": "https://vimeos.net/embed-7b0eesrrcka0.html"},
-    {"title": "Minnie’s Midnight Massacre", "year": "2026", "embed": "https://vimeos.net/embed-ccjdhb2blgww.html"},
-    {"title": "Midwinter Break", "year": "2026", "embed": "https://vimeos.net/embed-wb6th9djg844.html"},
-    {"title": "Herman", "year": "2025", "embed": "https://vimeos.net/embed-o8ys4dqqt2p2.html"},
-    {"title": "I Can Only Imagine 2", "year": "2026", "embed": "NOT_FOUND"},
-    {"title": "Jugada maestra", "year": "2026", "embed": "https://vimeos.net/embed-8lrj7v4ityix.html"},
-    {"title": "Haunters of the Silence", "year": "2025", "embed": "https://vimeos.net/embed-g1av6i9q2ewv.html"},
-    {"title": "Hellfire", "year": "2026", "embed": "https://vimeos.net/embed-vxskgknibeqw.html"},
-    {"title": "Couture", "year": "2026", "embed": "https://vimeos.net/embed-66w4of4lun7s.html"},
-    {"title": "By Design", "year": "2026", "embed": "https://vimeos.net/embed-tkwsgo2xy5oq.html"},
-    {"title": "Un destino en Corea", "year": "2026", "embed": "https://vimeos.net/embed-u2grzqtc9mej.html"},
-    {"title": "Ba", "year": "2024", "embed": "https://vimeos.net/embed-3q5of6liuvce.html"},
-    {"title": "Tears to a Glass Eye", "year": "2025", "embed": "https://vimeos.net/embed-qm2c19wn5cs9.html"},
-    {"title": "¡Uf! ¿Solo amigos?", "year": "2026", "embed": "https://vimeos.net/embed-ist3euogtfle.html"},
-    {"title": "The Knock Knock Man", "year": "2026", "embed": "https://vimeos.net/embed-bdgtwq945aw9.html"},
-    {"title": "Repay It in Blood", "year": "2026", "embed": "https://vimeos.net/embed-kls9bp0yg1ag.html"},
-    {"title": "Una última aventura: Detrás de cámaras de Stranger Things 5", "year": "2026", "embed": "https://vimeos.net/embed-g7hk87zoiahr.html"},
-    {"title": "Mama's Little Murderer", "year": "2026", "embed": "https://vimeos.net/embed-iikuprszf2xr.html"},
-    {"title": "De las cenizas: Bajo tierra", "year": "2026", "embed": "https://vimeos.net/embed-uqru7gfswitn.html"},
-    {"title": "Enter Sanctum", "year": "None", "embed": "https://vimeos.net/embed-ugqp1etaa8bd.html"},
-    {"title": "Una carta a mi juventud", "year": "2026", "embed": "https://vimeos.net/embed-pn1u1x5yvhfu.html"},
-    {"title": "Oscar Shaw", "year": "2026", "embed": "https://vimeos.net/embed-22rgbjfcgosd.html"},
-    {"title": "La celda de los milagros", "year": "2025", "embed": "https://vimeos.net/embed-ujjph6iacbsm.html"},
-    {"title": "You're All Doomed", "year": "2026", "embed": "https://vimeos.net/embed-bctxby7n02uk.html"},
-    {"title": "Pandora: Fire and Ice", "year": "2025", "embed": "https://vimeos.net/embed-gtimiknub5tj.html"},
-    {"title": "La hora de los valientes", "year": "2025", "embed": "https://vimeos.net/embed-0yj58dbp5kr8.html"},
-    {"title": "A Town Called Purgatory", "year": "2025", "embed": "https://vimeos.net/embed-swrl10mxl91n.html"},
-    {"title": "El paseo 8", "year": "2025", "embed": "https://vimeos.net/embed-sj8tiqndeumt.html"},
-    {"title": "Borrón y Vida Nueva", "year": "2025", "embed": "https://vimeos.net/embed-w1gj8yijn2jc.html"},
-    {"title": "The Caretaker", "year": "2025", "embed": "https://vimeos.net/embed-79wpwzg7xrsq.html"},
-    {"title": "Down River", "year": "2025", "embed": "https://vimeos.net/embed-s8co3hiidczk.html"},
-    {"title": "The Dreamer Cinderella", "year": "2025", "embed": "https://vimeos.net/embed-ojhp860yys9o.html"},
-    {"title": "Amorosa", "year": "2025", "embed": "https://vimeos.net/embed-bccqu0zyxpx7.html"},
-    {"title": "Nadie sabe quién soy yo", "year": "2025", "embed": "https://vimeos.net/embed-wh852ci18dlb.html"},
-    {"title": "Ojalá me lo hubieras dicho", "year": "2025", "embed": "https://vimeos.net/embed-7zmhgziq8zws.html"},
-    {"title": "Tormento", "year": "2025", "embed": "https://vimeos.net/embed-54w9vgf7bb7o.html"},
-    {"title": "La princesa Kaguya del cosmos", "year": "2026", "embed": "https://vimeos.net/embed-v8vsx7w3g0bc.html"},
-    {"title": "Inthralled", "year": "2025", "embed": "https://vimeos.net/embed-zrzr8tcv6gf5.html"},
-    {"title": "Las Ratas: Una historia de The Witcher", "year": "2025", "embed": "https://vimeos.net/embed-v6gi9jxwlh5k.html"},
-    {"title": "Ahí estoy yo", "year": "2026", "embed": "https://vimeos.net/embed-duqdcx9fndgi.html"},
-    {"title": "La primera nevada en Fraggle Rock", "year": "2025", "embed": "https://vimeos.net/embed-iohebpkjg37z.html"},
-    {"title": "VHS Summer Camp", "year": "2026", "embed": "https://vimeos.net/embed-91hv31bica3a.html"},
-    {"title": "Luderdale", "year": "2025", "embed": "https://vimeos.net/embed-kui8vy4ab8kt.html"},
-    {"title": "Parking", "year": "2025", "embed": "https://vimeos.net/embed-kxdbdsf2usgw.html"},
-    {"title": "Hogar siniestro", "year": "2025", "embed": "https://vimeos.net/embed-7phb5kakaw42.html"},
-    {"title": "Baramulla", "year": "2025", "embed": "https://vimeos.net/embed-1bomg53826d9.html"},
-    {"title": "Stephen", "year": "2025", "embed": "https://vimeos.net/embed-u36uv5a6w5jp.html"},
-    {"title": "The Roughneck", "year": "2025", "embed": "https://vimeos.net/embed-4ebo9kbs48cu.html"},
-    {"title": "Lost Horizon", "year": "2025", "embed": "https://vimeos.net/embed-4pahvxfpu00m.html"},
-    {"title": "Signing Tony Raymond", "year": "2026", "embed": "https://vimeos.net/embed-8uyo0qs0nbms.html"},
-    {"title": "The Raven", "year": "2025", "embed": "https://vimeos.net/embed-6obv9gcke10g.html"},
-    {"title": "Patrulla de aterrizaje: Operación bola de nieve", "year": "2025", "embed": "https://vimeos.net/embed-85ysydkiinju.html"},
-    {"title": "El tiempo que nos queda", "year": "2025", "embed": "https://vimeos.net/embed-d269wmafeier.html"},
-    {"title": "Blindly in Love", "year": "2025", "embed": "https://vimeos.net/embed-kcvy399fctl5.html"},
-    {"title": "LEGO Frozen: Operation Puffins", "year": "2025", "embed": "https://vimeos.net/embed-kxp0rwzrivfs.html"},
-    {"title": "Los Muppets: Un show especial", "year": "2026", "embed": "https://vimeos.net/embed-ee3taj6t7twz.html"},
-    {"title": "Rockstar: DUKI desde el fin del mundo", "year": "2025", "embed": "https://vimeos.net/embed-964qodko8dxu.html"},
-    {"title": "Lone Samurai", "year": "2025", "embed": "https://vimeos.net/embed-6cizz3m1vi70.html"},
-    {"title": "LO QUE SE OCULTA EN LAS SOMBRAS", "year": "2025", "embed": "https://vimeos.net/embed-q0r02ppktrpx.html"},
-    {"title": "Speed Train", "year": "2025", "embed": "https://vimeos.net/embed-8iei5dkoe566.html"},
-    {"title": "La huésped", "year": "2025", "embed": "https://vimeos.net/embed-m2zlmp8tds6g.html"},
-    {"title": "Reinas de la Noche", "year": "2025", "embed": "https://vimeos.net/embed-jgcmh4l0c52i.html"}
+     {
+        "title": "En busca de la felicidad (2025)",
+        "embed_url": "https://vimeos.net/embed-u5p3pn9ktqu1.html"
+    },
+    {
+        "title": "La dolce casa (2025)",
+        "embed_url": "https://vimeos.net/embed-mrifun5zbdr5.html"
+    },
+    {
+        "title": "Pídeme lo que quieras (2024)",
+        "embed_url": "https://vimeos.net/embed-jos3jun8ifim.html"
+    },
+    {
+        "title": "Tiger: Tanque de guerra (2025)",
+        "embed_url": "https://vimeos.net/embed-tt656uew159s.html"
+    },
+    {
+        "title": "Regalo maldito (2025)",
+        "embed_url": "https://vimeos.net/embed-0q0jak53txsm.html"
+    },
+    {
+        "title": "Rippy (2024)",
+        "embed_url": "https://vimeos.net/embed-ufsy1ivk4nbi.html"
+    },
+    {
+        "title": "Alarum: Código Letal (2025)",
+        "embed_url": "https://vimeos.net/embed-x2dwm12825bq.html"
+    },
+    {
+        "title": "Drop: Amenaza anónima (2025)",
+        "embed_url": "https://vimeos.net/embed-w10upk2hwr17.html"
+    },
+    {
+        "title": "Alerta Amber (2024)",
+        "embed_url": "https://vimeos.net/embed-yvtldhzha8w5.html"
+    },
+    {
+        "title": "So Fades the Light (2025)",
+        "embed_url": "https://vimeos.net/embed-v3uhoyhokqvw.html"
+    },
+    {
+        "title": "Un día fuera de control (2025)",
+        "embed_url": "https://vimeos.net/embed-erbu1wnxq49z.html"
+    },
+    {
+        "title": "Thi Yot 2 - Susurros Mortales 2 (2024)",
+        "embed_url": "https://vimeos.net/embed-wwllczyir02s.html"
+    },
+    {
+        "title": "Una boda en las bahamas con madea (2025)",
+        "embed_url": "https://vimeos.net/embed-0nzj3bpidx92.html"
+    },
+    {
+        "title": "Drácula (2025)",
+        "embed_url": "https://vimeos.net/embed-162wzuryvd2c.html"
+    },
+    {
+        "title": "Atrapado robando (2025)",
+        "embed_url": "https://vimeos.net/embed-kb2ttpk87rva.html"
+    },
+    {
+        "title": "Séance Games: Metaxu (2024)",
+        "embed_url": "https://vimeos.net/embed-q04zrmxf8exg.html"
+    },
+    {
+        "title": "Crescent City (2024)",
+        "embed_url": "https://vimeos.net/embed-xe321cg0q9t3.html"
+    },
+    {
+        "title": "Viaje de fin de curso: Mallorca (2025)",
+        "embed_url": "https://vimeos.net/embed-p16g7qab87x5.html"
+    },
+    {
+        "title": "Los huérfanos (2025)",
+        "embed_url": "https://vimeos.net/embed-nrr9e1794ypn.html"
+    },
+    {
+        "title": "Trust (2025)",
+        "embed_url": "https://vimeos.net/embed-cozbbsxc76c9.html"
+    },
+    {
+        "title": "La mujer de las sombras (2025)",
+        "embed_url": "https://vimeos.net/embed-ctumgfmqirz9.html"
+    },
+    {
+        "title": "LOOK BACK: Continúa Dibujando (2024)",
+        "embed_url": "https://vimeos.net/embed-qg4wxh53j7lw.html"
+    },
+    {
+        "title": "Asesinos Sadicos 2 Hermanos Hambrientos (2024)",
+        "embed_url": "https://vimeos.net/embed-r72nqxdvmaem.html"
+    },
+    {
+        "title": "Canta y no llores (2024)",
+        "embed_url": "https://vimeos.net/embed-34i0mcv4m60j.html"
+    },
+    {
+        "title": "El tour universitario con Joe (2026)",
+        "embed_url": "https://vimeos.net/embed-npwekogzfd6j.html"
+    },
+    {
+        "title": "María (2024)",
+        "embed_url": "https://vimeos.net/embed-35ejzk76ijxl.html"
+    },
+    {
+        "title": "Z-O-M-B-I-E-S 4: El origen de los vampiros (2025)",
+        "embed_url": "https://vimeos.net/embed-0qlsq4muguuc.html"
+    },
+    {
+        "title": "H Is for Hawk (2025)",
+        "embed_url": "https://vimeos.net/embed-gi27l6om5jmf.html"
+    },
+    {
+        "title": "Depredador: Tierras salvajes (2025)",
+        "embed_url": "https://vimeos.net/embed-gifb0mvp14aw.html"
+    },
+    {
+        "title": "One More Shot (2025)",
+        "embed_url": "https://vimeos.net/embed-495snhoasgi4.html"
+    },
+    {
+        "title": "Mr. K (2025)",
+        "embed_url": "https://vimeos.net/embed-2i5vmcebs2ln.html"
+    },
+    {
+        "title": "Icefall (2025)",
+        "embed_url": "https://vimeos.net/embed-g4vqyhnyw6af.html"
+    },
+    {
+        "title": "Del cielo al infierno (2025)",
+        "embed_url": "https://vimeos.net/embed-yj28nqqoistv.html"
+    },
+    {
+        "title": "Regarde (2025)",
+        "embed_url": "https://vimeos.net/embed-2r8vapc469hs.html"
+    },
+    {
+        "title": "Un Buen Ladrón (2025)",
+        "embed_url": "https://vimeos.net/embed-fc4eufatv3cp.html"
+    },
+    {
+        "title": "Steve (2025)",
+        "embed_url": "https://vimeos.net/embed-cv2kv13dygwx.html"
+    },
+    {
+        "title": "La red antisocial: De los memes al caos (2024)",
+        "embed_url": "https://vimeos.net/embed-p8bb1bvkzybl.html"
+    },
+    {
+        "title": "Together: Juntos hasta la muerte (2025)",
+        "embed_url": "https://vimeos.net/embed-bctb56wi6xca.html"
+    },
+    {
+        "title": "Sueños de trenes (2025)",
+        "embed_url": "https://vimeos.net/embed-i14yhbo6r95l.html"
+    },
+    {
+        "title": "Moana 2 (2024)",
+        "embed_url": "https://vimeos.net/embed-b7o6j67cn5pr.html"
+    },
+    {
+        "title": "Policías de la mafia (2025)",
+        "embed_url": "https://vimeos.net/embed-gjcr5l0zjxz1.html"
+    },
+    {
+        "title": "El gran viaje de tu vida (2025)",
+        "embed_url": "https://vimeos.net/embed-x6rs1ymcd9o4.html"
+    },
+    {
+        "title": "Candlewood (2025)",
+        "embed_url": "https://vimeos.net/embed-txkc3kzdgazw.html"
+    },
+    {
+        "title": "Saiyaara (2025)",
+        "embed_url": "https://vimeos.net/embed-4bkyailjsrb8.html"
+    },
+    {
+        "title": "Osiris (2025)",
+        "embed_url": "NOT_FOUND"
+    },
+    {
+        "title": "Tiempo de guerra (2025)",
+        "embed_url": "NOT_FOUND"
+    },
+    {
+        "title": "Rehenes en la noche (2024)",
+        "embed_url": "https://vimeos.net/embed-wzrsmdk0gae3.html"
+    },
+    {
+        "title": "Friendship (2025)",
+        "embed_url": "https://vimeos.net/embed-2xaeh00lp8pm.html"
+    },
+    {
+        "title": "Megamente contra el sindicato de la perdición (2024)",
+        "embed_url": "https://vimeos.net/embed-0g4ctifm8d0n.html"
+    },
+    {
+        "title": "Acto encubierto (2025)",
+        "embed_url": "https://vimeos.net/embed-tcuw1d1b0rqb.html"
+    },
+    {
+        "title": "El Pájaro Loco se va de campamento (2024)",
+        "embed_url": "https://vimeos.net/embed-iww59cbo9c1h.html"
+    },
+    {
+        "title": "Warlord (2025)",
+        "embed_url": "https://vimeos.net/embed-hdcjlyz7908p.html"
+    },
+    {
+        "title": "Lo Mejor Que Puedas (2025)",
+        "embed_url": "https://vimeos.net/embed-un9joi8xi5en.html"
+    },
+    {
+        "title": "Masameer Junior (2025)",
+        "embed_url": "https://vimeos.net/embed-riqu1fzaguvm.html"
+    },
+    {
+        "title": "Kindred (2025)",
+        "embed_url": "https://vimeos.net/embed-n9juk4kpfkw8.html"
+    },
+    {
+        "title": "El cautivo (2025)",
+        "embed_url": "https://vimeos.net/embed-ae6r0l44zkyi.html"
+    },
+    {
+        "title": "Los desfiles (2024)",
+        "embed_url": "https://vimeos.net/embed-gggrvi84wvf6.html"
+    },
+    {
+        "title": "Runt (2024)",
+        "embed_url": "https://vimeos.net/embed-6kth48u58zc0.html"
+    },
+    {
+        "title": "31 Minutos: Calurosa Navidad (2025)",
+        "embed_url": "https://vimeos.net/embed-z31m3zho0x3v.html"
+    },
+    {
+        "title": "Cumpleanos sangriento (2025)",
+        "embed_url": "https://vimeos.net/embed-g1hsocn16czo.html"
+    },
+    {
+        "title": "A través del fuego (2025)",
+        "embed_url": "https://vimeos.net/embed-427ti7qei95w.html"
+    },
+    {
+        "title": "Pharrell Williams: Pieza por pieza (2024)",
+        "embed_url": "https://vimeos.net/embed-f978f307d8vn.html"
+    },
+    {
+        "title": "Wolves Against the World (2024)",
+        "embed_url": "https://vimeos.net/embed-na1afjpztl21.html"
+    },
+    {
+        "title": "Juegos de Seducción (2025)",
+        "embed_url": "https://vimeos.net/embed-ai6xd9mi1e32.html"
+    },
+    {
+        "title": "Sin piedad (2026)",
+        "embed_url": "https://vimeos.net/embed-7bplwv3deni4.html"
+    },
+    {
+        "title": "Yo no soy esa (2024)",
+        "embed_url": "https://vimeos.net/embed-drkh2a0hd77m.html"
+    },
+    {
+        "title": "Muerte en invierno (2025)",
+        "embed_url": "https://vimeos.net/embed-jt0wegwrhje8.html"
+    },
+    {
+        "title": "Mercato (2025)",
+        "embed_url": "https://vimeos.net/embed-1msiryzhm9zk.html"
+    },
+    {
+        "title": "La Última Gran Actuación (2024)",
+        "embed_url": "https://vimeos.net/embed-caib3gu0u6rl.html"
+    },
+    {
+        "title": "La pire mère au monde (2025)",
+        "embed_url": "https://vimeos.net/embed-t4bol3ghsvm4.html"
+    },
+    {
+        "title": "Wormtown (2025)",
+        "embed_url": "https://goodstream.one/embed-dgxuf6amjon7.html"
+    },
+    {
+        "title": "Jurassic World: Renace (2025)",
+        "embed_url": "https://vimeos.net/embed-r5xuubxljw1k.html"
+    }
 ]
 
 conn = http.client.HTTPSConnection("api.themoviedb.org")
@@ -118,11 +307,20 @@ conn = http.client.HTTPSConnection("api.themoviedb.org")
 sql_buffer = "-- SQL Insert Script para video_sources\n-- Generado automáticamente por Vivotv Helper\n\n"
 
 for movie in movies_list:
-    if movie["embed"] == "NOT_FOUND":
+    if movie.get("embed_url") == "NOT_FOUND" or movie.get("embed") == "NOT_FOUND":
         continue
         
-    query = urllib.parse.quote(movie["title"])
-    year = movie["year"]
+    # Extraer año del título si existe en formato "(YYYY)"
+    match = re.search(r'(.*?)\s*\((\d{4})\)', movie["title"])
+    if match:
+        title_clean = match.group(1).strip()
+        year = match.group(2)
+    else:
+        title_clean = movie["title"].strip()
+        year = movie.get("year", "None")
+        
+    query = urllib.parse.quote(title_clean)
+    embed_val = movie.get("embed_url") or movie.get("embed")
     
     # Intento 1: Con año
     url = f"/3/search/movie?api_key={TMDB_API_KEY}&query={query}&language=es-ES"
@@ -146,7 +344,7 @@ for movie in movies_list:
                 tmdb_id = data["results"][0]["id"]
 
     if tmdb_id:
-        sql_buffer += f"INSERT INTO video_sources (tmdb_id, stream_url) VALUES ({tmdb_id}, '{movie['embed']}') ON CONFLICT (tmdb_id) DO NOTHING; -- {movie['title']} ({year})\n"
+        sql_buffer += f"INSERT INTO video_sources (tmdb_id, stream_url) VALUES ({tmdb_id}, '{embed_val}') ON CONFLICT (tmdb_id) DO NOTHING; -- {movie['title']}\n"
     else:
         sql_buffer += f"-- NOT FOUND: {movie['title']} ({year})\n"
 

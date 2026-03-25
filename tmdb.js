@@ -120,9 +120,26 @@ export const CATALOG_UI = {
         return genres[id] || '';
     },
 
+
+    showSkeletons(containerId, count = 6) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        const skeletonWrap = document.createElement('div');
+        skeletonWrap.className = 'carousel-skeleton';
+        for (let i = 0; i < count; i++) {
+            const item = document.createElement('div');
+            item.className = 'skeleton skeleton-item';
+            skeletonWrap.appendChild(item);
+        }
+        container.appendChild(skeletonWrap);
+    },
+
     renderCarousel(containerId, items, typeOverride = null, availableIds = new Set()) {
         const container = document.getElementById(containerId);
         if (!container) return;
+        
+        // Limpiar skeletons si existen
         container.innerHTML = '';
 
         if (!items || items.length === 0) {

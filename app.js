@@ -128,6 +128,12 @@ async function toDashboard(user) {
         }
     } else {
         try {
+            // Mostrar skeletons antes de cargar
+            if (document.getElementById('trendingCarousel')) CATALOG_UI.showSkeletons('trendingCarousel');
+            if (document.getElementById('popularMoviesCarousel')) CATALOG_UI.showSkeletons('popularMoviesCarousel');
+            if (document.getElementById('topRatedCarousel')) CATALOG_UI.showSkeletons('topRatedCarousel');
+            if (document.getElementById('popularTVCarousel')) CATALOG_UI.showSkeletons('popularTVCarousel');
+
             const [trending, popular, topRated, popularTV] = await Promise.all([
                 TMDB_SERVICE.getTrending(),
                 TMDB_SERVICE.getPopularMovies(),
@@ -264,11 +270,17 @@ function mapError(msg) {
     return msg;
 }
 
+// NUEVO: Debounce para búsqueda
+let searchDebounceTimer;
 if (searchInput) searchInput.addEventListener('input', (e) => {
     const q = e.target.value.trim();
     if (btnClear) btnClear.classList.toggle('hidden', q.length === 0);
+    
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    
     if (q.length < 3) return;
-    setTimeout(async () => {
+
+    searchDebounceTimer = setTimeout(async () => {
         const res = await TMDB_SERVICE.search(q);
         if (res.results.length) {
             const carousel = document.getElementById('popularMoviesCarousel');

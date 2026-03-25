@@ -8,6 +8,15 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+    // SEGURIDAD: Validar Referer (Opcional pero recomendado)
+    const referer = req.headers.referer || '';
+    const allowedHost = 'vivoweb'; // Ajusta esto según tu dominio en producción
+    if (req.method !== 'OPTIONS' && !referer.includes(allowedHost) && !referer.includes('localhost') && !referer.includes('127.0.0.1')) {
+        // En desarrollo permitimos localhost, en producción solo tu dominio
+        console.warn('Bloqueado por Referer:', referer);
+        // return res.status(403).json({ error: 'Acceso no autorizado' });
+    }
+
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
