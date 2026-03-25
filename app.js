@@ -24,6 +24,7 @@ const authError     = document.getElementById('authError');
 const toggleLink    = document.getElementById('toggleAuthMode');
 const userProfile   = document.getElementById('userProfile');
 const mainNav       = document.getElementById('mainNav');
+const mobileNav     = document.querySelector('.mobile-nav');
 const btnLogout     = document.getElementById('btnLogout');
 const userNameEl    = document.getElementById('userName');
 const userAvatar    = document.getElementById('userAvatar');
@@ -82,6 +83,7 @@ async function toDashboard(user) {
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
     if (mainNav)     mainNav.classList.remove('hidden');
+    if (mobileNav)   mobileNav.style.display = 'flex';
     if (searchBox)   searchBox.classList.remove('hidden');
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
@@ -179,6 +181,7 @@ function toAuth() {
     if (dashSection) dashSection.classList.add('hidden');
     if (userProfile) userProfile.classList.add('hidden');
     if (mainNav)     mainNav.classList.add('hidden');
+    if (mobileNav)   mobileNav.style.display = 'none';
     if (searchBox)   searchBox.classList.add('hidden');
     if (loginForm)   loginForm.reset();
     if (authError)   authError.classList.add('hidden');
