@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VivoTV - Tu plataforma de streaming premium. Películas, series y contenido exclusivo en un solo lugar.">
+    <meta name="theme-color" content="#8b5cf6">
+    <title>VivoTV - Streaming Premium</title>
+    <!-- Fix #12: PWA manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Fix #3: Cargar Outfit (la fuente declarada en styles.css), no Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Splash Screen animado -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-logo">VIVO<span>TV</span></div>
+        <div class="splash-bars">
+            <div></div><div></div><div></div><div></div><div></div>
+        </div>
+    </div>
+
+    <!-- Navbar Premium Glassmorphism -->
+    <header class="navbar" id="navbar">
+        <div class="logo">VIVO<span>TV</span></div>
+        <nav id="mainNav" class="hidden">
+            <a href="index.html" class="active" id="navInicio">Inicio</a>
+            <a href="peliculas.html" id="navPeliculas">Películas</a>
+            <a href="series.html" id="navSeries">Series</a>
+            <a href="#linkMyList" id="linkMyList">Mi Lista</a>
+        </nav>
+        <div class="user-actions">
+            <!-- Barra de Búsqueda Expandible -->
+            <div class="search-box hidden" id="searchBox">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="searchInput" placeholder="Buscar títulos, géneros...">
+                <button class="btn-clear-search hidden" id="btnClearSearch">&times;</button>
+            </div>
+            <!-- Perfil -->
+            <div id="userProfile" class="hidden user-profile-btn">
+                <div class="avatar" id="userAvatar">U</div>
+                <span id="userName">Usuario</span>
+                <button id="btnLogout" class="btn btn-outline btn-sm">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Pantalla de Autenticación -->
+    <main id="authSection" class="auth-container">
+        <!-- Fondo con imágenes en mosaic para dar profundidad -->
+        <div class="auth-bg-grid" id="authBgGrid"></div>
+        <div class="auth-overlay"></div>
+
+        <div class="auth-card glass-panel">
+            <div class="auth-logo">VIVO<span>TV</span></div>
+            <h2 id="authTitle">Bienvenido de vuelta</h2>
+            <p id="authSubtitle">Inicia sesión para disfrutar de tu contenido premium</p>
+            
+            <form id="loginForm" novalidate>
+                <div class="input-group">
+                    <label for="email">Correo Electrónico</label>
+                    <input type="email" id="email" required placeholder="correo@ejemplo.com" autocomplete="email">
+                </div>
+                <div class="input-group">
+                    <label for="password">Contraseña</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" required placeholder="••••••••" minlength="6" autocomplete="current-password">
+                        <button type="button" class="btn-toggle-pass" id="btnTogglePass" aria-label="Ver contraseña">
+                            <svg id="eyeIcon" viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">
+                    <span id="btnText">Iniciar Sesión</span>
+                    <span class="loader hidden" id="btnLoader"></span>
+                </button>
+                
+                <p id="authError" class="error-msg hidden"></p>
+                
+                <div class="auth-divider"><span>o continúa con</span></div>
+                <p class="auth-toggle">
+                    ¿No tienes cuenta? <a href="#" id="toggleAuthMode">Regístrate gratis</a>
+                </p>
+            </form>
+        </div>
+    </main>
+
+    <!-- Dashboard Principal -->
+    <main id="dashboardSection" class="dashboard-container hidden">
+        
+        <!-- Hero Banner Dinámico -->
+        <section class="hero-banner" id="heroBanner">
+            <div class="hero-overlay"></div>
+            <div class="hero-genre-badge" id="heroGenre"></div>
+            <div class="hero-content">
+                <div class="hero-logo-title" id="heroLogoTitle">
+                    <h1 id="heroTitle">Cargando...</h1>
+                </div>
+                <p id="heroOverview" class="hero-overview"></p>
+                <div class="hero-meta" id="heroMeta"></div>
+                <div class="hero-buttons">
+                    <button class="btn btn-play" id="btnHeroPlay">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        Reproducir
+                    </button>
+                    <button class="btn btn-outline" id="btnHeroInfo">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                        Ver Detalles
+                    </button>
+                </div>
+            </div>
+            <!-- Indicadores del Hero (como dots del slider) -->
+            <div class="hero-indicators" id="heroIndicators"></div>
+        </section>
+
+        <!-- Catálogos y Carruseles -->
+        <div class="catalogs-wrapper">
+            
+            <!-- Vistos Recientemente -->
+            <section class="catalog-row hidden" id="recentSection" data-section="recent">
+                <div class="row-header">
+                    <h3 class="row-title"><span class="row-accent">⏱</span> Continuar Viendo</h3>
+                    <a href="#" class="btn-ver-mas" id="linkHistorial">Historial <span>›</span></a>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="recentCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Mi Lista (Favoritos) -->
+            <section class="catalog-row hidden" id="myListSection" data-section="mylist">
+                <div class="row-header">
+                    <h3 class="row-title"><span class="row-accent">★</span> Mi Lista</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="myListCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Tendencias -->
+            <section class="catalog-row" id="trendingSection" data-section="trending">
+                <div class="row-header">
+                    <h3 class="row-title">🔥 Tendencias del Día</h3>
+                    <button class="btn-ver-mas" data-carousel="trendingCarousel" data-fetch="trending" data-type="all">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="trendingCarousel">
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+                    </div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+            
+            <!-- Películas Populares -->
+            <section class="catalog-row" id="moviesSection" data-section="movies">
+                <div class="row-header">
+                    <h3 class="row-title" id="popularMoviesTitle">🎬 Películas Populares</h3>
+                    <button class="btn-ver-mas" data-carousel="popularMoviesCarousel" data-fetch="movies" data-type="movie">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="popularMoviesCarousel">
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+                    </div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Mejor Valoradas -->
+            <section class="catalog-row" id="topRatedSection" data-section="toprated">
+                <div class="row-header">
+                    <h3 class="row-title">⭐ Mejor Valoradas</h3>
+                    <button class="btn-ver-mas" data-carousel="topRatedCarousel" data-fetch="toprated" data-type="movie">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="topRatedCarousel">
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+                    </div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Series Populares -->
+            <section class="catalog-row" id="seriesSection" data-section="series">
+                <div class="row-header">
+                    <h3 class="row-title">📺 Series Populares</h3>
+                    <button class="btn-ver-mas" data-carousel="popularTVCarousel" data-fetch="tv" data-type="tv">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="popularTVCarousel">
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+                    </div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Overlay Modal Detalle + Reproductor -->
+    <div id="detailModal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <!-- Backdrop del Modal -->
+            <div class="modal-backdrop" id="modalBackdrop"></div>
+            <button class="close-modal" id="btnCloseModal" aria-label="Cerrar">&times;</button>
+            
+            <div class="modal-body">
+                <div class="modal-poster">
+                    <img id="modalPosterImg" src="" alt="Poster de la película" loading="lazy">
+                </div>
+                <div class="modal-info">
+                    <h2 id="modalTitle">Título</h2>
+                    <div class="modal-metadata">
+                        <span id="modalYear" class="meta-chip">2024</span>
+                        <span id="modalRating" class="meta-chip badge-green">⭐ N/A</span>
+                        <span id="modalRuntime" class="meta-chip">N/A</span>
+                    </div>
+                    <p id="modalOverview" class="modal-overview-text">Descripción...</p>
+
+                    <!-- Info de Series (oculto para películas) -->
+                    <div id="seriesInfo" class="series-info hidden">
+                        <div class="series-stats">
+                            <div class="series-stat">
+                                <span class="stat-number" id="statSeasons">-</span>
+                                <span class="stat-label">Temporadas</span>
+                            </div>
+                            <div class="series-stat-divider"></div>
+                            <div class="series-stat">
+                                <span class="stat-number" id="statEpisodes">-</span>
+                                <span class="stat-label">Episodios totales</span>
+                            </div>
+                            <div class="series-stat-divider"></div>
+                            <div class="series-stat">
+                                <span class="stat-number" id="statStatus">-</span>
+                                <span class="stat-label">Estado</span>
+                            </div>
+                        </div>
+                        <!-- Selector de Temporada -->
+                        <div class="seasons-selector" id="seasonsSelector">
+                            <p class="seasons-label">Temporadas disponibles:</p>
+                            <div class="seasons-pills" id="seasonsPills"></div>
+                        </div>
+                        <!-- Grid de Episodios -->
+                        <div class="episodes-section hidden" id="episodesSection">
+                            <p class="seasons-label" id="episodesSectionTitle">Episodios:</p>
+                            <div class="episodes-grid" id="episodesGrid"></div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-play btn-sm" id="btnModalPlay">
+                            <svg viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            Reproducir
+                        </button>
+                        <button class="btn btn-outline btn-sm" id="btnAddToMyList">
+                            <svg id="favIconSvg" viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                            <span id="favBtnText">Mi Lista</span>
+                        </button>
+                    </div>
+
+                    <!-- Player Container -->
+                    <div class="player-container" id="playerContainer">
+                        <div id="videoPlaceholder" class="video-preview-box">
+                            <div class="placeholder-inner">
+                                <svg viewBox="0 0 24 24" width="48" fill="rgba(255,255,255,0.2)"><path d="M8 5v14l11-7z"/></svg>
+                                <p>Verificando disponibilidad...</p>
+                            </div>
+                        </div>
+                        <video id="videoPlayer" class="hidden" controls crossorigin="anonymous" playsinline></video>
+                        <iframe id="videoIframe" class="hidden" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                    </div>
+
+                    <p id="sourceError" class="error-msg hidden">Este título no tiene enlace de video disponible.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast de notificación -->
+    <div class="toast hidden" id="toast"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
