@@ -171,16 +171,31 @@ async function toDashboard(user) {
         }
 
         // 5. Cargar Filas (Filtradas)
-        const renderRow = async (containerId, fetchFn, type) => {
+        const renderRow = async (containerId, fetchFn, type, title) => {
             const el = document.getElementById(containerId);
             if (!el) return;
             const data = await fetchFn();
             const filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
             CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
-            // Ocultar sección completa si no hay nada
+            
+            // Gestionar visibilidad de la sección y "Ver más"
             const section = el.closest('.catalog-row');
-            if (section && filtered.length === 0) section.classList.add('hidden');
-            else if (section) section.classList.remove('hidden');
+            if (section) {
+                if (filtered.length === 0) section.classList.add('hidden');
+                else {
+                    section.classList.remove('hidden');
+                    const btnVerMas = section.querySelector('.btn-ver-mas');
+                    if (btnVerMas) {
+                        btnVerMas.onclick = () => {
+                            const grid = document.getElementById('gridContainer');
+                            if (grid) {
+                                grid.scrollIntoView({ behavior: 'smooth' });
+                                showToast(`Explora más en la sección inferior.`);
+                            }
+                        };
+                    }
+                }
+            }
         };
 
         if (pageType === 'all') {
@@ -195,20 +210,28 @@ async function toDashboard(user) {
             const fetchPopular = () => pageType === 'tv' ? TMDB_SERVICE.getPopularTV() : TMDB_SERVICE.getPopularMovies();
             const fetchTop = () => pageType === 'tv' ? TMDB_SERVICE.fetchFromTMDB('/tv/top_rated') : TMDB_SERVICE.getTopRated();
             
-            // Géneros (Acción: 28, Comedia: 35, Drama: 18, Terror: 27, Misterio: 9648)
-            const genre1 = pageType === 'tv' ? 10759 : 28; // Action & Adventure (TV) vs Action (Movie)
-            const genre2 = pageType === 'tv' ? 35 : 35;    // Comedy
-            const genre3 = pageType === 'tv' ? 18 : 10749; // Drama (TV) vs Romance (Movie)
-            const genre4 = pageType === 'tv' ? 10765 : 27; // Sci-Fi (TV) vs Horror (Movie)
-
             await Promise.all([
                 renderRow('popularCarousel', fetchPopular, pageType),
                 renderRow('topRatedCarousel', fetchTop, pageType),
-                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre1 }), pageType),
-                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre2 }), pageType),
-                renderRow('genre3Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre3 }), pageType),
-                renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre4 }), pageType),
+                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10759:28 }), pageType),
+                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: 35 }), pageType),
+                renderRow('genre3Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?18:10749 }), pageType),
+                renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10765:27 }), pageType),
             ]);
+
+            // 6. Cargar Grilla de "Todas las..." al final
+            const gridContainer = document.getElementById('gridContainer');
+            if (gridContainer) {
+                await loadGridData(pageType, 1);
+                const btnLoadMore = document.getElementById('btnLoadMore');
+                if (btnLoadMore) {
+                    let currentPage = 1;
+                    btnLoadMore.onclick = async () => {
+                        currentPage++;
+                        await loadGridData(pageType, currentPage, true);
+                    };
+                }
+            }
         }
 
     } catch (e) { 
