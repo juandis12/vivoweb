@@ -10,18 +10,15 @@ export const TMDB_SERVICE = {
         let url;
         
         if (CONFIG.USE_PROXY) {
-            // En Vercel: La API Key está en el servidor, el cliente no la ve.
             url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
-            // Limpiamos el slash inicial si existe para pasarlo como parámetro 'path'
             const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
             url.searchParams.append('path', cleanPath);
         } else {
-            // En Local: Llamada directa (Usar llave manual o fallback de desarrollo)
-            // NOTA: Para producción, esta llave ya no existirá aquí.
-            const localKey = '743275e25bcea0a320b87d2af271a136'; 
+            // Local: Decodificar llave oculta
+            const _k = atob(CONFIG._tk);
             url = new URL(`${CONFIG.TMDB_BASE_URL}${endpoint}`);
-            url.searchParams.append('api_key', localKey);
-            url.searchParams.append('language', 'es-ES');
+            url.searchParams.append('api_key', _k);
+            url.searchParams.append('language', 'es-MX');
         }
 
         Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, val));
@@ -60,50 +57,51 @@ export const CATALOG_UI = {
         const heroTitle   = document.getElementById('heroTitle');
         const heroOverview = document.getElementById('heroOverview');
         const heroBanner  = document.getElementById('heroBanner');
-        const heroGenre   = document.getElementById('heroGenre');
         const heroMeta    = document.getElementById('heroMeta');
         const indicators  = document.getElementById('heroIndicators');
         const btnPlay     = document.getElementById('btnHeroPlay');
         const btnInfo     = document.getElementById('btnHeroInfo');
 
-        if (!movie) return;
+        if (!movie || !heroBanner) return;
 
-        heroTitle.textContent   = movie.title || movie.name;
-        heroOverview.textContent = movie.overview || 'Sin descripción disponible.';
+        // Cinematic Fade Transition
+        heroBanner.style.opacity = '0';
+        
+        setTimeout(() => {
+            heroTitle.textContent   = movie.title || movie.name;
+            heroOverview.textContent = movie.overview || 'Sin descripción disponible.';
+            heroBanner.style.backgroundImage = `url('${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}')`;
 
-        // Crossfade suave: cambiar background con transición (Fix #11)
-        heroBanner.style.transition = 'background-image 0.8s ease';
-        heroBanner.style.backgroundImage = `url('${CONFIG.TMDB_IMAGE_BASE}${movie.backdrop_path}')`;
+            const year   = (movie.release_date || movie.first_air_date || '').split('-')[0];
+            const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
+            
+            if (heroMeta) {
+                heroMeta.innerHTML = `
+                    <span class="meta-chip">${year}</span>
+                    <span class="meta-chip badge-gold">⭐ ${rating}</span>
+                    <span class="meta-chip">4K Ultra HD</span>
+                `;
+            }
 
-        if (movie.genre_ids?.length) {
-            heroGenre.textContent = CATALOG_UI.getGenreName(movie.genre_ids[0]);
-        }
+            if (btnPlay) {
+                btnPlay.dataset.tmdbId = movie.id;
+                btnPlay.dataset.type   = movie.media_type || 'movie';
+            }
+            if (btnInfo) {
+                btnInfo.dataset.tmdbId = movie.id;
+                btnInfo.dataset.type   = movie.media_type || 'movie';
+            }
 
-        const year   = (movie.release_date || movie.first_air_date || '').split('-')[0];
-        const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '';
-        heroMeta.innerHTML = `
-            ${year   ? `<span class="meta-pill">📅 ${year}</span>` : ''}
-            ${rating ? `<span class="meta-pill green">⭐ ${rating}</span>` : ''}
-            <span class="meta-pill">${movie.media_type === 'tv' ? '📺 Serie' : '🎬 Película'}</span>
-        `;
+            heroBanner.style.opacity = '1';
+        }, 500);
 
-        btnPlay.dataset.tmdbId = movie.id;
-        btnPlay.dataset.type   = movie.media_type || 'movie';
-        btnInfo.dataset.tmdbId = movie.id;
-        btnInfo.dataset.type   = movie.media_type || 'movie';
-
-        // Reconstruir dots y resaltar el activo correcto
-        if (heroItems.length > 1) {
+        // Update dots
+        if (indicators && heroItems.length > 1) {
             indicators.innerHTML = '';
             const activeIndex = heroItems.indexOf(movie);
             heroItems.slice(0, 8).forEach((item, i) => {
                 const dot = document.createElement('div');
-                dot.className = `hero-dot${i === activeIndex ? ' active' : ''}`;
-                dot.addEventListener('click', () => {
-                    CATALOG_UI.renderHero(heroItems[i], heroItems);
-                    // Sincronizar dots del click manual con el timer global
-                    window.dispatchEvent(new CustomEvent('hero-dot-click', { detail: { index: i } }));
-                });
+                dot.className = `hero-dot ${i === activeIndex ? 'active' : ''}`;
                 indicators.appendChild(dot);
             });
         }
@@ -176,7 +174,7 @@ export const CATALOG_UI = {
                 ${isAvailable ? `
                     <div class="available-badge">
                         <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
-                        Disponible
+                        DISPONIBLE
                     </div>` : ''}
             </div>
             <div class="movie-tooltip">

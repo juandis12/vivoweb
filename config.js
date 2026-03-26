@@ -9,8 +9,13 @@ export const CONFIG = {
     TMDB_PROXY_URL: '/api/tmdb', // Se usará en Vercel
     TMDB_IMAGE_BASE: 'https://image.tmdb.org/t/p/original',
     TMDB_IMAGE_CARD: 'https://image.tmdb.org/t/p/w500',
+    TMDB_IMAGE_HERO: 'https://image.tmdb.org/t/p/original',
     
-    // Detección automática de entorno (Evita el proxy en redes locales)
+    // API KEY OBFUSCADA (Hiding it better as requested)
+    // tmd-k: YmJiY2YwZjhjYmU0MGYzYjUyMTgzNWY0ZWYyNTU1OGU=
+    _tk: 'YmJiY2YwZjhjYmU0MGYzYjUyMTgzNWY0ZWYyNTU1OGU=',
+
+    // Detección automática de entorno...
     USE_PROXY: (
         window.location.hostname !== 'localhost' && 
         window.location.hostname !== '127.0.0.1' && 

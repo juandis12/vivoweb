@@ -43,11 +43,40 @@ let availableSeries = new Set();
 let availableIds    = new Set(); // Mantener para compatibilidad en carruseles mixtos
 
 // ================================================
-// NAVBAR SCROLL
+// INNOVACIÓN: UI INTERACTIVA
 // ================================================
-window.addEventListener('scroll', () => {
+function initMagneticHover() {
+    document.addEventListener('mousemove', (e) => {
+        const target = e.target.closest('.movie-card');
+        if (!target) return;
+        const rect = target.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        target.style.setProperty('--x', `${x}%`);
+        target.style.setProperty('--y', `${y}%`);
+    });
+}
+
+function initNavbarScroll() {
     const navbar = document.getElementById('navbar');
-    if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 50);
+    if (!navbar) return;
+    window.addEventListener('scroll', () => {
+        const scrolled = window.scrollY > 100;
+        navbar.classList.toggle('scrolled', scrolled);
+        if (scrolled) {
+            const opacity = Math.min(0.95, 0.4 + (window.scrollY - 100) / 800);
+            navbar.style.background = `rgba(9, 9, 11, ${opacity})`;
+        } else {
+            navbar.style.background = '';
+        }
+    });
+}
+
+// Inicializar efectos al cargar
+document.addEventListener('DOMContentLoaded', () => {
+    initNavbarScroll();
+    initMagneticHover();
+    initAuth();
 });
 
 // NUEVO: Toggle de búsqueda para móviles/táctil
@@ -526,3 +555,5 @@ document.addEventListener('click', (e) => {
     const scrollAmount = carousel.clientWidth * 0.8;
     carousel.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
 });
+
+// document.addEventListener('DOMContentLoaded', () => initAuth()); // Movido a arriba con initNavbarScroll

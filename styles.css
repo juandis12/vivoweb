@@ -1,43 +1,40 @@
-/*
-  VivoTV - Design System v2.0 Premium
-  Estructura: Variables → Reset → Componentes → layouts → Animaciones
-*/
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap');
 
-/* ================================================
-   1. DESIGN TOKENS / CSS VARIABLES
-================================================ */
 :root {
-    /* Paleta Aether Cinema 💎 */
-    --bg-base: #0f0f12;
-    --bg-card: #1a1a1f;
-    --primary: #7c3aed;
-    --primary-hover: #9061f9;
-    --primary-dark: #5b21b6;
-    --secondary: #00d1ff;
-    --accent-gold: #fbbf24;
-    --accent-green: #22c55e;
+    /* Paleta Cinematic Glass 2.0 🎬 */
+    --bg-base: #09090b; /* Profundidad absoluta */
+    --bg-surface: #121217;
+    --primary: #8b5cf6;
+    --primary-glow: rgba(139, 92, 246, 0.5);
+    --secondary: #06b6d4;
+    --secondary-glow: rgba(6, 182, 212, 0.5);
+    --accent-purple: #a855f7;
+    --accent-pink: #f472b6;
     
-    /* Sistema de Capas & Glassmorphism */
-    --glass-base: rgba(15, 15, 20, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-hover: rgba(139, 92, 246, 0.12);
+    /* Glassmorphism 2.0 */
+    --glass-base: rgba(18, 18, 23, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-blur: 50px;
+    --glass-incandescent: rgba(255, 255, 255, 0.1);
     
-    /* Tipografía & Espaciado */
-    --font: 'Outfit', sans-serif;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --shadow-glow: 0 0 35px rgba(139, 92, 246, 0.4);
-
-    /* Tipografía Premium */
-    --font: 'Outfit', 'Inter', system-ui, sans-serif;
+    /* Tipografía Editorial */
+    --font-display: 'Epilogue', sans-serif;
+    --font-body: 'Manrope', sans-serif;
+    --text-primary: #f9f5f8;
+    --text-secondary: #adaaad;
+    --text-muted: #71717a;
+    
+    /* Elevación y Profundidad */
+    --shadow-premium: 0 20px 50px rgba(0, 0, 0, 0.8);
+    --shadow-incandescent: 0 0 20px var(--primary-glow);
     
     /* Animaciones */
     --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
     
-    /* Espaciados */
-    --side-padding: 5%;
+    /* Espaciados Asimétricos */
+    --side-padding: 6%;
+    --section-gap: 8.5rem; /* Spacing scale 24 */
 }
 
 /* ================================================
@@ -116,22 +113,22 @@ button { font-family: inherit; cursor: pointer; }
    4. NAVBAR
  ================================================ */
 .navbar {
-    position: fixed; top: 15px; left: var(--side-padding); right: var(--side-padding);
-    padding: 12px 30px;
+    position: fixed; top: 25px; left: var(--side-padding); right: var(--side-padding);
+    padding: 14px 40px;
     display: flex; align-items: center; gap: 40px; z-index: 1000;
     background: var(--glass-base);
-    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     border-radius: 100px;
-    transition: all 0.4s var(--ease-smooth);
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .navbar.scrolled {
     top: 0; left: 0; right: 0;
     border-radius: 0;
-    background: rgba(15, 15, 20, 0.98);
+    background: rgba(9, 9, 11, 0.9);
     border-bottom: 1px solid var(--glass-border);
-    padding: 14px var(--side-padding);
+    padding: 16px var(--side-padding);
 }
 
 .logo {
@@ -188,35 +185,33 @@ nav a.active::after { width: 24px; }
 .btn-block { width: 100%; border-radius: 12px; padding: 15px; }
 
 .btn-primary { 
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); 
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%); 
     color: white; 
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 10px 25px -5px var(--primary-glow);
 }
 .btn-primary:hover { 
-    transform: translateY(-2px); 
-    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.5); 
-    filter: brightness(1.1);
+    transform: translateY(-3px) scale(1.02); 
+    box-shadow: 0 20px 35px -8px var(--primary-glow); 
+    filter: brightness(1.2);
 }
 
 .btn-outline {
-    background: rgba(255,255,255,0.05); color: white;
-    border: 1px solid rgba(255,255,255,0.15);
+    background: var(--glass-base); color: white;
+    border: 1px solid var(--glass-border);
     backdrop-filter: blur(10px);
 }
 .btn-outline:hover { 
     background: rgba(255,255,255,0.1); 
-    border-color: rgba(255,255,255,0.3);
-    transform: translateY(-2px);
+    border-color: var(--primary);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 0 20px var(--primary-glow);
 }
 
 .btn-play { 
     background: #fff; color: #000; 
-    box-shadow: 0 4px 20px rgba(255,255,255,0.2);
+    box-shadow: 0 10px 30px rgba(255,255,255,0.3);
 }
-.btn-play:hover { background: #f1f5f9; transform: translateY(-3px) scale(1.04); }
-
-.btn-sm.added-to-list svg { fill: var(--accent-green); }
-.btn-sm.added-to-list { border-color: var(--accent-green); color: var(--accent-green); }
+.btn-play:hover { background: #f1f5f9; transform: translateY(-4px) scale(1.05); }
 
 /* ================================================
    6. BARRA DE BÚSQUEDA
@@ -256,53 +251,62 @@ nav a.active::after { width: 24px; }
 /* ================================================
    7. PANTALLA DE AUTENTICACIÓN
 ================================================ */
+/* ================================================
+   7. PANTALLA DE AUTENTICACIÓN INNOVADORA
+================================================ */
 .auth-container {
     min-height: 100vh; position: relative;
     display: flex; align-items: center; justify-content: center;
-    padding: 80px 20px 20px;
+    overflow: hidden; background: #000;
 }
 
-/* Mosaico de portadas al fondo */
-.auth-bg-grid {
-    position: absolute; inset: 0; z-index: 0;
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    grid-template-rows: repeat(4, 1fr);
-    gap: 4px; overflow: hidden;
-    opacity: 0.3;
+/* Mesh Gradient Animado 🎨 */
+.mesh-gradient {
+    position: absolute; inset: 0; filter: blur(100px);
+    z-index: 0; opacity: 0.6;
 }
-.auth-bg-grid img {
-    width: 100%; height: 100%; object-fit: cover;
-    filter: saturate(0.7);
+.mesh-circle {
+    position: absolute; border-radius: 50%;
+    animation: meshMove 20s infinite alternate-reverse;
+}
+.circle-1 { width: 500px; height: 500px; background: var(--primary); top: -10%; left: -10%; animation-duration: 25s; }
+.circle-2 { width: 600px; height: 600px; background: var(--secondary); bottom: -10%; right: -10%; animation-duration: 30s; }
+.circle-3 { width: 400px; height: 400px; background: var(--accent-purple); top: 30%; left: 40%; animation-duration: 35s; }
+
+@keyframes meshMove {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(10%, 15%) scale(1.1); }
+    66% { transform: translate(-15%, 5%) scale(0.9); }
+    100% { transform: translate(5%, -10%) scale(1.05); }
 }
 
 .auth-overlay {
     position: absolute; inset: 0; z-index: 1;
-    background: radial-gradient(circle at center, rgba(15, 10, 35, 0.4) 0%, rgba(8, 5, 26, 0.98) 80%);
+    background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.85) 100%);
 }
 
 .auth-card {
     position: relative; z-index: 10;
-    width: 100%; max-width: 420px;
-    padding: 45px 40px;
-    border-radius: 20px;
-    background: rgba(25, 15, 60, 0.6);
-    backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(139, 92, 246, 0.1);
-    animation: authCardIn 0.5s var(--ease-spring) 2.5s both;
-}
-
-@keyframes authCardIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    width: 100%; max-width: 440px;
+    padding: 60px 50px;
+    border-radius: 32px;
+    background: var(--glass-base);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-premium), 0 0 40px rgba(139, 92, 246, 0.1);
+    animation: authCardIn 1s var(--ease-spring) 0.5s both;
 }
 
 .auth-logo {
-    font-size: 2rem; font-weight: 800; text-align: center;
-    margin-bottom: 25px; letter-spacing: -0.5px;
+    font-family: var(--font-display);
+    font-size: 2.5rem; font-weight: 900; text-align: center;
+    margin-bottom: 30px; letter-spacing: -2px;
+    background: linear-gradient(135deg, #fff, var(--primary));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
-.auth-logo span { color: var(--primary); }
+.auth-logo span { -webkit-text-fill-color: var(--primary); color: var(--primary); }
 
 .auth-card h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
 .auth-card > p { color: var(--text-secondary); margin-bottom: 28px; font-size: 0.9rem; }
