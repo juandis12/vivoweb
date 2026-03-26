@@ -38,7 +38,9 @@ const authSubtitle  = document.getElementById('authSubtitle');
 
 let isLoginMode = true;
 let heroItems   = [];
-let availableIds = new Set();
+let availableMovies = new Set();
+let availableSeries = new Set();
+let availableIds    = new Set(); // Mantener para compatibilidad en carruseles mixtos
 
 // ================================================
 // NAVBAR SCROLL
@@ -86,9 +88,24 @@ async function fetchAvailableIds() {
             supabase.from('series_episodes').select('tmdb_id')
         ]);
         
+        availableMovies = new Set();
+        availableSeries = new Set();
         availableIds = new Set();
-        if (movies.data) movies.data.forEach(m => availableIds.add(m.tmdb_id.toString()));
-        if (series.data) series.data.forEach(s => availableIds.add(s.tmdb_id.toString()));
+
+        if (movies.data) {
+            movies.data.forEach(m => {
+                const id = m.tmdb_id.toString();
+                availableMovies.add(id);
+                availableIds.add(id);
+            });
+        }
+        if (series.data) {
+            series.data.forEach(s => {
+                const id = s.tmdb_id.toString();
+                availableSeries.add(id);
+                availableIds.add(id);
+            });
+        }
     } catch (e) { console.error('Error fetching available IDs:', e); }
 }
 
@@ -172,12 +189,49 @@ async function toDashboard(user) {
 async function loadGridData(type, page, append = false) {
     const container = document.getElementById('gridContainer');
     const loader    = document.getElementById('gridLoader');
+    const btnLoadMore = document.getElementById('btnLoadMore');
     if (!container) return;
 
     if (!append) container.innerHTML = '';
     if (loader) loader.classList.remove('hidden');
 
     try {
+        // ---- FILTRO: SOLO DISPONIBLES ----
+        // Si estamos en peliculas.html o series.html, cargamos solo de Supabase
+        const isMoviesPage = document.body.classList.contains('page-movies');
+        const isSeriesPage = document.body.classList.contains('page-series');
+
+        if (isMoviesPage || isSeriesPage) {
+            const targetSet = type === 'tv' ? availableSeries : availableMovies;
+            const allIds = Array.from(targetSet);
+            
+            // Paginación manual simple para el set local
+            const perPage = 20;
+            const start = (page - 1) * perPage;
+            const end   = start + perPage;
+            const pageIds = allIds.slice(start, end);
+
+            if (loader) loader.classList.add('hidden');
+            if (btnLoadMore) btnLoadMore.classList.toggle('hidden', end >= allIds.length);
+
+            if (pageIds.length) {
+                // Fetch details for each ID
+                const detailsArray = await Promise.all(
+                    pageIds.map(id => TMDB_SERVICE.getDetails(id, type).catch(() => null))
+                );
+
+                detailsArray.forEach(item => {
+                    if (!item || !item.poster_path) return;
+                    const card = CATALOG_UI.createMovieCard(item, type, true);
+                    container.appendChild(card);
+                });
+            } else if (!append) {
+                container.innerHTML = '<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay títulos disponibles en este momento.</p>';
+            }
+            return;
+        }
+
+        // ---- MODO NORMAL: POPULARES TMDB ----
         const data = type === 'tv' 
             ? await TMDB_SERVICE.getPopularTV(page)
             : await TMDB_SERVICE.getPopularMovies(page);
@@ -259,6 +313,14 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
 if (btnLogout) btnLogout.addEventListener('click', () => { stopHeroRotation(); supabase.auth.signOut(); });
 if (btnPass) btnPass.addEventListener('click', () => { passwordEl.type = passwordEl.type === 'password' ? 'text' : 'password'; });
 
+if (btnClear) btnClear.addEventListener('click', () => {
+    searchInput.value = '';
+    btnClear.classList.add('hidden');
+    const isSeriesPage = document.body.classList.contains('page-series');
+    const type = isSeriesPage ? 'tv' : 'movie';
+    loadGridData(type, 1);
+});
+
 function setLoading(v) {
     if (btnText) btnText.classList.toggle('hidden', v);
     if (btnLoader) btnLoader.classList.toggle('hidden', !v);
@@ -284,7 +346,36 @@ if (searchInput) searchInput.addEventListener('input', (e) => {
         const res = await TMDB_SERVICE.search(q);
         if (res.results.length) {
             const carousel = document.getElementById('popularMoviesCarousel');
-            if (carousel) CATALOG_UI.renderCarousel('popularMoviesCarousel', res.results, null, availableIds);
+            const grid     = document.getElementById('gridContainer');
+            
+            const isMoviesPage = document.body.classList.contains('page-movies');
+            const isSeriesPage = document.body.classList.contains('page-series');
+
+            if (grid) {
+                // En páginas de cuadrícula (Peliculas/Series), filtramos por disponibilidad
+                grid.innerHTML = '';
+                const filtered = res.results.filter(item => {
+                    const id = item.id.toString();
+                    if (isMoviesPage) return availableMovies.has(id);
+                    if (isSeriesPage) return availableSeries.has(id);
+                    return availableIds.has(id);
+                });
+
+                if (filtered.length) {
+                    filtered.forEach(item => {
+                        const type = item.media_type || (isSeriesPage ? 'tv' : 'movie');
+                        const card = CATALOG_UI.createMovieCard(item, type, true);
+                        grid.appendChild(card);
+                    });
+                } else {
+                    grid.innerHTML = '<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No se encontraron resultados disponibles para "' + q + '".</p>';
+                }
+                const btnLoadMore = document.getElementById('btnLoadMore');
+                if (btnLoadMore) btnLoadMore.classList.add('hidden');
+            } else if (carousel) {
+                // En Home, mostramos todo con badges
+                CATALOG_UI.renderCarousel('popularMoviesCarousel', res.results, null, availableIds);
+            }
         }
     }, 500);
 });
