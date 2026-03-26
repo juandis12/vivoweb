@@ -43,33 +43,97 @@
     <!-- Contenido de Series -->
     <main id="dashboardSection" class="dashboard-container">
         
-        <header class="grid-header">
-            <nav class="breadcrumbs">
-                <a href="index.html">Inicio</a>
-                <span>/</span>
-                <span>Series</span>
-            </nav>
-            <h1 class="grid-title">Todas las Series</h1>
-            <p class="text-muted">Disfruta de las mejores temporadas y episodios completos.</p>
-        </header>
-
-        <section class="movies-grid-container">
-            <div id="gridContainer" class="movies-grid">
-                <!-- Se llenará dinámicamente -->
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
+        <!-- Hero Banner Dinámico -->
+        <section class="hero-banner" id="heroBanner">
+            <div class="hero-overlay"></div>
+            <div class="hero-genre-badge" id="heroGenre"></div>
+            <div class="hero-content">
+                <div class="hero-logo-title" id="heroLogoTitle">
+                    <h1 id="heroTitle">Series Premium</h1>
+                </div>
+                <p id="heroOverview" class="hero-overview">Las mejores historias, capítulo a capítulo.</p>
+                <div class="hero-meta" id="heroMeta"></div>
+                <div class="hero-buttons">
+                    <button class="btn btn-play" id="btnHeroPlay">▶ Reproducir</button>
+                    <button class="btn btn-outline" id="btnHeroInfo">Ver Detalles</button>
+                </div>
             </div>
-            
-            <div id="gridLoader" class="grid-loader hidden">
-                <div class="loader"></div>
-            </div>
-
-            <div style="text-align: center; margin-top: 40px;">
-                <button id="btnLoadMore" class="btn btn-outline">Cargar más series</button>
-            </div>
+            <div class="hero-indicators" id="heroIndicators"></div>
         </section>
 
+        <div class="catalogs-wrapper">
+            <!-- Populares -->
+            <section class="catalog-row" id="popularSection">
+                <div class="row-header">
+                    <h3 class="row-title">📺 Series Populares</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="popularCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Mejor Valoradas -->
+            <section class="catalog-row" id="topRatedSection">
+                <div class="row-header">
+                    <h3 class="row-title">⭐ Mejor Valoradas</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="topRatedCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Acción y Aventura (TV: 10759) -->
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">🧨 Acción y Aventura</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre1Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Comedia -->
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">😆 Comedias Imperdibles</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre2Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Drama -->
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">🎭 Grandes Dramas</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre3Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Sci-Fi & Fantasy (TV: 10765) -->
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">🚀 Ciencia Ficción y Fantasía</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre4Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+        </div>
     </main>
 
     <!-- Modal Detalle (Replicado para funcionalidad) -->

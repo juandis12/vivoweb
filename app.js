@@ -135,61 +135,85 @@ async function toDashboard(user) {
         userAvatar.textContent = name[0].toUpperCase();
     }
 
-    // Cargar disponibilidad antes de renderizar
+    // 1. Cargar disponibilidad
     await fetchAvailableIds();
 
-    const gridContainer = document.getElementById('gridContainer');
-    const isSeriesPage  = document.body.classList.contains('page-series');
+    // 2. Detectar tipo de página
+    const isMoviesPage = document.body.classList.contains('page-movies');
+    const isSeriesPage = document.body.classList.contains('page-series');
+    const pageType = isSeriesPage ? 'tv' : (isMoviesPage ? 'movie' : 'all');
 
-    if (gridContainer) {
-        const type = isSeriesPage ? 'tv' : 'movie';
-        await loadGridData(type, 1);
+    try {
+        // 3. Mostrar skeletons
+        const carouselIds = [
+            'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
+            'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel'
+        ];
+        carouselIds.forEach(id => {
+            if (document.getElementById(id)) CATALOG_UI.showSkeletons(id);
+        });
+
+        // 4. Cargar Hero
+        let heroData;
+        if (pageType === 'tv') heroData = await TMDB_SERVICE.fetchFromTMDB('/trending/tv/day');
+        else if (pageType === 'movie') heroData = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/day');
+        else heroData = await TMDB_SERVICE.getTrending();
+
+        // Filtrar Hero solo disponibles
+        heroItems = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString())).slice(0, 8);
         
-        const btnLoadMore = document.getElementById('btnLoadMore');
-        if (btnLoadMore) {
-            let currentPage = 1;
-            btnLoadMore.onclick = async () => {
-                currentPage++;
-                await loadGridData(type, currentPage, true);
-            };
+        if (heroItems.length && document.getElementById('heroBanner')) {
+            CATALOG_UI.renderHero(heroItems[0], heroItems);
+            startHeroRotation();
+        } else if (document.getElementById('heroBanner')) {
+            // Fallback si no hay nada disponible en tendencia
+            document.getElementById('heroBanner').classList.add('hidden');
         }
-    } else {
-        try {
-            // Mostrar skeletons antes de cargar
-            if (document.getElementById('trendingCarousel')) CATALOG_UI.showSkeletons('trendingCarousel');
-            if (document.getElementById('popularMoviesCarousel')) CATALOG_UI.showSkeletons('popularMoviesCarousel');
-            if (document.getElementById('topRatedCarousel')) CATALOG_UI.showSkeletons('topRatedCarousel');
-            if (document.getElementById('popularTVCarousel')) CATALOG_UI.showSkeletons('popularTVCarousel');
 
-            const [trending, popular, topRated, popularTV] = await Promise.all([
-                TMDB_SERVICE.getTrending(),
-                TMDB_SERVICE.getPopularMovies(),
-                TMDB_SERVICE.getTopRated(),
-                TMDB_SERVICE.getPopularTV(),
+        // 5. Cargar Filas (Filtradas)
+        const renderRow = async (containerId, fetchFn, type) => {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const data = await fetchFn();
+            const filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+            CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
+            // Ocultar sección completa si no hay nada
+            const section = el.closest('.catalog-row');
+            if (section && filtered.length === 0) section.classList.add('hidden');
+            else if (section) section.classList.remove('hidden');
+        };
+
+        if (pageType === 'all') {
+            await Promise.all([
+                renderRow('trendingCarousel', () => TMDB_SERVICE.getTrending(), null),
+                renderRow('popularMoviesCarousel', () => TMDB_SERVICE.getPopularMovies(), 'movie'),
+                renderRow('topRatedCarousel', () => TMDB_SERVICE.getTopRated(), 'movie'),
+                renderRow('popularTVCarousel', () => TMDB_SERVICE.getPopularTV(), 'tv')
             ]);
-
-            heroItems = trending.results.filter(m => m.backdrop_path).slice(0, 8);
+        } else {
+            // Páginas específicas: Películas o Series
+            const fetchPopular = () => pageType === 'tv' ? TMDB_SERVICE.getPopularTV() : TMDB_SERVICE.getPopularMovies();
+            const fetchTop = () => pageType === 'tv' ? TMDB_SERVICE.fetchFromTMDB('/tv/top_rated') : TMDB_SERVICE.getTopRated();
             
-            if (heroItems.length && document.getElementById('heroBanner')) {
-                CATALOG_UI.renderHero(heroItems[0], heroItems);
-                startHeroRotation();
-            }
+            // Géneros (Acción: 28, Comedia: 35, Drama: 18, Terror: 27, Misterio: 9648)
+            const genre1 = pageType === 'tv' ? 10759 : 28; // Action & Adventure (TV) vs Action (Movie)
+            const genre2 = pageType === 'tv' ? 35 : 35;    // Comedy
+            const genre3 = pageType === 'tv' ? 18 : 10749; // Drama (TV) vs Romance (Movie)
+            const genre4 = pageType === 'tv' ? 10765 : 27; // Sci-Fi (TV) vs Horror (Movie)
 
-            if (document.getElementById('trendingCarousel')) 
-                CATALOG_UI.renderCarousel('trendingCarousel', trending.results, null, availableIds);
-            if (document.getElementById('popularMoviesCarousel'))
-                CATALOG_UI.renderCarousel('popularMoviesCarousel', popular.results, 'movie', availableIds);
-            if (document.getElementById('topRatedCarousel'))
-                CATALOG_UI.renderCarousel('topRatedCarousel', topRated.results, 'movie', availableIds);
-            if (document.getElementById('popularTVCarousel'))
-                CATALOG_UI.renderCarousel('popularTVCarousel', popularTV.results, 'tv', availableIds);
-
-        } catch (e) { 
-            console.error('Error cargando catálogo:', e); 
-            const heroTitle = document.getElementById('heroTitle');
-            if (heroTitle) heroTitle.textContent = 'Error al cargar contenido ⚠️';
-            showToast('Error de conexión con el servidor de películas.');
+            await Promise.all([
+                renderRow('popularCarousel', fetchPopular, pageType),
+                renderRow('topRatedCarousel', fetchTop, pageType),
+                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre1 }), pageType),
+                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre2 }), pageType),
+                renderRow('genre3Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre3 }), pageType),
+                renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: genre4 }), pageType),
+            ]);
         }
+
+    } catch (e) { 
+        console.error('Error cargando catálogo:', e); 
+        showToast('Error de conexión con el catálogo.');
     }
 
     await loadMyList();
@@ -368,36 +392,47 @@ if (searchInput) searchInput.addEventListener('input', (e) => {
     searchDebounceTimer = setTimeout(async () => {
         const res = await TMDB_SERVICE.search(q);
         if (res.results.length) {
-            const carousel = document.getElementById('popularMoviesCarousel');
-            const grid     = document.getElementById('gridContainer');
-            
             const isMoviesPage = document.body.classList.contains('page-movies');
             const isSeriesPage = document.body.classList.contains('page-series');
+            const pageType = isSeriesPage ? 'tv' : (isMoviesPage ? 'movie' : 'all');
 
-            if (grid) {
-                // En páginas de cuadrícula (Peliculas/Series), filtramos por disponibilidad
+            // Filtrar por disponibilidad SIEMPRE
+            const filtered = res.results.filter(item => {
+                const id = item.id.toString();
+                // Si estamos en página de Películas, solo mostrar películas disponibles
+                if (pageType === 'movie' && item.media_type !== 'movie') return false;
+                // Si estamos en página de Series, solo mostrar series disponibles
+                if (pageType === 'tv' && item.media_type !== 'tv') return false;
+                
+                return availableIds.has(id);
+            });
+
+            // Encontrar el primer carrusel disponible para mostrar resultados
+            const targetCarousel = isMoviesPage ? 'popularCarousel' : 
+                                 (isSeriesPage ? 'popularCarousel' : 'trendingCarousel');
+            
+            const carousel = document.getElementById(targetCarousel);
+            const grid     = document.getElementById('gridContainer');
+
+            if (carousel) {
+                // Actualizar título de la sección si es búsqueda
+                const section = carousel.closest('.catalog-row');
+                const rowTitle = section?.querySelector('.row-title');
+                if (rowTitle) rowTitle.textContent = `🔍 Resultados para "${q}"`;
+                
+                CATALOG_UI.renderCarousel(targetCarousel, filtered, null, availableIds);
+                if (section) section.classList.remove('hidden');
+            } else if (grid) {
+                // Compatibilidad con cuadrícula antigua (si quedase alguna)
                 grid.innerHTML = '';
-                const filtered = res.results.filter(item => {
-                    const id = item.id.toString();
-                    if (isMoviesPage) return availableMovies.has(id);
-                    if (isSeriesPage) return availableSeries.has(id);
-                    return availableIds.has(id);
-                });
-
                 if (filtered.length) {
                     filtered.forEach(item => {
-                        const type = item.media_type || (isSeriesPage ? 'tv' : 'movie');
-                        const card = CATALOG_UI.createMovieCard(item, type, true);
+                        const card = CATALOG_UI.createMovieCard(item, item.media_type || (isSeriesPage ? 'tv' : 'movie'), true);
                         grid.appendChild(card);
                     });
                 } else {
-                    grid.innerHTML = '<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No se encontraron resultados disponibles para "' + q + '".</p>';
+                    grid.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No se encontraron resultados disponibles para "${q}".</p>`;
                 }
-                const btnLoadMore = document.getElementById('btnLoadMore');
-                if (btnLoadMore) btnLoadMore.classList.add('hidden');
-            } else if (carousel) {
-                // En Home, mostramos todo con badges
-                CATALOG_UI.renderCarousel('popularMoviesCarousel', res.results, null, availableIds);
             }
         }
     }, 500);
@@ -455,3 +490,16 @@ if (btnModalPlay) btnModalPlay.addEventListener('click', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => initAuth());
+
+// ---- CAROUSEL NAVIGATION ----
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.carousel-arrow');
+    if (!btn) return;
+    const wrapper = btn.closest('.carousel-wrapper');
+    const carousel = wrapper ? wrapper.querySelector('.carousel') : null;
+    if (!carousel) return;
+    
+    const direction = btn.classList.contains('carousel-arrow-left') ? -1 : 1;
+    const scrollAmount = carousel.clientWidth * 0.8;
+    carousel.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+});

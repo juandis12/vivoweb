@@ -43,33 +43,94 @@
     <!-- Contenido de Películas -->
     <main id="dashboardSection" class="dashboard-container">
         
-        <header class="grid-header">
-            <nav class="breadcrumbs">
-                <a href="index.html">Inicio</a>
-                <span>/</span>
-                <span>Películas</span>
-            </nav>
-            <h1 class="grid-title">Todas las Películas</h1>
-            <p class="text-muted">Explora los títulos más populares y mejor valorados.</p>
-        </header>
-
-        <section class="movies-grid-container">
-            <div id="gridContainer" class="movies-grid">
-                <!-- Se llenará dinámicamente -->
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
+        <!-- Hero Banner Dinámico -->
+        <section class="hero-banner" id="heroBanner">
+            <div class="hero-overlay"></div>
+            <div class="hero-genre-badge" id="heroGenre"></div>
+            <div class="hero-content">
+                <div class="hero-logo-title" id="heroLogoTitle">
+                    <h1 id="heroTitle">Películas Premium</h1>
+                </div>
+                <p id="heroOverview" class="hero-overview">Explora lo mejor del cine en VivoTV.</p>
+                <div class="hero-meta" id="heroMeta"></div>
+                <div class="hero-buttons">
+                    <button class="btn btn-play" id="btnHeroPlay">▶ Reproducir</button>
+                    <button class="btn btn-outline" id="btnHeroInfo">Ver Detalles</button>
+                </div>
             </div>
-            
-            <div id="gridLoader" class="grid-loader hidden">
-                <div class="loader"></div>
-            </div>
-
-            <div style="text-align: center; margin-top: 40px;">
-                <button id="btnLoadMore" class="btn btn-outline">Cargar más películas</button>
-            </div>
+            <div class="hero-indicators" id="heroIndicators"></div>
         </section>
 
+        <div class="catalogs-wrapper">
+            <!-- Populares -->
+            <section class="catalog-row" id="popularSection">
+                <div class="row-header">
+                    <h3 class="row-title">🎬 Películas Populares</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="popularCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Mejor Valoradas -->
+            <section class="catalog-row" id="topRatedSection">
+                <div class="row-header">
+                    <h3 class="row-title">⭐ Mejor Valoradas</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="topRatedCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Géneros -->
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">💥 Acción y Pura Adrenalina</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre1Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">😂 Para Morirse de Risa</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre2Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">💖 Historias de Amor</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre3Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">👻 Noches de Terror</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre4Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+        </div>
     </main>
 
     <!-- Overlay Modal Detalle + Reproductor (Unificado) -->
