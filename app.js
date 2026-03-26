@@ -70,6 +70,7 @@ if (searchBox) {
 async function initAuth() {
     if (!supabase) return;
     const { data: { session } } = await supabase.auth.getSession();
+    console.log('[VivoTV] Session:', session ? `Logged in as ${session.user.email}` : 'Not logged in');
     if (session) await toDashboard(session.user);
     else toAuth();
 
@@ -87,6 +88,12 @@ async function fetchAvailableIds() {
             supabase.from('video_sources').select('tmdb_id'),
             supabase.from('series_episodes').select('tmdb_id')
         ]);
+        
+        if (movies.error) console.error('[VivoTV] Supabase Movies Error:', movies.error);
+        if (series.error) console.error('[VivoTV] Supabase Series Error:', series.error);
+
+        console.log('[VivoTV] Raw Movies Data:', movies.data?.length || 0, 'items');
+        console.log('[VivoTV] Raw Series Data:', series.data?.length || 0, 'items');
         
         availableMovies = new Set();
         availableSeries = new Set();
@@ -106,7 +113,10 @@ async function fetchAvailableIds() {
                 availableIds.add(id);
             });
         }
-    } catch (e) { console.error('Error fetching available IDs:', e); }
+    } catch (e) { 
+        console.error('Error fetching available IDs:', e);
+        showToast('Error cargando biblioteca. Revisa tu conexión.');
+    }
 }
 
 async function toDashboard(user) {
@@ -202,31 +212,44 @@ async function loadGridData(type, page, append = false) {
         const isSeriesPage = document.body.classList.contains('page-series');
 
         if (isMoviesPage || isSeriesPage) {
+            console.log(`[VivoTV] Cargando rejilla filtrada (${type}). IDs totales:`, 
+                type === 'tv' ? availableSeries.size : availableMovies.size);
+            
             const targetSet = type === 'tv' ? availableSeries : availableMovies;
             const allIds = Array.from(targetSet);
             
-            // Paginación manual simple para el set local
-            const perPage = 20;
+            const perPage = 28; // Aumentar un poco para llenar pantallas grandes
             const start = (page - 1) * perPage;
             const end   = start + perPage;
             const pageIds = allIds.slice(start, end);
 
-            if (loader) loader.classList.add('hidden');
             if (btnLoadMore) btnLoadMore.classList.toggle('hidden', end >= allIds.length);
 
             if (pageIds.length) {
-                // Fetch details for each ID
-                const detailsArray = await Promise.all(
-                    pageIds.map(id => TMDB_SERVICE.getDetails(id, type).catch(() => null))
-                );
+                // Fetch details in smaller chunks to avoid rate limiting
+                const detailsArray = [];
+                const chunkSize = 10;
+                for (let i = 0; i < pageIds.length; i += chunkSize) {
+                    const chunk = pageIds.slice(i, i + chunkSize);
+                    console.log(`[VivoTV] Fetching chunk ${i/chunkSize + 1} for ${type}...`);
+                    const chunkRes = await Promise.all(
+                        chunk.map(id => TMDB_SERVICE.getDetails(id, type).catch(() => null))
+                    );
+                    detailsArray.push(...chunkRes);
+                }
+
+                if (loader) loader.classList.add('hidden');
 
                 detailsArray.forEach(item => {
                     if (!item || !item.poster_path) return;
                     const card = CATALOG_UI.createMovieCard(item, type, true);
                     container.appendChild(card);
                 });
-            } else if (!append) {
-                container.innerHTML = '<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay títulos disponibles en este momento.</p>';
+            } else {
+                if (loader) loader.classList.add('hidden');
+                if (!append) {
+                    container.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay ${type === 'tv' ? 'series' : 'películas'} disponibles en este momento.</p>`;
+                }
             }
             return;
         }
