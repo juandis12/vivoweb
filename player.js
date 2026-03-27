@@ -119,13 +119,16 @@ export const PLAYER_LOGIC = {
             const savedSecs  = progressObj?.progress_seconds || 0;
 
             if (savedSecs > 60) {
-                this.showResumePrompt(savedSecs, 
-                    () => this._playSource(data.stream_url, savedSecs), // Resume
-                    () => { // Start from scratch
+                this.showFloatingResumeCard({
+                    thumb: `${CONFIG.TMDB_IMAGE_CARD}${this.seriesData?.poster_path || ''}`,
+                    title: '¿Continuar viendo?',
+                    desc: `Te quedaste en el minuto ${this.formatTime(savedSecs)}`,
+                    onResume: () => this._playSource(data.stream_url, savedSecs),
+                    onRestart: () => {
                         this._playSource(data.stream_url, 0);
                         this._saveProgress(tmdbId, 'movie', null, null, 0, supabaseClient);
                     }
-                );
+                });
             } else {
                 this._playSource(data.stream_url, 0);
             }
@@ -224,9 +227,16 @@ export const PLAYER_LOGIC = {
 
         seriesInfo.classList.remove('hidden');
         
-        // Si hay progreso global, mostrar el banner de reanudación rápida
+        // Si hay progreso global, mostrar la nueva tarjeta flotante innovadora
         if (this.lastSeriesProgress) {
-            this.renderSeriesResumeBanner(this.lastSeriesProgress);
+            const p = this.lastSeriesProgress;
+            this.showFloatingResumeCard({
+                thumb: `${CONFIG.TMDB_IMAGE_CARD}${this.seriesData?.poster_path || ''}`,
+                title: 'Continuar Serie',
+                desc: `T${p.season_number} E${p.episode_number} — ${this.formatTime(p.progress_seconds)}`,
+                onResume: () => this.resumeLastEpisode(p.season_number, p.episode_number),
+                onRestart: null // En el global no damos opción de reiniciar todo
+            });
         }
     },
 
@@ -243,31 +253,6 @@ export const PLAYER_LOGIC = {
             .maybeSingle();
         
         this.lastSeriesProgress = data || null;
-    },
-
-    renderSeriesResumeBanner(progress) {
-        const seriesInfo = document.getElementById('seriesInfo');
-        if (!seriesInfo) return;
-
-        // Limpiar previo
-        document.querySelector('.series-resume-banner')?.remove();
-
-        const banner = document.createElement('div');
-        banner.className = 'series-resume-banner glass-panel';
-        banner.innerHTML = `
-            <div class="resume-banner-text">
-                🍿 Sigues en la <strong>Temporada ${progress.season_number}</strong>, Episodio <strong>${progress.episode_number}</strong>
-            </div>
-            <button class="btn-resume-series" id="btnContinueSeries">Continuar</button>
-        `;
-
-        seriesInfo.prepend(banner);
-
-        document.getElementById('btnContinueSeries').onclick = () => {
-            this.resumeLastEpisode(progress.season_number, progress.episode_number);
-            banner.style.opacity = '0';
-            setTimeout(() => banner.remove(), 300);
-        };
     },
 
     resumeLastEpisode(seasonNum, epNum) {
@@ -651,53 +636,53 @@ export const PLAYER_LOGIC = {
     },
 
     // ──────────────────────────────
-    // AVISO CONTINUAR REPRODUCCIÓN
+    // TARJETA FLOTANTE DE CONTINUIDAD (DISEÑO INNOVADOR)
     // ──────────────────────────────
-    showResumePrompt(seconds, onResume, onRestart) {
+    showFloatingResumeCard({ thumb, title, desc, onResume, onRestart }) {
         const playerContainer = document.getElementById('playerContainer');
         const placeholder     = document.getElementById('videoPlaceholder');
         if (!playerContainer) return;
 
-        // Asegurar que el placeholder está oculto para que no se traslape con el prompt
         if (placeholder) placeholder.classList.add('hidden');
+        document.querySelector('.glass-floating-card')?.remove();
 
-        // Limpiar cualquier prompt previo
-        document.querySelector('.resume-prompt')?.remove();
-
-        const formatTime = (s) => {
-            const h = Math.floor(s / 3600);
-            const m = Math.floor((s % 3600) / 60);
-            const sc = s % 60;
-            return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sc).padStart(2, '0')}` : `${m}:${String(sc).padStart(2, '0')}`;
-        };
-
-        const prompt = document.createElement('div');
-        prompt.className = 'resume-prompt';
-        prompt.innerHTML = `
-            <div class="resume-card glass-panel">
-                <h3>¿Continuar viendo?</h3>
-                <p>Te quedaste en el minuto <strong>${formatTime(seconds)}</strong>. ¿Deseas retomar desde ahí?</p>
-                <div class="resume-actions">
-                    <button class="resume-btn resume-confirm" id="btnResumeContinue">Continuar</button>
-                    <button class="resume-btn resume-cancel" id="btnResumeRestart">Desde el inicio</button>
+        const card = document.createElement('div');
+        card.className = 'glass-floating-card';
+        card.innerHTML = `
+            <img src="${thumb}" class="floating-card-thumb" alt="Thumbnail">
+            <div class="floating-card-content">
+                <h3>${title}</h3>
+                <p>${desc}</p>
+                <div class="floating-card-actions">
+                    <button class="float-btn float-btn-primary" id="btnFloatResume">Continuar</button>
+                    ${onRestart ? `<button class="float-btn float-btn-outline" id="btnFloatRestart">Reiniciar</button>` : ''}
                 </div>
             </div>
         `;
 
         playerContainer.style.position = 'relative';
-        playerContainer.appendChild(prompt);
+        playerContainer.appendChild(card);
 
-        document.getElementById('btnResumeContinue').onclick = () => {
-            prompt.style.opacity = '0';
-            setTimeout(() => prompt.remove(), 300);
+        document.getElementById('btnFloatResume').onclick = () => {
+            card.style.transform = 'translateY(100px) scale(0.8)';
+            card.style.opacity = '0';
+            setTimeout(() => card.remove(), 400);
             onResume();
         };
 
-        document.getElementById('btnResumeRestart').onclick = () => {
-            prompt.style.opacity = '0';
-            setTimeout(() => prompt.remove(), 300);
-            onRestart();
-        };
+        if (onRestart) {
+            document.getElementById('btnFloatRestart').onclick = () => {
+                card.remove();
+                onRestart();
+            };
+        }
+    },
+
+    formatTime(s) {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sc = s % 60;
+        return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sc).padStart(2, '0')}` : `${m}:${String(sc).padStart(2, '0')}`;
     },
 
     // ──────────────────────────────
@@ -705,7 +690,7 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     closeModal() {
         this._stopProgressTimer();
-        document.querySelector('.resume-prompt')?.remove();
+        document.querySelector('.glass-floating-card')?.remove();
         const modal  = document.getElementById('detailModal');
         const video  = document.getElementById('videoPlayer');
         const iframe = document.getElementById('videoIframe');

@@ -588,7 +588,6 @@ nav a.active::after { width: 24px; }
 
 .movie-tooltip-btn {
     width: 100%; padding: 10px;
-    font-size: 0.9rem;
     background: var(--primary); color: white; border: none;
     border-radius: 8px; font-weight: 700; cursor: pointer;
     transition: all 0.3s;
