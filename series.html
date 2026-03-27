@@ -184,6 +184,18 @@
                     </div>
                     <p id="modalOverview" class="modal-overview-text"></p>
                     
+                    <!-- Player Container (Movido arriba para visibilidad inmediata) -->
+                    <div class="player-container" id="playerContainer">
+                        <div id="videoPlaceholder" class="video-preview-box">
+                            <div class="placeholder-inner">
+                                <svg viewBox="0 0 24 24" width="48" fill="rgba(255,255,255,0.2)"><path d="M8 5v14l11-7z"/></svg>
+                                <p>Cargando información...</p>
+                            </div>
+                        </div>
+                        <video id="videoPlayer" class="hidden" controls crossorigin="anonymous" playsinline></video>
+                        <iframe id="videoIframe" class="hidden" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                    </div>
+
                     <div class="modal-actions">
                         <button class="btn btn-play btn-sm" id="btnModalPlay">Reproducir</button>
                         <button class="btn btn-outline btn-sm" id="btnAddToMyList">
@@ -207,11 +219,6 @@
                             <h4 id="episodesSectionTitle" class="episodes-title"></h4>
                             <div class="episodes-grid" id="episodesGrid"></div>
                         </div>
-                    </div>
-                    <div class="player-container" id="playerContainer">
-                        <div id="videoPlaceholder" class="video-preview-box"></div>
-                        <video id="videoPlayer" class="hidden" controls playsinline></video>
-                        <iframe id="videoIframe" class="hidden" frameborder="0" allowfullscreen></iframe>
                     </div>
                     <p id="sourceError" class="error-msg hidden">No disponible en este momento.</p>
                 </div>
