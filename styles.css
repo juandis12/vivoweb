@@ -504,14 +504,47 @@ nav a.active::after { width: 24px; }
 
 /* Innovative Floating Resume Card (Glass Pebble) */
 .glass-floating-card {
-    position: fixed; bottom: 40px; right: 40px; z-index: 9999;
-    width: 350px; background: rgba(5, 5, 5, 0.4); 
-    backdrop-filter: blur(35px) saturate(200%) brightness(120%);
-    border: 1px solid rgba(255,255,255,0.18); border-radius: 24px;
-    padding: 20px; display: flex; align-items: center; gap: 18px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(var(--primary-rgb), 0.15);
+    position: fixed; bottom: 20px; right: 20px; z-index: 5500; /* Debajo de modales */
+    width: 280px; background: rgba(15, 10, 30, 0.7); 
+    backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 18px;
+    padding: 12px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
     animation: floatingPebbleIn 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
     pointer-events: all;
+    transition: all 0.3s ease;
+}
+
+.floating-card-thumb {
+    width: 45px; height: 65px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+}
+.floating-card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.floating-card-content { flex: 1; min-width: 0; }
+.floating-card-content h3 { font-size: 0.85rem; font-weight: 800; margin-bottom: 2px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.floating-card-content p { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; }
+
+.floating-card-actions { display: flex; gap: 8px; }
+.float-btn { padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; }
+.float-btn-primary { background: var(--primary); color: white; }
+.float-btn-outline { background: rgba(255,255,255,0.1); color: white; }
+
+@keyframes floatingPebbleIn {
+    from { opacity: 0; transform: translateY(40px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Responsivo para el Pebble */
+@media (max-width: 600px) {
+    .glass-floating-card {
+        bottom: 85px; right: 15px; left: 15px; width: auto; 
+        padding: 10px; gap: 10px;
+        z-index: 4000; /* Encima de nav pero debajo de todo lo demás */
+    }
+    .floating-card-thumb { width: 35px; height: 50px; }
+    .floating-card-content h3 { font-size: 0.8rem; }
+    .floating-card-actions { gap: 5px; }
+    .float-btn { padding: 4px 10px; font-size: 0.7rem; }
 }
 
 /* Flechas de navegación del carrusel */

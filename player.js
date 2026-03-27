@@ -43,6 +43,10 @@ export const PLAYER_LOGIC = {
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         document.getElementById('playerContainer')?.classList.remove('active'); // ESCONDER POR DEFECTO
+        
+        // OCULTAR PEBBLE SI EXISTE
+        document.querySelector('.glass-floating-card')?.style.setProperty('display', 'none', 'important');
+
         videoPlayer.classList.add('hidden');
         videoIframe.classList.add('hidden');
         videoIframe.src = '';
@@ -697,6 +701,10 @@ export const PLAYER_LOGIC = {
         document.getElementById('playerContainer')?.classList.remove('active');
         modal.classList.add('hidden');
         document.body.style.overflow = '';
+        
+        // RE-MOSTRAR PEBBLE SI EXISTE
+        document.querySelector('.glass-floating-card')?.style.setProperty('display', 'flex');
+
         video.pause(); video.src  = '';
         iframe.src = '';
         if (this.hls) { this.hls.destroy(); this.hls = null; }
