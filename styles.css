@@ -796,20 +796,12 @@ nav a.active::after { width: 24px; }
    12. MODAL SERIES — Info de temporadas/episodios
  ================================================ */
 .series-info {
-    margin: 15px 0; padding: 15px;
-    background: rgba(124, 58, 237, 0.03);
-    border: 1px solid rgba(124, 58, 237, 0.1);
-    border-radius: 16px;
+    margin: 15px 0;
+    /* Sin fondo ni borde para que se integre con el modal */
     animation: fadeIn 0.4s ease;
 }
 
-.series-stats { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
-.series-stat { flex: 1; text-align: center; }
-.stat-number { font-size: 1.5rem; font-weight: 900; color: var(--primary); }
-.stat-label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-.series-stat-divider { width: 1px; height: 25px; background: rgba(255,255,255,0.1); }
-
-/* Pills de temporadas */
+.series-stats { display: none; } /* ELIMINADO POR PETICIÓN DEL USUARIO */
 .seasons-label {
     font-size: 0.8rem; font-weight: 600;
     color: var(--text-muted); margin-bottom: 10px;

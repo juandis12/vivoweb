@@ -236,6 +236,17 @@
                     </div>
                     <p id="modalOverview" class="modal-overview-text">Descripción...</p>
 
+                    <div class="modal-actions">
+                        <button class="btn btn-play btn-sm" id="btnModalPlay">
+                            <svg viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            Reproducir
+                        </button>
+                        <button class="btn btn-outline btn-sm" id="btnAddToMyList">
+                            <svg id="favIconSvg" viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                            <span id="favBtnText">Mi Lista</span>
+                        </button>
+                    </div>
+
                     <!-- Info de Series (oculto para películas) -->
                     <div id="seriesInfo" class="series-info hidden">
                         <div class="series-stats">
@@ -264,17 +275,6 @@
                             <h4 id="episodesSectionTitle" class="episodes-title"></h4>
                             <div class="episodes-grid" id="episodesGrid"></div>
                         </div>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button class="btn btn-play btn-sm" id="btnModalPlay">
-                            <svg viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            Reproducir
-                        </button>
-                        <button class="btn btn-outline btn-sm" id="btnAddToMyList">
-                            <svg id="favIconSvg" viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-                            <span id="favBtnText">Mi Lista</span>
-                        </button>
                     </div>
 
                     <!-- Player Container -->
