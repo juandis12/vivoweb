@@ -343,7 +343,6 @@ export const PLAYER_LOGIC = {
 
         if (savedSecs > 30) {
             // OCULTAR placeholder mientras se muestra el prompt de Resume
-            placeholder.classList.add('hidden');
             this.showResumePrompt(savedSecs,
                 () => this._playSource(ep.stream_url, savedSecs), // Resume
                 () => { // Start scratch
@@ -378,6 +377,8 @@ export const PLAYER_LOGIC = {
         } else {
             video.classList.add('hidden');
             iframe.classList.remove('hidden');
+            // Bloquear popups y redirecciones con Sandbox
+            iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
             iframe.src = url;
             this._startIframeTracking();
         }
@@ -639,11 +640,7 @@ export const PLAYER_LOGIC = {
     // TARJETA FLOTANTE DE CONTINUIDAD (DISEÑO INNOVADOR)
     // ──────────────────────────────
     showFloatingResumeCard({ thumb, title, desc, onResume, onRestart }) {
-        const playerContainer = document.getElementById('playerContainer');
-        const placeholder     = document.getElementById('videoPlaceholder');
-        if (!playerContainer) return;
-
-        if (placeholder) placeholder.classList.add('hidden');
+        // Eliminar cualquier instancia previa
         document.querySelector('.glass-floating-card')?.remove();
 
         const card = document.createElement('div');
@@ -660,8 +657,7 @@ export const PLAYER_LOGIC = {
             </div>
         `;
 
-        playerContainer.style.position = 'relative';
-        playerContainer.appendChild(card);
+        document.body.appendChild(card); // Fixed position -> Append to body
 
         document.getElementById('btnFloatResume').onclick = () => {
             card.style.transform = 'translateY(100px) scale(0.8)';
