@@ -108,11 +108,23 @@ export const PLAYER_LOGIC = {
                     <p>Sin enlace disponible para este título</p>
                 </div>`;
         } else {
-            // Reanudar desde el minuto guardado
-            const progress = await this._getProgress(tmdbId, 'movie', null, null, supabaseClient);
-            this._playSource(data.stream_url, progress?.progress_seconds || 0);
+            // Check progress
+            const progressObj = await this._getProgress(tmdbId, 'movie', null, null, supabaseClient);
+            const savedSecs  = progressObj?.progress_seconds || 0;
 
-            // Guardar en historial al empezar
+            if (savedSecs > 60) {
+                this.showResumePrompt(savedSecs, 
+                    () => this._playSource(data.stream_url, savedSecs), // Resume
+                    () => { // Start from scratch
+                        this._playSource(data.stream_url, 0);
+                        this._saveProgress(tmdbId, 'movie', null, null, 0, supabaseClient);
+                    }
+                );
+            } else {
+                this._playSource(data.stream_url, 0);
+            }
+            
+            // Initial log to history
             this._saveProgress(tmdbId, 'movie', null, null, 0, supabaseClient);
         }
     },
@@ -262,16 +274,29 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     // REPRODUCIR UN EPISODIO
     // ──────────────────────────────
-    async _playEpisode(tmdbId, seasonNum, ep, supabaseClient, seekSeconds = 0) {
+    async _playEpisode(tmdbId, seasonNum, ep, supabaseClient) {
         const placeholder = document.getElementById('videoPlaceholder');
         placeholder.classList.remove('hidden');
         placeholder.innerHTML = '<div class="placeholder-inner"><p>Cargando episodio...</p></div>';
 
-        this._playSource(ep.stream_url, seekSeconds);
+        // Check progress for this specific episode
+        const progressObj = await this._getProgress(tmdbId, 'tv', seasonNum, ep.episode_number, supabaseClient);
+        const savedSecs  = progressObj?.progress_seconds || 0;
 
-        // Guardar en historial inmediatamente al iniciar
-        await this._saveProgress(tmdbId, 'tv', seasonNum, ep.episode_number, seekSeconds, supabaseClient);
-        // Disparar actualización de "Recientes"
+        if (savedSecs > 30) {
+            this.showResumePrompt(savedSecs,
+                () => this._playSource(ep.stream_url, savedSecs), // Resume
+                () => { // Start scratch
+                    this._playSource(ep.stream_url, 0);
+                    this._saveProgress(tmdbId, 'tv', seasonNum, ep.episode_number, 0, supabaseClient);
+                }
+            );
+        } else {
+            this._playSource(ep.stream_url, 0);
+            await this._saveProgress(tmdbId, 'tv', seasonNum, ep.episode_number, 0, supabaseClient);
+        }
+
+        // Update history sidebar
         window.dispatchEvent(new CustomEvent('update-recent'));
     },
 
@@ -496,10 +521,57 @@ export const PLAYER_LOGIC = {
     },
 
     // ──────────────────────────────
+    // AVISO CONTINUAR REPRODUCCIÓN
+    // ──────────────────────────────
+    showResumePrompt(seconds, onResume, onRestart) {
+        const playerContainer = document.getElementById('playerContainer');
+        if (!playerContainer) return;
+
+        // Limpiar cualquier prompt previo
+        document.querySelector('.resume-prompt')?.remove();
+
+        const formatTime = (s) => {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sc = s % 60;
+            return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sc).padStart(2, '0')}` : `${m}:${String(sc).padStart(2, '0')}`;
+        };
+
+        const prompt = document.createElement('div');
+        prompt.className = 'resume-prompt';
+        prompt.innerHTML = `
+            <div class="resume-card glass-panel">
+                <h3>¿Continuar viendo?</h3>
+                <p>Te quedaste en el minuto <strong>${formatTime(seconds)}</strong>. ¿Deseas retomar desde ahí?</p>
+                <div class="resume-actions">
+                    <button class="resume-btn resume-confirm" id="btnResumeContinue">Continuar</button>
+                    <button class="resume-btn resume-cancel" id="btnResumeRestart">Desde el inicio</button>
+                </div>
+            </div>
+        `;
+
+        playerContainer.style.position = 'relative';
+        playerContainer.appendChild(prompt);
+
+        document.getElementById('btnResumeContinue').onclick = () => {
+            prompt.style.opacity = '0';
+            setTimeout(() => prompt.remove(), 300);
+            onResume();
+        };
+
+        document.getElementById('btnResumeRestart').onclick = () => {
+            prompt.style.opacity = '0';
+            setTimeout(() => prompt.remove(), 300);
+            onRestart();
+        };
+    },
+
+    // ──────────────────────────────
     // CERRAR MODAL
     // ──────────────────────────────
     closeModal() {
         this._stopProgressTimer();
+        document.querySelector('.resume-prompt')?.remove();
         const modal  = document.getElementById('detailModal');
         const video  = document.getElementById('videoPlayer');
         const iframe = document.getElementById('videoIframe');

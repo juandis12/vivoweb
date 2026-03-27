@@ -588,7 +588,8 @@ nav a.active::after { width: 24px; }
 .movie-tooltip-year { color: var(--text-muted); font-weight: 500; }
 
 .movie-tooltip-btn {
-    width: 100%; padding: 10px; font-size: 0.9rem;
+    width: 100%; padding: 10px;
+    font-size: 0.9rem;
     background: var(--primary); color: white; border: none;
     border-radius: 8px; font-weight: 700; cursor: pointer;
     transition: all 0.3s;
@@ -798,11 +799,14 @@ nav a.active::after { width: 24px; }
 }
 
 /* Grid de episodios */
-.episodes-section {
-    margin-top: 14px;
+.episodes-section { margin-top: 30px; animation: fadeIn 0.4s ease; }
+.episodes-title {
+    font-size: 1.1rem; font-weight: 700; margin-bottom: 20px;
+    color: var(--text-primary); border-left: 3px solid var(--primary);
+    padding-left: 14px; letter-spacing: -0.5px;
 }
 .episodes-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 12px; max-height: 280px; overflow-y: auto; padding-right: 5px;
 }
 .episodes-grid::-webkit-scrollbar { width: 4px; }
