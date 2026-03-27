@@ -85,6 +85,19 @@ button { font-family: inherit; cursor: pointer; }
 .empty-state h2 { font-family: 'Epilogue', sans-serif; margin-bottom: 10px; }
 .empty-state p { opacity: 0.6; margin-bottom: 30px; }
 
+/* Utility de Páginas Secundarias */
+.main-content { min-height: 100vh; padding-top: 100px; }
+.section-padding { padding: 0 var(--side-padding) 60px; }
+.section-header { margin-bottom: 45px; }
+.section-title { 
+    font-size: clamp(2.2rem, 5vw, 3.5rem); font-weight: 900; 
+    letter-spacing: -2px; margin-bottom: 12px;
+    background: linear-gradient(to bottom, #fff 60%, #cbd5e1 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.section-subtitle { color: var(--text-muted); font-size: 1.15rem; max-width: 600px; line-height: 1.6; }
+
 /* ================================================
    3. SPLASH SCREEN
 ================================================ */

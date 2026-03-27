@@ -12,19 +12,22 @@
 </head>
 <body class="page-series">
 
-    <!-- Splash Screen -->
-    <div id="splashScreen" class="splash-screen hidden">
+    <!-- Splash Screen animado -->
+    <div id="splashScreen" class="splash-screen">
         <div class="splash-logo">VIVO<span>TV</span></div>
+        <div class="splash-bars">
+            <div></div><div></div><div></div><div></div><div></div>
+        </div>
     </div>
 
     <!-- Navbar -->
-    <header class="navbar scrolled" id="navbar">
-        <div class="logo">VIVO<span>TV</span></div>
-        <nav id="mainNav">
-            <a href="index.html" id="navInicio">Inicio</a>
-            <a href="peliculas.html" id="navPeliculas">Películas</a>
-            <a href="series.html" class="active" id="navSeries">Series</a>
-            <a href="milista.html" id="linkMyList">Mi Lista</a>
+    <header class="navbar" id="navbar">
+        <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">VIVO<span>TV</span></a></div>
+        <nav id="mainNav" class="hidden">
+            <a href="index.html">Inicio</a>
+            <a href="peliculas.html">Películas</a>
+            <a href="series.html" class="active">Series</a>
+            <a href="milista.html">Mi Lista</a>
         </nav>
         <div class="user-actions">
             <div class="search-box" id="searchBox">
@@ -46,6 +49,7 @@
         <div class="mesh-gradient catalog-bg">
             <div class="mesh-circle circle-1"></div>
             <div class="mesh-circle circle-2"></div>
+            <div class="mesh-circle circle-3"></div>
         </div>
         <!-- Hero Banner Dinámico -->
         <section class="hero-banner" id="heroBanner">
