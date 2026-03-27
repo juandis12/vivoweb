@@ -42,6 +42,7 @@ export const PLAYER_LOGIC = {
         // Reset UI
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        document.getElementById('playerContainer')?.classList.remove('active'); // ESCONDER POR DEFECTO
         videoPlayer.classList.add('hidden');
         videoIframe.classList.add('hidden');
         videoIframe.src = '';
@@ -366,7 +367,9 @@ export const PLAYER_LOGIC = {
         const video       = document.getElementById('videoPlayer');
         const iframe      = document.getElementById('videoIframe');
         const placeholder = document.getElementById('videoPlaceholder');
+        const container   = document.getElementById('playerContainer');
 
+        container?.classList.add('active'); // MOSTRAR CONTENEDOR
         placeholder.classList.add('hidden');
 
         const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(url);
@@ -546,6 +549,7 @@ export const PLAYER_LOGIC = {
     initStream(url, seekSeconds = 0) {
         const video       = document.getElementById('videoPlayer');
         const placeholder = document.getElementById('videoPlaceholder');
+        document.getElementById('playerContainer')?.classList.add('active'); 
         placeholder.classList.add('hidden');
         video.classList.remove('hidden');
 
@@ -690,6 +694,7 @@ export const PLAYER_LOGIC = {
         const modal  = document.getElementById('detailModal');
         const video  = document.getElementById('videoPlayer');
         const iframe = document.getElementById('videoIframe');
+        document.getElementById('playerContainer')?.classList.remove('active');
         modal.classList.add('hidden');
         document.body.style.overflow = '';
         video.pause(); video.src  = '';

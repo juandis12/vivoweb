@@ -127,16 +127,23 @@ export const CATALOG_UI = {
         skeletonWrap.className = 'carousel-skeleton';
         for (let i = 0; i < count; i++) {
             const item = document.createElement('div');
-            item.className = 'skeleton skeleton-item';
+            item.className = 'skeleton-card';
             skeletonWrap.appendChild(item);
         }
         container.appendChild(skeletonWrap);
     },
 
-    renderCarousel(containerId, items, typeOverride = null, availableIds = new Set()) {
+    renderCarousel(containerId, items, typeOverride = null, availableIds = new Set(), titleOverride = null) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
+        // Actualizar título si se proporciona
+        if (titleOverride) {
+            const section = container.closest('.catalog-row');
+            const rowTitle = section?.querySelector('.row-title');
+            if (rowTitle) rowTitle.textContent = titleOverride;
+        }
+
         // Limpiar skeletons si existen
         container.innerHTML = '';
 

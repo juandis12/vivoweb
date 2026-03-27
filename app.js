@@ -36,11 +36,12 @@ const btnPass       = document.getElementById('btnTogglePass');
 const authTitle     = document.getElementById('authTitle');
 const authSubtitle  = document.getElementById('authSubtitle');
 
-let isLoginMode = true;
+let isLoginMode = !window.location.pathname.includes('registro.html');
 let heroItems   = [];
 let availableMovies = new Set();
 let availableSeries = new Set();
-let availableIds    = new Set(); // Mantener para compatibilidad en carruseles mixtos
+let availableIds    = new Set();
+let searchTimeout   = null;
 
 // ================================================
 // INNOVACIÓN: UI INTERACTIVA
@@ -94,14 +95,72 @@ if (searchBox) {
 }
 
 // ================================================
+// BUSQUEDA REAL-TIME & DEBOUNCING
+// ================================================
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        if (searchBox && btnClear) {
+            btnClear.classList.toggle('hidden', q.length === 0);
+        }
+        
+        if (searchTimeout) clearTimeout(searchTimeout);
+        if (q.length < 3) return;
+
+        searchTimeout = setTimeout(async () => {
+            const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query: q });
+            if (res && res.results) {
+                const filtered = res.results.filter(item => availableIds.has(item.id.toString()));
+                const isMoviesPage = document.body.classList.contains('page-movies');
+                const isSeriesPage = document.body.classList.contains('page-series');
+                const isSearchPage = window.location.pathname.includes('busqueda.html');
+                
+                if (isSearchPage) {
+                    renderSearchResults(filtered, q);
+                } else {
+                    const targetId = isMoviesPage ? 'popularCarousel' : (isSeriesPage ? 'popularCarousel' : 'trendingCarousel');
+                    CATALOG_UI.renderCarousel(targetId, filtered, null, availableIds, `🔍 Resultados para "${q}"`);
+                }
+            }
+        }, 400);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const q = e.target.value.trim();
+            if (q.length >= 3) {
+                window.location.href = `busqueda.html?q=${encodeURIComponent(q)}`;
+            }
+        }
+    });
+}
+// ================================================
 // SUPABASE AUTH
 // ================================================
 async function initAuth() {
     if (!supabase) return;
     const { data: { session } } = await supabase.auth.getSession();
-    console.log('[VivoTV] Session:', session ? `Logged in as ${session.user.email}` : 'Not logged in');
-    if (session) await toDashboard(session.user);
-    else toAuth();
+    
+    // Si estamos en una página que requiere login y no hay sesión, redirigir
+    const protectedPages = ['milista.html'];
+    const isProtected = protectedPages.some(p => window.location.pathname.includes(p));
+
+    if (session) {
+        // Si hay sesión y estamos en login/registro, ir al home
+        const loginPages = ['login_screen.html', 'registro.html'];
+        const isLogin = loginPages.some(p => window.location.pathname.includes(p));
+        if (isLogin) {
+            window.location.href = 'index.html';
+            return;
+        }
+        await toDashboard(session.user);
+    } else {
+        if (isProtected) {
+            window.location.href = 'index.html'; // El index tiene el form de login
+            return;
+        }
+        toAuth();
+    }
 
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN')  await toDashboard(session.user);
@@ -167,7 +226,15 @@ async function toDashboard(user) {
     // 1. Cargar disponibilidad
     await fetchAvailableIds();
 
-    // 2. Detectar tipo de página
+    // 2. Inicializar Páginas Específicas
+    if (document.getElementById('favoritesGrid')) {
+        loadMyList();
+    }
+    if (document.getElementById('searchResultsGrid')) {
+        initSearchPage();
+    }
+
+    // 3. Detectar tipo de página para rows
     const isMoviesPage = document.body.classList.contains('page-movies');
     const isSeriesPage = document.body.classList.contains('page-series');
     const pageType = isSeriesPage ? 'tv' : (isMoviesPage ? 'movie' : 'all');
@@ -352,8 +419,12 @@ async function loadGridData(type, page, append = false) {
 }
 
 function toAuth() {
-    const isIndex = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('vivoweb/');
-    if (!isIndex) { window.location.href = 'index.html'; return; }
+    const isAuthPage = window.location.pathname.endsWith('index.html') || 
+                       window.location.pathname.endsWith('registro.html') ||
+                       window.location.pathname === '/' || 
+                       window.location.pathname.endsWith('vivoweb/');
+    
+    if (!isAuthPage) { window.location.href = 'index.html'; return; }
 
     if (authSection) authSection.classList.remove('hidden');
     if (dashSection) dashSection.classList.add('hidden');
@@ -378,14 +449,13 @@ function startHeroRotation() {
 }
 function stopHeroRotation() { if (heroRotationTimer) { clearInterval(heroRotationTimer); heroRotationTimer = null; } }
 
-if (toggleLink) toggleLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    isLoginMode = !isLoginMode;
-    toggleLink.textContent = isLoginMode ? 'Regístrate gratis' : 'Inicia Sesión';
-    if (btnText) btnText.textContent = isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta';
+if (toggleLink) {
+    // Ya no prevenimos el default porque queremos que navegue a registro.html / index.html
+    // Pero actualizamos los textos iniciales según el modo
+    if (btnText) btnText.textContent = isLoginMode ? 'Iniciar Sesión' : 'Registrarme';
     if (authTitle) authTitle.textContent = isLoginMode ? 'Bienvenido de vuelta' : 'Crea tu cuenta';
     if (authSubtitle) authSubtitle.textContent = isLoginMode ? 'Inicia sesión para disfrutar...' : 'Crea tu cuenta gratis...';
-});
+}
 
 if (loginForm) loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -432,76 +502,96 @@ function mapError(msg) {
 }
 
 // NUEVO: Debounce para búsqueda
-let searchDebounceTimer;
-if (searchInput) searchInput.addEventListener('input', (e) => {
-    const q = e.target.value.trim();
-    if (btnClear) btnClear.classList.toggle('hidden', q.length === 0);
-    
-    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
-    
-    if (q.length < 3) return;
 
-    searchDebounceTimer = setTimeout(async () => {
-        const res = await TMDB_SERVICE.search(q);
-        if (res.results.length) {
-            const isMoviesPage = document.body.classList.contains('page-movies');
-            const isSeriesPage = document.body.classList.contains('page-series');
-            const pageType = isSeriesPage ? 'tv' : (isMoviesPage ? 'movie' : 'all');
+async function initSearchPage() {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (!q) return;
 
-            // Filtrar por disponibilidad SIEMPRE
-            const filtered = res.results.filter(item => {
-                const id = item.id.toString();
-                // Si estamos en página de Películas, solo mostrar películas disponibles
-                if (pageType === 'movie' && item.media_type !== 'movie') return false;
-                // Si estamos en página de Series, solo mostrar series disponibles
-                if (pageType === 'tv' && item.media_type !== 'tv') return false;
-                
-                return availableIds.has(id);
-            });
+    const titleEl = document.getElementById('searchTitle');
+    const searchInput = document.getElementById('searchInput');
+    if (titleEl) titleEl.textContent = `Resultados para "${q}"`;
+    if (searchInput) searchInput.value = q;
 
-            // Encontrar el primer carrusel disponible para mostrar resultados
-            const targetCarousel = isMoviesPage ? 'popularCarousel' : 
-                                 (isSeriesPage ? 'popularCarousel' : 'trendingCarousel');
-            
-            const carousel = document.getElementById(targetCarousel);
-            const grid     = document.getElementById('gridContainer');
+    const grid = document.getElementById('searchResultsGrid');
+    if (grid) CATALOG_UI.showSkeletons('searchResultsGrid', 12);
 
-            if (carousel) {
-                // Actualizar título de la sección si es búsqueda
-                const section = carousel.closest('.catalog-row');
-                const rowTitle = section?.querySelector('.row-title');
-                if (rowTitle) rowTitle.textContent = `🔍 Resultados para "${q}"`;
-                
-                CATALOG_UI.renderCarousel(targetCarousel, filtered, null, availableIds);
-                if (section) section.classList.remove('hidden');
-            } else if (grid) {
-                // Compatibilidad con cuadrícula antigua (si quedase alguna)
-                grid.innerHTML = '';
-                if (filtered.length) {
-                    filtered.forEach(item => {
-                        const card = CATALOG_UI.createMovieCard(item, item.media_type || (isSeriesPage ? 'tv' : 'movie'), true);
-                        grid.appendChild(card);
-                    });
-                } else {
-                    grid.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No se encontraron resultados disponibles para "${q}".</p>`;
-                }
-            }
-        }
-    }, 500);
-});
+    const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query: q });
+    if (res && res.results) {
+        const filtered = res.results.filter(item => availableIds.has(item.id.toString()));
+        renderSearchResults(filtered, q);
+    }
+}
+
+function renderSearchResults(results, query) {
+    const grid = document.getElementById('searchResultsGrid');
+    const empty = document.getElementById('noResultsState');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    if (!results || results.length === 0) {
+        empty?.classList.remove('hidden');
+        return;
+    }
+
+    empty?.classList.add('hidden');
+    results.forEach(item => {
+        const type = item.media_type || (item.title ? 'movie' : 'tv');
+        const card = CATALOG_UI.createMovieCard(item, type, true);
+        grid.appendChild(card);
+    });
+}
 
 async function loadMyList() {
     const section = document.getElementById('myListSection');
     const carousel = document.getElementById('myListCarousel');
-    if (!section || !carousel || !supabase) return;
+    const favoritesGrid = document.getElementById('favoritesGrid');
+    const emptyState = document.getElementById('emptyListState');
+    
+    if (!supabase) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: favs } = await supabase.from('user_favorites').select('tmdb_id').eq('user_id', user.id);
-    if (favs?.length) {
-        section.classList.remove('hidden');
-        const details = await Promise.all(favs.map(f => TMDB_SERVICE.getDetails(f.tmdb_id)));
-        CATALOG_UI.renderCarousel('myListCarousel', details, null, availableIds);
-    } else { section.classList.add('hidden'); }
+
+    // Fetch favorites with type
+    const { data: favs } = await supabase.from('user_favorites')
+        .select('tmdb_id, type')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+    // Handle dedicated page grid if exists
+    if (favoritesGrid) {
+        if (!favs || favs.length === 0) {
+            favoritesGrid.innerHTML = '';
+            emptyState?.classList.remove('hidden');
+            return;
+        }
+        emptyState?.classList.add('hidden');
+        
+        // Show skeletons while loading details
+        CATALOG_UI.showSkeletons('favoritesGrid', 8);
+
+        favoritesGrid.innerHTML = '';
+        
+        // Cargar detalles y renderizar en la grilla
+        for (const item of favs) {
+            const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.type || 'movie').catch(() => null);
+            if (!details) continue;
+            const card = CATALOG_UI.createMovieCard(details, item.type || 'movie', true);
+            favoritesGrid.appendChild(card);
+        }
+        return;
+    }
+
+    // Handle home carousel if exists
+    if (section && carousel) {
+        if (favs?.length) {
+            section.classList.remove('hidden');
+            const details = await Promise.all(favs.slice(0, 15).map(f => TMDB_SERVICE.getDetails(f.tmdb_id, f.type || 'movie')));
+            CATALOG_UI.renderCarousel('myListCarousel', details.filter(d => d), null, availableIds);
+        } else {
+            section.classList.add('hidden');
+        }
+    }
 }
 
 async function loadRecentlyWatched() {
