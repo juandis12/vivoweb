@@ -200,12 +200,21 @@ nav a.active::after { width: 24px; }
 /* Avatar de Usuario */
 .user-profile-btn { display: flex; align-items: center; gap: 10px; }
 .avatar {
-    width: 34px; height: 34px; border-radius: 6px;
+    width: 34px; height: 34px; border-radius: 50%;
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 0.85rem;
     flex-shrink: 0;
     box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+    background-size: cover; background-position: center;
+    transition: all 0.3s var(--ease-smooth);
+    border: 1px solid var(--glass-border);
+}
+
+.user-profile-btn:hover .avatar {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px var(--primary-glow);
+    border-color: var(--primary);
 }
 
 /* ================================================

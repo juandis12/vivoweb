@@ -16,6 +16,7 @@ const authSection   = document.getElementById('authSection');
 const dashSection   = document.getElementById('dashboardSection');
 const loginForm     = document.getElementById('loginForm');
 const emailEl       = document.getElementById('email');
+const usernameEl    = document.getElementById('username');
 const passwordEl    = document.getElementById('password');
 const btnSubmit     = document.getElementById('btnSubmit');
 const btnText       = document.getElementById('btnText');
@@ -211,6 +212,31 @@ async function toDashboard(user) {
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
+    if (userName && user.user_metadata?.username) {
+        userName.textContent = user.user_metadata.username;
+        if (userAvatar) {
+            userAvatar.textContent = user.user_metadata.username.charAt(0).toUpperCase();
+            if (user.user_metadata.avatar_url) {
+                userAvatar.style.backgroundImage = `url('${user.user_metadata.avatar_url}')`;
+                userAvatar.style.backgroundSize = 'cover';
+                userAvatar.style.backgroundPosition = 'center';
+                userAvatar.style.color = 'transparent';
+            }
+        }
+    }
+
+    if (userProfile) {
+        userProfile.style.cursor = 'pointer';
+        userProfile.onclick = async () => {
+            const newUrl = prompt("Cambiar logo de perfil (URL de imagen):", user.user_metadata?.avatar_url || "");
+            if (newUrl !== null) {
+                const { error } = await supabase.auth.updateUser({ data: { avatar_url: newUrl } });
+                if (error) showToast("Error al actualizar perfil", "error");
+                else { showToast("¡Logo actualizado!"); location.reload(); }
+            }
+        };
+    }
+
     if (mainNav)     mainNav.classList.remove('hidden');
     if (mobileNav)   mobileNav.style.display = 'flex';
     if (searchBox)   searchBox.classList.remove('hidden');
@@ -468,7 +494,12 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
         } else {
-            const { error } = await supabase.auth.signUp({ email, password });
+            const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
+            const { error } = await supabase.auth.signUp({ 
+                email, 
+                password,
+                options: { data: { username: username } }
+            });
             if (error) throw error;
         }
     } catch (err) {
@@ -576,7 +607,8 @@ async function loadMyList() {
         for (const item of favs) {
             const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.type || 'movie').catch(() => null);
             if (!details) continue;
-            const card = CATALOG_UI.createMovieCard(details, item.type || 'movie', true);
+            const isAvail = availableIds.has(item.tmdb_id.toString()) || availableIds.has(item.tmdb_id);
+            const card = CATALOG_UI.createMovieCard(details, item.type || 'movie', isAvail);
             favoritesGrid.appendChild(card);
         }
         return;
