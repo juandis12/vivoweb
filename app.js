@@ -515,7 +515,12 @@ async function loadRecentlyWatched() {
     section.classList.remove('hidden');
     carousel.innerHTML = '';
     const seen = new Set();
-    const unique = history.filter(h => { if (seen.has(h.tmdb_id)) return false; seen.add(h.tmdb_id); return true; });
+    const unique = history.filter(h => {
+        const id = String(h.tmdb_id);
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
     for (const item of unique) {
         const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.type).catch(() => null);
         if (!details || !details.poster_path) continue;

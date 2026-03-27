@@ -276,14 +276,15 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     async _playEpisode(tmdbId, seasonNum, ep, supabaseClient) {
         const placeholder = document.getElementById('videoPlaceholder');
-        placeholder.classList.remove('hidden');
-        placeholder.innerHTML = '<div class="placeholder-inner"><p>Cargando episodio...</p></div>';
+        placeholder.innerHTML = '<div class="placeholder-inner"><p>Cargando información...</p></div>';
 
         // Check progress for this specific episode
         const progressObj = await this._getProgress(tmdbId, 'tv', seasonNum, ep.episode_number, supabaseClient);
         const savedSecs  = progressObj?.progress_seconds || 0;
 
         if (savedSecs > 30) {
+            // OCULTAR placeholder mientras se muestra el prompt de Resume
+            placeholder.classList.add('hidden');
             this.showResumePrompt(savedSecs,
                 () => this._playSource(ep.stream_url, savedSecs), // Resume
                 () => { // Start scratch
@@ -525,7 +526,11 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     showResumePrompt(seconds, onResume, onRestart) {
         const playerContainer = document.getElementById('playerContainer');
+        const placeholder     = document.getElementById('videoPlaceholder');
         if (!playerContainer) return;
+
+        // Asegurar que el placeholder está oculto para que no se traslape con el prompt
+        if (placeholder) placeholder.classList.add('hidden');
 
         // Limpiar cualquier prompt previo
         document.querySelector('.resume-prompt')?.remove();
