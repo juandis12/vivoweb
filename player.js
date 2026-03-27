@@ -12,12 +12,13 @@ export const PLAYER_LOGIC = {
 
     hls: null,
     currentUserId: null,
-    currentTmdbId: null,
     currentType: null,
     currentSeason: null,
     currentEpisode: null,
-    progressTimer: null,   // interval para guardar progreso en iframes
-    seriesData: null,      // datos completos de la serie actual
+    progressTimer: null,
+    seriesData: null,
+    lastSeriesProgress: null, // NUEVO: Para continuidad global de series
+    skipIntroTimer: null,     // NUEVO: Para el auto-salto
 
     // ──────────────────────────────
     // ABRIR DETALLE
@@ -65,6 +66,8 @@ export const PLAYER_LOGIC = {
             // Si es serie → mostrar info + cargar episodios
             if (type === 'tv' || details.media_type === 'tv') {
                 this.seriesData = details;
+                // Detectar último episodio visto globalmente para esta serie
+                await this.detectGlobalSeriesProgress(tmdbId, supabaseClient);
                 await this.renderSeriesInfo(details, supabaseClient);
                 // No carga video hasta que el usuario elija episodio
                 placeholder.innerHTML = `
@@ -95,11 +98,14 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     async _loadMovieSource(tmdbId, supabaseClient) {
         const placeholder = document.getElementById('videoPlaceholder');
+        const id = String(tmdbId);
         const { data, error } = await supabaseClient
             .from('video_sources')
             .select('stream_url')
-            .eq('tmdb_id', tmdbId)
-            .single();
+            .eq('tmdb_id', id)
+            .maybeSingle();
+
+        if (error) console.error('[VivoTV] Error loading source:', error);
 
         if (error || !data?.stream_url) {
             placeholder.innerHTML = `
@@ -217,6 +223,74 @@ export const PLAYER_LOGIC = {
         });
 
         seriesInfo.classList.remove('hidden');
+        
+        // Si hay progreso global, mostrar el banner de reanudación rápida
+        if (this.lastSeriesProgress) {
+            this.renderSeriesResumeBanner(this.lastSeriesProgress);
+        }
+    },
+
+    async detectGlobalSeriesProgress(tmdbId, supabaseClient) {
+        if (!supabaseClient) return;
+        const id = String(tmdbId);
+        const { data } = await supabaseClient
+            .from('watch_history')
+            .select('season_number, episode_number, progress_seconds')
+            .eq('tmdb_id', id)
+            .eq('type', 'tv')
+            .order('last_watched', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        
+        this.lastSeriesProgress = data || null;
+    },
+
+    renderSeriesResumeBanner(progress) {
+        const seriesInfo = document.getElementById('seriesInfo');
+        if (!seriesInfo) return;
+
+        // Limpiar previo
+        document.querySelector('.series-resume-banner')?.remove();
+
+        const banner = document.createElement('div');
+        banner.className = 'series-resume-banner glass-panel';
+        banner.innerHTML = `
+            <div class="resume-banner-text">
+                🍿 Sigues en la <strong>Temporada ${progress.season_number}</strong>, Episodio <strong>${progress.episode_number}</strong>
+            </div>
+            <button class="btn-resume-series" id="btnContinueSeries">Continuar</button>
+        `;
+
+        seriesInfo.prepend(banner);
+
+        document.getElementById('btnContinueSeries').onclick = () => {
+            this.resumeLastEpisode(progress.season_number, progress.episode_number);
+            banner.style.opacity = '0';
+            setTimeout(() => banner.remove(), 300);
+        };
+    },
+
+    resumeLastEpisode(seasonNum, epNum) {
+        // Encontrar la píldora de la temporada y hacerle click
+        const pills = document.getElementById('seasonsPills');
+        const seasonPill = Array.from(pills.querySelectorAll('.season-pill'))
+            .find(p => p.textContent === `T${seasonNum}`);
+        
+        if (seasonPill) {
+            seasonPill.click();
+            // Esperar a que se rendericen los episodios y hacerle click al correcto
+            setTimeout(() => {
+                const grid = document.getElementById('episodesGrid');
+                const epCard = Array.from(grid.querySelectorAll('.episode-card'))
+                    .find(c => c.querySelector('.episode-number')?.textContent === `Ep ${epNum}`);
+                
+                if (epCard) {
+                    epCard.click();
+                    // Scroll suave hasta el reproductor para ver la acción
+                    document.getElementById('playerContainer')?.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 300);
+        }
     },
 
     // ──────────────────────────────
@@ -320,9 +394,49 @@ export const PLAYER_LOGIC = {
             video.classList.add('hidden');
             iframe.classList.remove('hidden');
             iframe.src = url;
-            // Para iframes no podemos hacer seek, pero guardamos progreso por tiempo
             this._startIframeTracking();
         }
+
+        // AUTO-SALTO 10s (Prompt o Automático)
+        this.initSkipIntro(isDirectStream ? video : null);
+    },
+
+    initSkipIntro(videoEl) {
+        const playerContainer = document.getElementById('playerContainer');
+        if (!playerContainer) return;
+
+        // Limpiar previo
+        document.querySelector('.playback-overlay')?.remove();
+        if (this.skipIntroTimer) clearTimeout(this.skipIntroTimer);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'playback-overlay';
+        overlay.innerHTML = `
+            <button class="btn-skip-intro" id="btnSkipIntro">
+                ⏩ Saltar Anuncio <span>10s</span>
+            </button>
+        `;
+        playerContainer.appendChild(overlay);
+
+        const skipLogic = () => {
+            if (videoEl) {
+                videoEl.currentTime += 10;
+            } else {
+                // Para iframes (Cuevana y otros), el salto manual es limitado,
+                // pero movemos el progreso local para que el tracking refleje el salto
+                console.log('[VivoTV] Saltando 10s en iframe...');
+            }
+            overlay.remove();
+        };
+
+        const btn = document.getElementById('btnSkipIntro');
+        btn.onclick = skipLogic;
+
+        // Auto-eliminar después de 15 segundos si no se usa
+        this.skipIntroTimer = setTimeout(() => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 400);
+        }, 15000);
     },
 
     // ──────────────────────────────
@@ -399,9 +513,10 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     async _saveProgress(tmdbId, type, season, episode, seconds, supabaseClient, total = null) {
         if (!supabaseClient || !this.currentUserId) return;
+        const id = String(tmdbId);
         await supabaseClient.from('watch_history').upsert({
             user_id:        this.currentUserId,
-            tmdb_id:        tmdbId,
+            tmdb_id:        id,
             type,
             season_number:  season,
             episode_number: episode,
@@ -416,13 +531,27 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     async _getProgress(tmdbId, type, season, episode, supabaseClient) {
         if (!supabaseClient) return null;
-        const { data } = await supabaseClient
-            .from('watch_history')
-            .select('progress_seconds, total_seconds')
-            .eq('tmdb_id', tmdbId).eq('type', type)
-            .eq('season_number', season).eq('episode_number', episode)
-            .single();
-        return data || null;
+        try {
+            const id = String(tmdbId);
+            let query = supabaseClient
+                .from('watch_history')
+                .select('progress_seconds, total_seconds')
+                .eq('tmdb_id', id)
+                .eq('type', type);
+
+            if (season === null) query = query.is('season_number', null);
+            else query = query.eq('season_number', season);
+
+            if (episode === null) query = query.is('episode_number', null);
+            else query = query.eq('episode_number', episode);
+
+            const { data, error } = await query.maybeSingle();
+            if (error) console.warn('[VivoTV] Error getProgress:', error);
+            return data || null;
+        } catch (err) {
+            console.error('[VivoTV] Catch getProgress:', err);
+            return null;
+        }
     },
 
     // ──────────────────────────────
