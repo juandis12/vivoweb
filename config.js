@@ -8,6 +8,7 @@ export const CONFIG = {
     TMDB_PROXY_URL: '/api/tmdb', // Todas las peticiones deben pasar por aquí
     TMDB_IMAGE_BASE: 'https://image.tmdb.org/t/p/original',
     TMDB_IMAGE_CARD: 'https://image.tmdb.org/t/p/w500',
+    TMDB_IMAGE_HERO: 'https://image.tmdb.org/t/p/original',
     // Llave de desarrollo local validada (oculta solo para evitar bots, se sincronia con .env)
     _tk: 'NzQzMjc1ZTI1YmNlYTBhMzIwYjg3ZDJhZjI3MWExMzY=',
 

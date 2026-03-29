@@ -590,7 +590,13 @@ export const PLAYER_LOGIC = {
     updateModalUI(data) {
         document.getElementById('modalTitle').textContent    = data.title || data.name;
         document.getElementById('modalOverview').textContent = data.overview || 'Sin descripción.';
-        document.getElementById('modalPosterImg').src        = `${CONFIG.TMDB_IMAGE_CARD}${data.poster_path}`;
+        
+        // El póster clásico ya no se usa, inyectamos el backdrop grande estilo Netflix
+        if (data.backdrop_path) {
+            document.getElementById('modalBackdrop').style.backgroundImage = `url('${CONFIG.TMDB_IMAGE_BASE}${data.backdrop_path}')`;
+        } else {
+            document.getElementById('modalBackdrop').style.backgroundImage = `url('${CONFIG.TMDB_IMAGE_CARD}${data.poster_path}')`;
+        }
 
         const year    = (data.release_date || data.first_air_date || '').split('-')[0];
         const rating  = data.vote_average ? `⭐ ${data.vote_average.toFixed(1)}` : 'N/A';

@@ -187,6 +187,8 @@ export const CATALOG_UI = {
         const title  = _escapeHTML(rawTitle);
         const overview = _escapeHTML(item.overview || 'Sin descripción disponible.');
 
+        const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
+
         card.innerHTML = `
             <div class="movie-card-inner">
                 <img src="${CONFIG.TMDB_IMAGE_CARD}${item.poster_path}" alt="${title}" loading="lazy">
@@ -198,13 +200,16 @@ export const CATALOG_UI = {
                     </div>` : ''}
             </div>
             <div class="movie-tooltip">
-                <h4>${title}</h4>
-                <p>${overview}</p>
-                <div class="movie-tooltip-meta">
-                    <span class="movie-tooltip-rating">⭐ ${rating}</span>
-                    <span class="movie-tooltip-year">${year}</span>
+                <div class="movie-tooltip-actions">
+                    <button class="movie-tooltip-btn btn-play" title="Reproducir">▶</button>
+                    <button class="movie-tooltip-btn btn-outline-rnd" title="Añadir a Mi Lista">+</button>
                 </div>
-                <button class="movie-tooltip-btn">▶ Reproducir</button>
+                <div class="movie-tooltip-meta">
+                    <span class="movie-tooltip-rating">${rating} Match</span>
+                    <span class="movie-tooltip-year">${year}</span>
+                    <span class="badge-hd">HD</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #fff; margin-top: 8px;">${genresList}</div>
             </div>`;
 
         const openDetail = () => window.dispatchEvent(

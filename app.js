@@ -685,6 +685,12 @@ if (btnHeroPlay) btnHeroPlay.addEventListener('click', (e) => {
     const b = e.currentTarget;
     PLAYER_LOGIC.openDetail(b.dataset.tmdbId, b.dataset.type, supabase);
 });
+
+const btnHeroInfo = document.getElementById('btnHeroInfo');
+if (btnHeroInfo) btnHeroInfo.addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    PLAYER_LOGIC.openDetail(b.dataset.tmdbId, b.dataset.type, supabase);
+});
 const btnModalPlay = document.getElementById('btnModalPlay');
 if (btnModalPlay) btnModalPlay.addEventListener('click', () => {
     const v = document.getElementById('videoPlayer');

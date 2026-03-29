@@ -17,12 +17,12 @@
     --glass-blur: 50px;
     --glass-incandescent: rgba(255, 255, 255, 0.1);
     
-    /* Tipografía Editorial */
-    --font-display: 'Epilogue', sans-serif;
-    --font-body: 'Manrope', sans-serif;
+    /* Tipografía Netflix / Smart TV */
+    --font-display: 'Inter', sans-serif;
+    --font-body: 'Inter', sans-serif;
     --text-primary: #f9f5f8;
-    --text-secondary: #adaaad;
-    --text-muted: #71717a;
+    --text-secondary: #d1d5db; /* Más claro para lectura */
+    --text-muted: #9ca3af;
     
     /* Elevación y Profundidad */
     --shadow-premium: 0 20px 50px rgba(0, 0, 0, 0.8);
@@ -147,25 +147,18 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* ================================================
-   4. NAVBAR
+   4. NAVBAR (NETFLIX STYLE)
  ================================================ */
 .navbar {
-    position: fixed; top: 25px; left: var(--side-padding); right: var(--side-padding);
-    padding: 14px 40px;
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 20px 4%;
     display: flex; align-items: center; gap: 40px; z-index: 1000;
-    background: var(--glass-base);
-    backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: 100px;
-    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
+    transition: background-color 0.4s ease;
 }
 
 .navbar.scrolled {
-    top: 0; left: 0; right: 0;
-    border-radius: 0;
-    background: rgba(9, 9, 11, 0.9);
-    border-bottom: 1px solid var(--glass-border);
-    padding: 16px var(--side-padding);
+    background-color: var(--bg-base);
 }
 
 .logo {
@@ -218,17 +211,17 @@ nav a.active::after { width: 24px; }
 }
 
 /* ================================================
-   5. BOTONES
+   5. BOTONES (ESTILO TV)
  ================================================ */
 .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-    border: none; border-radius: 50px; font-weight: 700; font-size: 0.95rem;
-    padding: 12px 28px; transition: all 0.3s var(--ease-smooth);
-    white-space: nowrap;
+    border: none; border-radius: 4px; font-weight: 700; font-size: 1rem;
+    padding: 9px 24px; transition: all 0.2s var(--ease-smooth);
+    white-space: nowrap; cursor: pointer;
 }
-.btn:active { transform: scale(0.96); }
-.btn-sm { padding: 8px 20px; font-size: 0.85rem; }
-.btn-block { width: 100%; border-radius: 12px; padding: 15px; }
+.btn:active { transform: scale(0.98); }
+.btn-sm { padding: 8px 16px; font-size: 0.9rem; }
+.btn-block { width: 100%; padding: 12px; }
 
 .btn-primary { 
     background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%); 
@@ -397,58 +390,47 @@ nav a.active::after { width: 24px; }
 .auth-toggle a:hover { color: var(--primary); }
 
 /* ================================================
-   8. HERO BANNER
+   8. HERO BANNER (NETFLIX BILLBOARD)
 ================================================ */
 .dashboard-container { padding-bottom: 0; }
 
 .hero-banner {
-    position: relative; width: 100%; height: 95vh;
-    background-size: cover; background-position: center;
+    position: relative; width: 100%; height: 100vh;
+    background-size: cover; background-position: center top;
     display: flex; align-items: center;
     background-color: var(--bg-base);
-    transition: background-image 1.2s var(--ease-smooth);
 }
 
 .hero-overlay {
     position: absolute; inset: 0;
     background: 
-        linear-gradient(to right, rgba(15, 15, 18, 0.92) 0%, rgba(15, 15, 18, 0.2) 60%, transparent 100%),
-        linear-gradient(to top, var(--bg-base) 0%, transparent 50%);
+        linear-gradient(to right, rgba(9, 9, 11, 0.8) 0%, rgba(9, 9, 11, 0) 50%),
+        /* Viñeta inferior gigante de Netflix */
+        linear-gradient(to top, var(--bg-base) 0%, transparent 40%);
 }
 
 .hero-content {
     position: relative; z-index: 10;
-    padding: 0 var(--side-padding);
-    max-width: 900px;
-    margin-top: 40px;
+    padding: 0 4%; /* Margen general de Netflix */
+    max-width: 45%;
+    margin-top: 10vh;
 }
 
-.hero-genre-badge {
-    display: inline-block; margin-bottom: 25px;
-    font-size: 0.85rem; font-weight: 800;
-    color: var(--primary); letter-spacing: 3px;
-    text-transform: uppercase;
-    background: rgba(124, 58, 237, 0.12);
-    padding: 6px 16px; border-radius: 6px;
-    border-left: 4px solid var(--primary);
-}
+.hero-genre-badge { display: none; } /* Netflix no usa badge en el Hero */
 
 .hero-content h1 {
-    font-size: clamp(3rem, 8vw, 6rem);
-    font-weight: 950; line-height: 0.9; margin-bottom: 24px;
-    text-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    letter-spacing: -3px;
-    background: linear-gradient(to bottom, #fff 60%, #cbd5e1 100%);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 900; line-height: 1.1; margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+    letter-spacing: -1px; color: white;
 }
 
 .hero-overview {
-    font-size: 1.15rem; color: #94a3b8; line-height: 1.7;
-    margin-bottom: 40px; max-width: 650px;
+    font-size: 1.2vw; color: white; line-height: 1.5;
+    margin-bottom: 24px; font-weight: 500;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
     display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3;
     -webkit-box-orient: vertical; overflow: hidden;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .hero-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
@@ -601,10 +583,10 @@ nav a.active::after { width: 24px; }
 }
 .carousel::-webkit-scrollbar { display: none; }
 
-/* Tarjeta de Película Premium con Tooltip Hover */
+/* Tarjeta de Película Premium (Netflix Billboards) */
 .movie-card {
-    min-width: 200px; height: 300px;
-    border-radius: 20px; overflow: visible;
+    min-width: 180px; height: 270px; /* Ratio 2:3 absoluto */
+    border-radius: 4px; overflow: visible;
     cursor: pointer; position: relative;
     transition: transform 0.4s var(--ease-spring), box-shadow 0.4s;
     flex-shrink: 0;
@@ -612,11 +594,11 @@ nav a.active::after { width: 24px; }
 
 .movie-card-inner {
     width: 100%; height: 100%;
-    border-radius: 20px; overflow: hidden;
+    border-radius: 4px; overflow: hidden;
     position: relative;
-    box-shadow: var(--shadow-md);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.3s var(--ease-smooth);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    border: none;
+    transition: border 0.3s;
 }
 
 .movie-card-inner img {
@@ -624,78 +606,59 @@ nav a.active::after { width: 24px; }
     transition: transform 0.5s ease;
 }
 
-/* Gradiente inferior en poster */
-.movie-card-inner::after {
-    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60%;
-    background: linear-gradient(to top, rgba(15,15,20, 0.9) 0%, transparent 100%);
-    pointer-events: none;
-}
-.movie-card-title {
-    position: absolute; bottom: 15px; left: 15px; right: 15px; z-index: 5;
-    font-size: 0.95rem; font-weight: 800; line-height: 1.1;
-    color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-    transition: transform 0.3s var(--ease-smooth);
-}
+.movie-card-inner::after { display: none; } /* Netflix no oscurece las carátulas estáticas por default */
 
-.movie-card:hover { transform: scale(1.06) translateY(-8px); z-index: 50; }
+.movie-card-title { display: none; } /* En Netflix la carátula no tiene título visible a menos que no cargue la foto */
+
+/* Hover Netflix Extremo */
+.movie-card:hover { transform: scale(1.3) translateY(-10px); z-index: 50; }
 .movie-card:hover .movie-card-inner { 
-    box-shadow: 0 15px 40px rgba(124, 58, 237, 0.4); 
-    border-color: var(--primary);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.9); 
+    border-radius: 4px 4px 0 0;
 }
-.movie-card:hover .movie-card-inner img { transform: scale(1.1); filter: brightness(0.8); }
-.movie-card:hover .movie-card-title { transform: translateY(-3px); }
+.movie-card:hover .movie-card-inner img { filter: brightness(1); }
 
-/* Tooltip Contextual de Próxima Generación */
+/* Tooltip Animado que se pega debajo (Simulando Netflix Box) */
 .movie-tooltip {
-    position: absolute; bottom: calc(100% + 12px); left: 50%;
-    transform: translateX(-50%) scale(0.8) translateY(10px);
-    width: 260px; z-index: 100;
-    background: rgba(25, 15, 60, 0.85);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(139, 92, 246, 0.4);
-    border-radius: 12px; padding: 18px;
-    box-shadow: 0 15px 45px rgba(0,0,0,0.8), 0 0 20px rgba(139, 92, 246, 0.2);
+    position: absolute; top: 100%; left: 0; right: 0;
+    width: 100%; z-index: 100;
+    background: #181818;
+    border-radius: 0 0 4px 4px; padding: 12px;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.8);
     opacity: 0; pointer-events: none;
-    transition: all 0.3s var(--ease-spring);
+    transform: scaleY(0); transform-origin: top;
+    transition: all 0.2s ease-in-out;
 }
 
 .movie-card:hover .movie-tooltip {
-    opacity: 1; transform: translateX(-50%) scale(1) translateY(0);
+    opacity: 1; pointer-events: auto;
+    transform: scaleY(1);
+    transition-delay: 0.2s; /* Ligero retraso para que no vibre al pasar rápido */
 }
 
-.movie-tooltip h4 { font-size: 1.1rem; font-weight: 800; margin-bottom: 8px; color: white; }
-.movie-tooltip p { 
-    font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;
-    display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3;
-    -webkit-box-orient: vertical; overflow: hidden;
+.movie-tooltip h4 { display: none; } /* Título oculto en Netflix hoverbox a veces, usan logo, pero por ahora ocultamos */
+.movie-tooltip p { display: none; } /* Ocultar overview para imitar limpieza */
+
+.movie-tooltip-actions {
+    display: flex; gap: 8px; margin-bottom: 12px;
 }
 
 .movie-tooltip-meta { 
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 0.85rem; margin-bottom: 15px; 
+    display: flex; justify-content: flex-start; align-items: center; gap: 8px;
+    font-size: 0.75rem; 
 }
-.movie-tooltip-rating { color: var(--accent-gold); font-weight: 800; display: flex; align-items: center; gap: 4px; }
-.movie-tooltip-year { color: var(--text-muted); font-weight: 500; }
+.movie-tooltip-rating { color: #46d369; font-weight: 800; } /* Verde Netflix de match */
+.movie-tooltip-year { color: var(--text-muted); }
 
 .movie-tooltip-btn {
-    width: 100%; padding: 10px;
-    background: var(--primary); color: white; border: none;
-    border-radius: 8px; font-weight: 700; cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    width: 32px; height: 32px; border-radius: 50%;
+    background: white; color: black; border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
 }
-.movie-tooltip-btn:hover { 
-    background: var(--primary-hover); transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
-}
-
-.movie-card:hover { transform: scale(1.08) translateY(-10px); z-index: 50; }
-.movie-card:hover .movie-card-inner { 
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.5); 
-    border: 1.5px solid rgba(139, 92, 246, 0.8);
-}
-.movie-card-inner { border: 1.5px solid transparent; transition: all 0.3s; }
-.movie-card:hover .movie-card-inner img { filter: brightness(0.7) saturate(1.2); }
+.movie-tooltip-btn:hover { background: #e5e5e5; }
+.movie-tooltip-btn.btn-outline-rnd { background: rgba(42,42,42,0.6); color: white; border: 2px solid rgba(255,255,255,0.5); }
+.movie-tooltip-btn.btn-outline-rnd:hover { border-color: white; background: rgba(255,255,255,0.1); }
 
 /* Skeleton Loader Púrpura */
 .skeleton-card {
@@ -744,75 +707,68 @@ nav a.active::after { width: 24px; }
 .movie-card.is-available:hover::after { opacity: 1; }
 
 /* ================================================
-   10. MODAL DE DETALLE Y REPRODUCTOR
+   10. MODAL DE DETALLE Y REPRODUCTOR (ESTILO NETFLIX)
  ================================================ */
 .modal-overlay {
     position: fixed; inset: 0; z-index: 6000;
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    display: flex; align-items: flex-start; justify-content: center; padding: 30px 0;
+    background: rgba(0,0,0,0.7);
+    overflow-y: auto; scrollbar-width: none;
     animation: fadeIn 0.3s ease;
 }
 
 .modal-content {
-    width: 100%; max-width: 1100px;
-    background: var(--bg-card);
-    border: 1px solid var(--glass-border);
-    border-radius: 24px;
+    width: 100%; max-width: 850px;
+    background: #181818;
+    border-radius: 10px;
     overflow: hidden; position: relative;
-    max-height: 92vh; overflow-y: auto;
-    animation: modalIn 0.5s var(--ease-spring);
     box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+    animation: modalIn 0.3s ease;
+    margin: auto;
 }
-.modal-content::-webkit-scrollbar { width: 6px; }
-.modal-content::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
 
-/* Backdrop decorativo */
+/* Backdrop Header: El video o la imagen va arriba abarcando todo el ancho */
 .modal-backdrop {
-    position: absolute; top: 0; left: 0; right: 0; height: 350px;
-    background-size: cover; background-position: center 20%;
-    z-index: 0; opacity: 0.25;
-    filter: blur(4px);
+    position: relative; width: 100%; aspect-ratio: 16/9;
+    background-size: cover; background-position: center;
+    background-color: #000;
 }
 .modal-backdrop::after {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to bottom, transparent 0%, var(--bg-card) 100%);
-}
-
-@keyframes modalIn {
-    from { opacity: 0; transform: scale(0.9) translateY(30px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    background: linear-gradient(to top, #181818 0%, transparent 60%);
 }
 
 .close-modal {
-    position: sticky; top: 20px; float: right; margin: 20px 20px 0 0;
-    z-index: 20; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: white; width: 44px; height: 44px; border-radius: 50%;
-    font-size: 1.8rem; display: flex; align-items: center; justify-content: center;
-    transition: all 0.3s;
+    position: absolute; top: 15px; right: 15px;
+    z-index: 20; background: #181818; border: none;
+    color: white; width: 36px; height: 36px; border-radius: 50%;
+    font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; cursor: pointer;
 }
-.close-modal:hover { background: var(--primary); transform: rotate(90deg) scale(1.1); box-shadow: var(--shadow-glow); }
+.close-modal:hover { background: rgba(255,255,255,0.1); }
 
 .modal-body {
-    display: grid; grid-template-columns: 280px 1fr;
-    gap: 40px; padding: 40px;
+    padding: 0 45px 45px;
     position: relative; z-index: 5;
+    margin-top: -80px; /* Para que el título flote sobre el degradado inferior del backdrop */
 }
 
-.modal-poster { flex-shrink: 0; }
-.modal-poster img { width: 100%; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+.modal-poster { display: none; } /* En Netflix no existe el poster al lado */
 
-.modal-info h2 { font-size: 2.5rem; font-weight: 900; margin-bottom: 12px; letter-spacing: -1px; }
+.modal-info h2 { font-size: 2.2rem; font-weight: 800; margin-bottom: 25px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
 
-.modal-metadata { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.modal-metadata { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
 .meta-chip {
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-    padding: 6px 14px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+    font-size: 0.95rem; font-weight: 500; color: white;
 }
-.badge-green { color: var(--accent-green); background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2); }
+.badge-match { color: #46d369; font-weight: 600; }
+.badge-hd { border: 1px solid rgba(255,255,255,0.4); padding: 0 4px; border-radius: 3px; font-size: 0.7rem; color: rgba(255,255,255,0.9); }
 
-.modal-overview-text { color: #94a3b8; line-height: 1.8; margin-bottom: 30px; font-size: 1rem; }
+.modal-two-columns {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 40px;
+}
+
+.modal-overview-text { color: white; line-height: 1.6; margin-bottom: 30px; font-size: 1rem; }
 
 .modal-actions { display: flex; gap: 12px; margin-bottom: 30px; }
 
