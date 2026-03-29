@@ -456,7 +456,8 @@ export const PLAYER_LOGIC = {
     _onVideoTimeUpdate() {
         if (this._progressDebounce) return;
         this._progressDebounce = true;
-        setTimeout(() => { this._progressDebounce = false; }, 10000);
+        // Netflix Estándar: Evita inundar (DDoS) la DB mediante rate limiting elevado. Guarda cada 30 segundos.
+        setTimeout(() => { this._progressDebounce = false; }, 30000);
 
         const video = document.getElementById('videoPlayer');
         if (!video || video.paused) return;
@@ -694,9 +695,23 @@ export const PLAYER_LOGIC = {
     // ──────────────────────────────
     closeModal() {
         this._stopProgressTimer();
+
+        // Netflix Estándar: Guardar último segundo exacto al cerrar, asegurando que no se pierdan 29s de progreso.
+        const video  = document.getElementById('videoPlayer');
+        if (video && video.currentTime > 0) {
+             this._saveProgress(
+                this.currentTmdbId,
+                this.currentType,
+                this.currentSeason,
+                this.currentEpisode,
+                Math.floor(video.currentTime),
+                _supabase,
+                Math.floor(video.duration) || null,
+            );
+        }
+
         document.querySelector('.glass-floating-card')?.remove();
         const modal  = document.getElementById('detailModal');
-        const video  = document.getElementById('videoPlayer');
         const iframe = document.getElementById('videoIframe');
         document.getElementById('playerContainer')?.classList.remove('active');
         modal.classList.add('hidden');

@@ -8,15 +8,14 @@ export const TMDB_SERVICE = {
     // Fix #8: Object.entries() en lugar de for...in (más robusto, evita props heredadas)
     async fetchFromTMDB(endpoint, params = {}) {
         let url;
-        
         if (CONFIG.USE_PROXY) {
             url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
             const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
             url.searchParams.append('path', cleanPath);
         } else {
-            // Local: Decodificar llave oculta
+            console.warn("⚠️ MODO DESARROLLADOR: Consumiendo TMDB vía Front-end (Live Server detectado). Esto no es seguro para Producción.");
             const _k = atob(CONFIG._tk);
-            url = new URL(`${CONFIG.TMDB_BASE_URL}${endpoint}`);
+            url = new URL(`https://api.themoviedb.org/3${endpoint}`);
             url.searchParams.append('api_key', _k);
             url.searchParams.append('language', 'es-MX');
         }
@@ -51,6 +50,17 @@ export const TMDB_SERVICE = {
 /**
  * Motor de Renderizado de la UI del Catálogo
  */
+
+function _escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 export const CATALOG_UI = {
 
     renderHero(movie, heroItems = []) {
@@ -70,6 +80,7 @@ export const CATALOG_UI = {
         setTimeout(() => {
             heroTitle.textContent   = movie.title || movie.name;
             heroOverview.textContent = movie.overview || 'Sin descripción disponible.';
+            // En caso que el render fuera con innerHTML, el textContent lo protege nativamente
             heroBanner.style.backgroundImage = `url('${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}')`;
 
             const year   = (movie.release_date || movie.first_air_date || '').split('-')[0];
@@ -172,7 +183,9 @@ export const CATALOG_UI = {
 
         const year   = (item.release_date || item.first_air_date || '').split('-')[0];
         const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-        const title  = item.title || item.name || '';
+        const rawTitle  = item.title || item.name || '';
+        const title  = _escapeHTML(rawTitle);
+        const overview = _escapeHTML(item.overview || 'Sin descripción disponible.');
 
         card.innerHTML = `
             <div class="movie-card-inner">
@@ -186,7 +199,7 @@ export const CATALOG_UI = {
             </div>
             <div class="movie-tooltip">
                 <h4>${title}</h4>
-                <p>${item.overview || 'Sin descripción disponible.'}</p>
+                <p>${overview}</p>
                 <div class="movie-tooltip-meta">
                     <span class="movie-tooltip-rating">⭐ ${rating}</span>
                     <span class="movie-tooltip-year">${year}</span>

@@ -8,13 +8,25 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // SEGURIDAD: Validar Referer (Opcional pero recomendado)
-    const referer = req.headers.referer || '';
-    const allowedHost = 'vivoweb'; // Ajusta esto según tu dominio en producción
-    if (req.method !== 'OPTIONS' && !referer.includes(allowedHost) && !referer.includes('localhost') && !referer.includes('127.0.0.1')) {
-        // En desarrollo permitimos localhost, en producción solo tu dominio
-        console.warn('Bloqueado por Referer:', referer);
-        // return res.status(403).json({ error: 'Acceso no autorizado' });
+    // SEGURIDAD: Validación Estricta de Origen (CORS whitelist)
+    const reqOrigin = req.headers.referer || req.headers.origin;
+    if (req.method !== 'OPTIONS') {
+        if (!reqOrigin) {
+            return res.status(403).json({ error: 'Bloqueado: Falta cabecera de Origen.' });
+        }
+        try {
+            const hostname = new URL(reqOrigin).hostname;
+            // Autorizados: Localhost y tus dominios de prod (ej. miservidor-vivoweb.vercel.app)
+            const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+            const extendsVivoweb = hostname.includes('vivoweb'); // Si usas Vercel con ramas automáticas
+            
+            if (!isLocal && !extendsVivoweb) {
+                console.warn('🛡️ CORS Bloqueado para hostname:', hostname);
+                return res.status(403).json({ error: 'Acceso no autorizado (CORS estricto).' });
+            }
+        } catch(e) {
+            return res.status(403).json({ error: 'Origen inválido.' });
+        }
     }
 
     if (req.method === 'OPTIONS') {

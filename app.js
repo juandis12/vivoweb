@@ -48,15 +48,9 @@ let searchTimeout   = null;
 // INNOVACIÓN: UI INTERACTIVA
 // ================================================
 function initMagneticHover() {
-    document.addEventListener('mousemove', (e) => {
-        const target = e.target.closest('.movie-card');
-        if (!target) return;
-        const rect = target.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        target.style.setProperty('--x', `${x}%`);
-        target.style.setProperty('--y', `${y}%`);
-    });
+    // 🚀 OPTIMIZACIÓN CINEMÁTICA: Removido el listener global de mousemove que bloqueaba la UI principal.
+    // El hover ahora está manejado puramente a través de aceleración de hardware en CSS (transform: scale)
+    // tal como recomienda la arquitectura React de Netflix. Cero pérdida energética.
 }
 
 function initNavbarScroll() {
@@ -172,6 +166,20 @@ async function initAuth() {
 // NUEVO: Obtener IDs disponibles en Supabase
 async function fetchAvailableIds() {
     if (!supabase) return;
+
+    // Hidratar desde SessionStorage para evitar Table Scan en cada refresh automático (Solución Temporal de Escalabilidad)
+    const cachedData = sessionStorage.getItem('vivoWebAvailableIds');
+    if (cachedData) {
+        try {
+            const parsed = JSON.parse(cachedData);
+            availableMovies = new Set(parsed.movies);
+            availableSeries = new Set(parsed.series);
+            availableIds    = new Set(parsed.ids);
+            console.log('[VivoTV] Catálogo disponible cargado desde Caché Local (Optimizado).');
+            return;
+        } catch(e) { console.warn('Caché corrupto, recargando net...', e); }
+    }
+
     try {
         const [movies, series] = await Promise.all([
             supabase.from('video_sources').select('tmdb_id'),
@@ -188,11 +196,17 @@ async function fetchAvailableIds() {
         availableSeries = new Set();
         availableIds = new Set();
 
+        const memMovies = [];
+        const memSeries = [];
+        const memIds    = [];
+
         if (movies.data) {
             movies.data.forEach(m => {
                 const id = m.tmdb_id.toString();
                 availableMovies.add(id);
                 availableIds.add(id);
+                memMovies.push(id);
+                memIds.push(id);
             });
         }
         if (series.data) {
@@ -200,8 +214,17 @@ async function fetchAvailableIds() {
                 const id = s.tmdb_id.toString();
                 availableSeries.add(id);
                 availableIds.add(id);
+                memSeries.push(id);
+                memIds.push(id);
             });
         }
+
+        // Guardar para mitigación de DDoS locales contra la base de datos
+        sessionStorage.setItem('vivoWebAvailableIds', JSON.stringify({
+            movies: memMovies,
+            series: memSeries,
+            ids: memIds
+        }));
     } catch (e) { 
         console.error('Error fetching available IDs:', e);
         showToast('Error cargando biblioteca. Revisa tu conexión.');
