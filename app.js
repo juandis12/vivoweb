@@ -168,7 +168,7 @@ async function fetchAvailableIds() {
     if (!supabase) return;
 
     // Hidratar desde SessionStorage para evitar Table Scan en cada refresh automático (Solución Temporal de Escalabilidad)
-    const cachedData = sessionStorage.getItem('vivoWebAvailableIds');
+    const cachedData = sessionStorage.getItem('vivoWebAvailableIds_v2');
     if (cachedData) {
         try {
             const parsed = JSON.parse(cachedData);
@@ -220,7 +220,7 @@ async function fetchAvailableIds() {
         }
 
         // Guardar para mitigación de DDoS locales contra la base de datos
-        sessionStorage.setItem('vivoWebAvailableIds', JSON.stringify({
+        sessionStorage.setItem('vivoWebAvailableIds_v2', JSON.stringify({
             movies: memMovies,
             series: memSeries,
             ids: memIds
