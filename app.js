@@ -168,14 +168,14 @@ async function fetchAvailableIds() {
     if (!supabase) return;
 
     // Hidratar desde SessionStorage para evitar Table Scan en cada refresh automático (Solución Temporal de Escalabilidad)
-    const cachedData = sessionStorage.getItem('vivoWebAvailableIds_v2');
+    const cachedData = sessionStorage.getItem('vivoWebAvailableIds_v3');
     if (cachedData) {
         try {
             const parsed = JSON.parse(cachedData);
             availableMovies = new Set(parsed.movies);
             availableSeries = new Set(parsed.series);
             availableIds    = new Set(parsed.ids);
-            console.log('[VivoTV] Catálogo disponible cargado desde Caché Local (Optimizado).');
+            console.log('[VivoTV] Catálogo disponible cargado desde Caché Local (Optimizado v3).');
             return;
         } catch(e) { console.warn('Caché corrupto, recargando net...', e); }
     }
@@ -220,7 +220,7 @@ async function fetchAvailableIds() {
         }
 
         // Guardar para mitigación de DDoS locales contra la base de datos
-        sessionStorage.setItem('vivoWebAvailableIds_v2', JSON.stringify({
+        sessionStorage.setItem('vivoWebAvailableIds_v3', JSON.stringify({
             movies: memMovies,
             series: memSeries,
             ids: memIds
@@ -468,6 +468,8 @@ async function loadGridData(type, page, append = false) {
 }
 
 function toAuth() {
+    sessionStorage.clear(); // Destruir catálogos cacheados al salir
+    
     const isAuthPage = window.location.pathname.endsWith('index.html') || 
                        window.location.pathname.endsWith('registro.html') ||
                        window.location.pathname === '/' || 
@@ -533,7 +535,12 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
     } finally { setLoading(false); }
 });
 
-if (btnLogout) btnLogout.addEventListener('click', () => { stopHeroRotation(); supabase.auth.signOut(); });
+if (btnLogout) btnLogout.addEventListener('click', async () => { 
+    stopHeroRotation(); 
+    sessionStorage.clear();
+    await supabase.auth.signOut(); 
+    window.location.reload();
+});
 if (btnPass) btnPass.addEventListener('click', () => { passwordEl.type = passwordEl.type === 'password' ? 'text' : 'password'; });
 
 if (btnClear) btnClear.addEventListener('click', () => {
