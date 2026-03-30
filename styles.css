@@ -572,15 +572,18 @@ nav a.active::after { width: 24px; }
 .carousel-arrow:disabled { opacity: 0 !important; }
 
 .carousel {
-    display: flex; gap: 14px; overflow-x: auto; padding: 12px 16px 16px;
+    display: flex; gap: 14px; overflow-x: auto; 
+    padding: 20px 16px 120px; /* Espacio para el hover */
+    margin-bottom: -80px;      /* Compensar el espacio extra */
     scroll-behavior: smooth; scrollbar-width: none; flex: 1;
+    overflow-y: visible;       /* Clave para que no se corte el tooltip */
 }
 .carousel::-webkit-scrollbar { display: none; }
 
 /* Tarjeta de Película Premium (Netflix Billboards) */
 .movie-card {
     min-width: 180px; height: 270px; /* Ratio 2:3 absoluto */
-    border-radius: 4px; overflow: visible;
+    border-radius: 8px; overflow: visible;
     cursor: pointer; position: relative;
     transition: transform 0.4s var(--ease-spring), box-shadow 0.4s;
     flex-shrink: 0;
@@ -617,11 +620,13 @@ nav a.active::after { width: 24px; }
     position: absolute; top: 100%; left: 0; right: 0;
     width: 100%; z-index: 100;
     background: #181818;
-    border-radius: 0 0 4px 4px; padding: 12px;
+    border-radius: 0 0 12px 12px; padding: 15px;
     box-shadow: 0 15px 45px rgba(0,0,0,0.8);
     opacity: 0; pointer-events: none;
     transform: scaleY(0); transform-origin: top;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--primary);
+    border-top: none;
 }
 
 .movie-card:hover .movie-tooltip {
@@ -1136,4 +1141,53 @@ nav a.active::after { width: 24px; }
         min-width: 150px;
         height: 225px;
     }
+
+    /* Fixing overlapping header on mobile */
+    .navbar {
+        padding: 15px var(--side-padding);
+        gap: 12px;
+        justify-content: space-between;
+    }
+    
+    .navbar nav {
+        display: none !important; /* Hide central nav since it moves to the bottom bar */
+    }
+    
+    .user-actions {
+        gap: 12px;
+        margin-left: initial;
+    }
+    
+    .search-box:hover, .search-box.active {
+        width: 160px; /* More reasonable width for mobile */
+    }
+    
+    .logo {
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .user-profile-btn span.userName {
+        display: none; /* Hide username text on mobile to save space */
+    }
 }
+
+@media (max-width: 480px) {
+    .navbar {
+        gap: 8px;
+    }
+    
+    .user-actions {
+        gap: 6px;
+    }
+    
+    #btnLogout span {
+        display: none; /* Only show icon/compact version of logout */
+    }
+    
+    #btnLogout {
+        padding: 8px;
+        min-width: 40px;
+    }
+}
+

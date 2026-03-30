@@ -184,7 +184,10 @@ async function fetchAvailableIds() {
         const fetchAllIds = async (tableName) => {
             let all = [], start = 0;
             while (true) {
-                const { data, error } = await supabase.from(tableName).select('tmdb_id').range(start, start + 999);
+                const { data, error } = await supabase.from(tableName)
+                    .select('tmdb_id, created_at')
+                    .order('created_at', { ascending: false })
+                    .range(start, start + 999);
                 if (error) { console.error(`[VivoTV] Error ${tableName}:`, error); break; }
                 if (data) all.push(...data);
                 if (!data || data.length < 1000) break;
@@ -443,6 +446,13 @@ async function loadGridData(type, page, append = false) {
                 }
 
                 if (loader) loader.classList.add('hidden');
+
+                // 🚀 INNOVACIÓN: Ordenación Cronológica Local (TMDB)
+                detailsArray.sort((a, b) => {
+                    const dateA = a?.release_date || a?.first_air_date || '0000-00-00';
+                    const dateB = b?.release_date || b?.first_air_date || '0000-00-00';
+                    return dateB.localeCompare(dateA); // Más nuevo primero
+                });
 
                 detailsArray.forEach(item => {
                     if (!item || !item.poster_path) return;

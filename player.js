@@ -384,8 +384,8 @@ export const PLAYER_LOGIC = {
         } else {
             video.classList.add('hidden');
             iframe.classList.remove('hidden');
-            // Bloquear popups y redirecciones con Sandbox
-            iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
+            // Bloquear popups y redirecciones intrusivas pero permitir lo necesario para el player
+            iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-top-navigation-by-user-activation allow-popups allow-popups-to-escape-sandbox');
             iframe.src = url;
             this._startIframeTracking();
         }
@@ -643,7 +643,9 @@ export const PLAYER_LOGIC = {
                 .eq('user_id', this.currentUserId).eq('tmdb_id', this.currentTmdbId);
         } else {
             await supabase.from('user_favorites').insert({
-                user_id: this.currentUserId, tmdb_id: this.currentTmdbId,
+                user_id: this.currentUserId, 
+                tmdb_id: this.currentTmdbId,
+                type: this.currentType
             });
         }
         await this.checkIfFavorite(supabase);
