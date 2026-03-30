@@ -273,7 +273,7 @@ async function toDashboard(user) {
     }
 
     if (mainNav)     mainNav.classList.remove('hidden');
-    if (mobileNav)   mobileNav.style.display = 'flex';
+    if (mobileNav)   mobileNav.classList.remove('hidden');
     if (searchBox)   searchBox.classList.remove('hidden');
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
@@ -493,7 +493,7 @@ function toAuth() {
     if (dashSection) dashSection.classList.add('hidden');
     if (userProfile) userProfile.classList.add('hidden');
     if (mainNav)     mainNav.classList.add('hidden');
-    if (mobileNav)   mobileNav.style.display = 'none';
+    if (mobileNav)   mobileNav.classList.add('hidden');
     if (searchBox)   searchBox.classList.add('hidden');
     if (loginForm)   loginForm.reset();
     if (authError)   authError.classList.add('hidden');
