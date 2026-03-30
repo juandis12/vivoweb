@@ -181,9 +181,21 @@ async function fetchAvailableIds() {
     }
 
     try {
+        const fetchAllIds = async (tableName) => {
+            let all = [], start = 0;
+            while (true) {
+                const { data, error } = await supabase.from(tableName).select('tmdb_id').range(start, start + 999);
+                if (error) { console.error(`[VivoTV] Error ${tableName}:`, error); break; }
+                if (data) all.push(...data);
+                if (!data || data.length < 1000) break;
+                start += 1000;
+            }
+            return { data: all };
+        };
+
         const [movies, series] = await Promise.all([
-            supabase.from('video_sources').select('tmdb_id'),
-            supabase.from('series_episodes').select('tmdb_id')
+            fetchAllIds('video_sources'),
+            fetchAllIds('series_episodes')
         ]);
         
         if (movies.error) console.error('[VivoTV] Supabase Movies Error:', movies.error);
