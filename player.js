@@ -193,15 +193,28 @@ export const PLAYER_LOGIC = {
 
             const renderAllSeasons = async () => {
                 grid.innerHTML = '';
+                console.log(`[VivoTV] Iniciando renderizado de ${seasons.length} temporadas para ID ${data.id}`);
+                
                 for (const season of seasons) {
-                    const seasonHeader = document.createElement('h3');
-                    seasonHeader.className = 'season-divider';
-                    seasonHeader.textContent = `Temporada ${season.season_number}`;
-                    grid.appendChild(seasonHeader);
+                    try {
+                        console.log(`[VivoTV] Preparando Temporada ${season.season_number}...`);
+                        const seasonHeader = document.createElement('h3');
+                        seasonHeader.className = 'season-divider';
+                        seasonHeader.innerHTML = `Temporada ${season.season_number} <span style="font-size:0.8rem;opacity:0.6;font-weight:400;margin-left:10px;">(${season.episode_count} episodios)</span>`;
+                        grid.appendChild(seasonHeader);
 
-                    const dbEpsForSeason = dbEpisodes.filter(e => Number(e.season_number) === Number(season.season_number));
-                    await this._renderEpisodes(data.id, season.season_number, season.episode_count, dbEpsForSeason, progressMap, supabaseClient, true);
+                        const dbEpsForSeason = dbEpisodes.filter(e => Number(e.season_number) === Number(season.season_number));
+                        
+                        // Renderizamos la temporada. Si falla internamente, _renderEpisodes ya maneja errores.
+                        await this._renderEpisodes(data.id, season.season_number, season.episode_count, dbEpsForSeason, progressMap, supabaseClient, true);
+                        
+                        console.log(`[VivoTV] Temporada ${season.season_number} completada.`);
+                    } catch (errSeason) {
+                        console.error(`[VivoTV] Error crítico cargando Temporada ${season.season_number}:`, errSeason);
+                        continue; // Saltamos a la siguiente temporada para no romper el resto de la serie
+                    }
                 }
+                console.log(`[VivoTV] Renderizado maratón finalizado para ID ${data.id}`);
             };
             renderAllSeasons();
         }
