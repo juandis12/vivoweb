@@ -250,16 +250,18 @@ async function toDashboard(user) {
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
-    if (userName && user.user_metadata?.username) {
-        userName.textContent = user.user_metadata.username;
-        if (userAvatar) {
-            userAvatar.textContent = user.user_metadata.username.charAt(0).toUpperCase();
-            if (user.user_metadata.avatar_url) {
-                userAvatar.style.backgroundImage = `url('${user.user_metadata.avatar_url}')`;
-                userAvatar.style.backgroundSize = 'cover';
-                userAvatar.style.backgroundPosition = 'center';
-                userAvatar.style.color = 'transparent';
-            }
+    const nameToShow = user.user_metadata?.username || user.email.split('@')[0];
+    
+    if (userNameEl) {
+        userNameEl.textContent = nameToShow;
+    }
+    if (userAvatar) {
+        userAvatar.textContent = nameToShow.charAt(0).toUpperCase();
+        if (user.user_metadata?.avatar_url) {
+            userAvatar.style.backgroundImage = `url('${user.user_metadata.avatar_url}')`;
+            userAvatar.style.backgroundSize = 'cover';
+            userAvatar.style.backgroundPosition = 'center';
+            userAvatar.style.color = 'transparent';
         }
     }
 
@@ -280,12 +282,6 @@ async function toDashboard(user) {
     if (searchBox)   searchBox.classList.remove('hidden');
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
-
-    if (userNameEl && userAvatar) {
-        const name = user.email.split('@')[0];
-        userNameEl.textContent = name;
-        userAvatar.textContent = name[0].toUpperCase();
-    }
 
     // 1. Cargar disponibilidad
     await fetchAvailableIds();
@@ -542,12 +538,23 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
             if (error) throw error;
         } else {
             const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
-            const { error } = await supabase.auth.signUp({ 
+            const { data, error } = await supabase.auth.signUp({ 
                 email, 
                 password,
-                options: { data: { username: username } }
+                options: { 
+                    data: { 
+                        username: username,
+                        name: username // Para cumplir con el NOT NULL si persiste
+                    } 
+                }
             });
             if (error) throw error;
+            
+            // ÉXITO: Notificación y redirección suave
+            showToast('📩 ¡Correo de confirmación enviado! Revisa tu bandeja de entrada.', 'success');
+            setTimeout(() => {
+                window.location.href = 'index.html'; // O tu URL de login
+            }, 3000);
         }
     } catch (err) {
         if (authError) {
@@ -580,7 +587,10 @@ function setLoading(v) {
 }
 
 function mapError(msg) {
-    if (msg.toLowerCase().includes('invalid login')) return '❌ Email o contraseña incorrectos.';
+    const m = msg.toLowerCase();
+    if (m.includes('invalid login')) return '❌ Email o contraseña incorrectos.';
+    if (m.includes('user already registered')) return '❌ Este correo electrónico ya está registrado.';
+    if (m.includes('database error saving new user')) return '⚠️ El nombre de usuario ya existe o hay un error de perfil.';
     return msg;
 }
 
