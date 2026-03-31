@@ -156,36 +156,55 @@ export const PLAYER_LOGIC = {
     },
 
     async renderSeriesInfo(data, supabaseClient) {
-        const pills = document.getElementById('seasonsPills');
-        document.getElementById('infoStatus').textContent = data.status === 'Ended' ? 'Finalizada' : 'En Emisión';
+        const infoStatus = document.getElementById('infoStatus');
+        if (infoStatus) infoStatus.textContent = data.status === 'Ended' ? 'Finalizada' : 'En Emisión';
 
-        let dbEpisodes = [];
-        const { data: eps } = await supabaseClient.from('series_episodes').select('season_number, episode_number, stream_url').eq('tmdb_id', data.id).order('season_number').order('episode_number');
-        dbEpisodes = eps || [];
+        // 1. CARGA MASIVA DE EPISODIOS (Paginada)
+        const fetchAllEps = async (seriesId) => {
+            let all = [], start = 0;
+            while (true) {
+                const { data: chunk, error } = await supabaseClient.from('series_episodes')
+                    .select('season_number, episode_number, stream_url')
+                    .eq('tmdb_id', Number(seriesId))
+                    .range(start, start + 999);
+                
+                if (error) { console.error('[VivoTV] Error fetch episodes:', error); break; }
+                if (chunk) all.push(...chunk);
+                if (!chunk || chunk.length < 1000) break;
+                start += 1000;
+            }
+            return all;
+        };
+
+        const dbEpisodes = await fetchAllEps(data.id);
+        console.log(`[VivoTV] Episodios totales encontrados en DB para ID ${data.id}:`, dbEpisodes.length);
 
         let progressMap = {};
-        const { data: hist } = await supabaseClient.from('watch_history').select('season_number, episode_number, progress_seconds, total_seconds').eq('tmdb_id', data.id).eq('type', 'tv');
+        const { data: hist } = await supabaseClient.from('watch_history').select('season_number, episode_number, progress_seconds, total_seconds').eq('tmdb_id', String(data.id)).eq('type', 'tv');
         (hist || []).forEach(h => progressMap[`${h.season_number}_${h.episode_number}`] = h);
 
-        pills.innerHTML = '';
+        const pills = document.getElementById('seasonsPills');
+        if (pills) pills.innerHTML = ''; 
+
         const seasons = (data.seasons || []).filter(s => s.season_number > 0);
-        seasons.forEach((season, idx) => {
-            const dbEpsForSeason = dbEpisodes.filter(e => e.season_number === season.season_number);
-            const pill = document.createElement('div');
-            pill.className = `season-pill${idx === 0 ? ' active' : ''}`;
-            pill.textContent = `Temporada ${season.season_number}`;
-            pill.addEventListener('click', () => {
-                pills.querySelectorAll('.season-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                this.currentSeason = season.season_number;
-                this._renderEpisodes(data.id, season.season_number, season.episode_count, dbEpsForSeason, progressMap, supabaseClient);
-            });
-            pills.appendChild(pill);
-            if (idx === 0) {
-                this.currentSeason = season.season_number;
-                this._renderEpisodes(data.id, season.season_number, season.episode_count, dbEpsForSeason, progressMap, supabaseClient);
-            }
-        });
+        const grid = document.getElementById('episodesGrid');
+        if (grid) {
+            grid.innerHTML = '<div class="marathon-loader"><div class="loader"></div><p>Sincronizando capítulos...</p></div>';
+
+            const renderAllSeasons = async () => {
+                grid.innerHTML = '';
+                for (const season of seasons) {
+                    const seasonHeader = document.createElement('h3');
+                    seasonHeader.className = 'season-divider';
+                    seasonHeader.textContent = `Temporada ${season.season_number}`;
+                    grid.appendChild(seasonHeader);
+
+                    const dbEpsForSeason = dbEpisodes.filter(e => Number(e.season_number) === Number(season.season_number));
+                    await this._renderEpisodes(data.id, season.season_number, season.episode_count, dbEpsForSeason, progressMap, supabaseClient, true);
+                }
+            };
+            renderAllSeasons();
+        }
 
         if (this.lastSeriesProgress) {
             const p = this.lastSeriesProgress;
@@ -198,14 +217,15 @@ export const PLAYER_LOGIC = {
         }
     },
 
-    async _renderEpisodes(tmdbId, seasonNum, totalEps, dbEpisodes, progressMap, supabaseClient) {
+    async _renderEpisodes(tmdbId, seasonNum, totalEps, dbEpisodes, progressMap, supabaseClient, append = false) {
         const grid = document.getElementById('episodesGrid');
-        grid.innerHTML = '';
+        if (!append) grid.innerHTML = '';
         const seasonData = await TMDB_SERVICE.getSeasonDetails(tmdbId, seasonNum);
         const epsMap = {};
         dbEpisodes.forEach(e => epsMap[e.episode_number] = e);
 
-        for (let i = 1; i <= totalEps; i++) {
+        const maxEp = Math.max(totalEps, ...dbEpisodes.map(e => e.episode_number), 0);
+        for (let i = 1; i <= maxEp; i++) {
             const epData = epsMap[i];
             const infoTMDB = seasonData.episodes?.find(e => e.episode_number === i) || {};
             const card = document.createElement('div');
@@ -371,11 +391,14 @@ export const PLAYER_LOGIC = {
     async checkIfFavorite(supabase) {
         const btn = document.getElementById('btnAddToMyList');
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user || !btn) return;
+
         this.currentUserId = user.id;
-        const { data } = await supabase.from('user_favorites').select('id').eq('user_id', user.id).eq('tmdb_id', this.currentTmdbId).maybeSingle();
+        const { data } = await supabase.from('user_favorites').select('id').eq('user_id', user.id).eq('tmdb_id', Number(this.currentTmdbId)).maybeSingle();
+        
         btn.classList.toggle('added-to-list', !!data);
-        document.getElementById('favBtnText').textContent = !!data ? 'En Mi Lista' : 'Mi Lista';
+        const text = document.getElementById('favBtnText');
+        if (text) text.textContent = !!data ? 'En Mi Lista' : 'Mi Lista';
     },
 
     async toggleFavorite(supabase) {

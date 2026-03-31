@@ -167,19 +167,6 @@ async function initAuth() {
 async function fetchAvailableIds() {
     if (!supabase) return;
 
-    // Hidratar desde SessionStorage para evitar Table Scan en cada refresh automático (Solución Temporal de Escalabilidad)
-    const cachedData = sessionStorage.getItem('vivoWebAvailableIds_v3');
-    if (cachedData) {
-        try {
-            const parsed = JSON.parse(cachedData);
-            availableMovies = new Set(parsed.movies);
-            availableSeries = new Set(parsed.series);
-            availableIds    = new Set(parsed.ids);
-            console.log('[VivoTV] Catálogo disponible cargado desde Caché Local (Optimizado v3).');
-            return;
-        } catch(e) { console.warn('Caché corrupto, recargando net...', e); }
-    }
-
     try {
         const fetchAllIds = async (tableName) => {
             let all = [], start = 0;
@@ -201,27 +188,15 @@ async function fetchAvailableIds() {
             fetchAllIds('series_episodes')
         ]);
         
-        if (movies.error) console.error('[VivoTV] Supabase Movies Error:', movies.error);
-        if (series.error) console.error('[VivoTV] Supabase Series Error:', series.error);
-
-        console.log('[VivoTV] Raw Movies Data:', movies.data?.length || 0, 'items');
-        console.log('[VivoTV] Raw Series Data:', series.data?.length || 0, 'items');
-        
         availableMovies = new Set();
         availableSeries = new Set();
         availableIds = new Set();
-
-        const memMovies = [];
-        const memSeries = [];
-        const memIds    = [];
 
         if (movies.data) {
             movies.data.forEach(m => {
                 const id = m.tmdb_id.toString();
                 availableMovies.add(id);
                 availableIds.add(id);
-                memMovies.push(id);
-                memIds.push(id);
             });
         }
         if (series.data) {
@@ -229,17 +204,10 @@ async function fetchAvailableIds() {
                 const id = s.tmdb_id.toString();
                 availableSeries.add(id);
                 availableIds.add(id);
-                memSeries.push(id);
-                memIds.push(id);
             });
         }
 
-        // Guardar para mitigación de DDoS locales contra la base de datos
-        sessionStorage.setItem('vivoWebAvailableIds_v3', JSON.stringify({
-            movies: memMovies,
-            series: memSeries,
-            ids: memIds
-        }));
+        console.log('[VivoTV] Catálogo en tiempo real sincronizado con Supabase.');
     } catch (e) { 
         console.error('Error fetching available IDs:', e);
         showToast('Error cargando biblioteca. Revisa tu conexión.');
@@ -456,12 +424,8 @@ async function loadGridData(type, page, append = false) {
                     finalItems = finalItems.filter(item => item.genres?.some(g => g.id === 16));
                 }
 
-                // Ordenación Cronológica
-                finalItems.sort((a, b) => {
-                    const dateA = a?.release_date || a?.first_air_date || '0000-00-00';
-                    const dateB = b?.release_date || b?.first_air_date || '0000-00-00';
-                    return dateB.localeCompare(dateA);
-                });
+                // Mantenemos el orden de la base de datos (últimos subidos primero)
+                // ya no ordenamos por fecha de estreno de TMDB para evitar que los nuevos se pierdan al final.
 
                 finalItems.forEach(item => {
                     const card = CATALOG_UI.createMovieCard(item, type, true);
