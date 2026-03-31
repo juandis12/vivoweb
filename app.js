@@ -297,13 +297,15 @@ async function toDashboard(user) {
     // 3. Detectar tipo de página para rows
     const isMoviesPage = document.body.classList.contains('page-movies');
     const isSeriesPage = document.body.classList.contains('page-series');
-    const pageType = isSeriesPage ? 'tv' : (isMoviesPage ? 'movie' : 'all');
+    const isAnimePage  = document.body.classList.contains('page-anime');
+    const pageType     = (isSeriesPage || isAnimePage) ? 'tv' : (isMoviesPage ? 'movie' : 'all');
 
     try {
         // 3. Mostrar skeletons
         const carouselIds = [
             'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
-            'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel'
+            'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
+            'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel'
         ];
         carouselIds.forEach(id => {
             if (document.getElementById(id)) CATALOG_UI.showSkeletons(id);
@@ -311,9 +313,15 @@ async function toDashboard(user) {
 
         // 4. Cargar Hero
         let heroData;
-        if (pageType === 'tv') heroData = await TMDB_SERVICE.fetchFromTMDB('/trending/tv/day');
-        else if (pageType === 'movie') heroData = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/day');
-        else heroData = await TMDB_SERVICE.getTrending();
+        if (isAnimePage) {
+            heroData = await TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, sort_by: 'popularity.desc' });
+        } else if (pageType === 'tv') {
+            heroData = await TMDB_SERVICE.fetchFromTMDB('/trending/tv/day');
+        } else if (pageType === 'movie') {
+            heroData = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/day');
+        } else {
+            heroData = await TMDB_SERVICE.getTrending();
+        }
 
         // Filtrar Hero solo disponibles
         heroItems = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString())).slice(0, 8);
@@ -334,7 +342,6 @@ async function toDashboard(user) {
             const filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
             CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
             
-            // Gestionar visibilidad de la sección y "Ver más"
             const section = el.closest('.catalog-row');
             if (section) {
                 if (filtered.length === 0) section.classList.add('hidden');
@@ -342,13 +349,7 @@ async function toDashboard(user) {
                     section.classList.remove('hidden');
                     const btnVerMas = section.querySelector('.btn-ver-mas');
                     if (btnVerMas) {
-                        btnVerMas.onclick = () => {
-                            const grid = document.getElementById('gridContainer');
-                            if (grid) {
-                                grid.scrollIntoView({ behavior: 'smooth' });
-                                showToast(`Explora más en la sección inferior.`);
-                            }
-                        };
+                        btnVerMas.onclick = () => { document.getElementById('gridContainer')?.scrollIntoView({ behavior: 'smooth' }); };
                     }
                 }
             }
@@ -361,8 +362,16 @@ async function toDashboard(user) {
                 renderRow('topRatedCarousel', () => TMDB_SERVICE.getTopRated(), 'movie'),
                 renderRow('popularTVCarousel', () => TMDB_SERVICE.getPopularTV(), 'tv')
             ]);
+        } else if (isAnimePage) {
+            // Lógica específica de ANIME
+            await Promise.all([
+                renderRow('popularCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, sort_by: 'popularity.desc' }), 'tv'),
+                renderRow('topRatedCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, sort_by: 'vote_average.desc', 'vote_count.gte': 100 }), 'tv'),
+                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759' }), 'tv'),
+                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765' }), 'tv'),
+            ]);
         } else {
-            // Páginas específicas: Películas o Series
+            // Películas o Series
             const fetchPopular = () => pageType === 'tv' ? TMDB_SERVICE.getPopularTV() : TMDB_SERVICE.getPopularMovies();
             const fetchTop = () => pageType === 'tv' ? TMDB_SERVICE.fetchFromTMDB('/tv/top_rated') : TMDB_SERVICE.getTopRated();
             
@@ -374,25 +383,24 @@ async function toDashboard(user) {
                 renderRow('genre3Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?18:10749 }), pageType),
                 renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10765:27 }), pageType),
             ]);
+        }
 
-            // 6. Cargar Grilla de "Todas las..." al final
-            const gridContainer = document.getElementById('gridContainer');
-            if (gridContainer) {
-                await loadGridData(pageType, 1);
-                const btnLoadMore = document.getElementById('btnLoadMore');
-                if (btnLoadMore) {
-                    let currentPage = 1;
-                    btnLoadMore.onclick = async () => {
-                        currentPage++;
-                        await loadGridData(pageType, currentPage, true);
-                    };
-                }
+        // 6. Cargar Grilla
+        const gridContainer = document.getElementById('gridContainer');
+        if (gridContainer) {
+            await loadGridData(pageType, 1);
+            const btnLoadMore = document.getElementById('btnLoadMore');
+            if (btnLoadMore) {
+                let currentPage = 1;
+                btnLoadMore.onclick = async () => {
+                    currentPage++;
+                    await loadGridData(pageType, currentPage, true);
+                };
             }
         }
 
     } catch (e) { 
         console.error('Error cargando catálogo:', e); 
-        showToast('Error de conexión con el catálogo.');
     }
 
     await loadMyList();
@@ -413,15 +421,16 @@ async function loadGridData(type, page, append = false) {
         // Si estamos en peliculas.html o series.html, cargamos solo de Supabase
         const isMoviesPage = document.body.classList.contains('page-movies');
         const isSeriesPage = document.body.classList.contains('page-series');
+        const isAnimePage  = document.body.classList.contains('page-anime');
 
-        if (isMoviesPage || isSeriesPage) {
+        if (isMoviesPage || isSeriesPage || isAnimePage) {
             console.log(`[VivoTV] Cargando rejilla filtrada (${type}). IDs totales:`, 
                 type === 'tv' ? availableSeries.size : availableMovies.size);
             
             const targetSet = type === 'tv' ? availableSeries : availableMovies;
             const allIds = Array.from(targetSet);
             
-            const perPage = 28; // Aumentar un poco para llenar pantallas grandes
+            const perPage = 28;
             const start = (page - 1) * perPage;
             const end   = start + perPage;
             const pageIds = allIds.slice(start, end);
@@ -429,12 +438,10 @@ async function loadGridData(type, page, append = false) {
             if (btnLoadMore) btnLoadMore.classList.toggle('hidden', end >= allIds.length);
 
             if (pageIds.length) {
-                // Fetch details in smaller chunks to avoid rate limiting
                 const detailsArray = [];
                 const chunkSize = 10;
                 for (let i = 0; i < pageIds.length; i += chunkSize) {
                     const chunk = pageIds.slice(i, i + chunkSize);
-                    console.log(`[VivoTV] Fetching chunk ${i/chunkSize + 1} for ${type}...`);
                     const chunkRes = await Promise.all(
                         chunk.map(id => TMDB_SERVICE.getDetails(id, type).catch(() => null))
                     );
@@ -443,22 +450,27 @@ async function loadGridData(type, page, append = false) {
 
                 if (loader) loader.classList.add('hidden');
 
-                // 🚀 INNOVACIÓN: Ordenación Cronológica Local (TMDB)
-                detailsArray.sort((a, b) => {
+                // Si es Anime, filtramos localmente los que NO tengan género 16 (Animación)
+                let finalItems = detailsArray.filter(item => item && item.poster_path);
+                if (isAnimePage) {
+                    finalItems = finalItems.filter(item => item.genres?.some(g => g.id === 16));
+                }
+
+                // Ordenación Cronológica
+                finalItems.sort((a, b) => {
                     const dateA = a?.release_date || a?.first_air_date || '0000-00-00';
                     const dateB = b?.release_date || b?.first_air_date || '0000-00-00';
-                    return dateB.localeCompare(dateA); // Más nuevo primero
+                    return dateB.localeCompare(dateA);
                 });
 
-                detailsArray.forEach(item => {
-                    if (!item || !item.poster_path) return;
+                finalItems.forEach(item => {
                     const card = CATALOG_UI.createMovieCard(item, type, true);
                     container.appendChild(card);
                 });
             } else {
                 if (loader) loader.classList.add('hidden');
                 if (!append) {
-                    container.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay ${type === 'tv' ? 'series' : 'películas'} disponibles en este momento.</p>`;
+                    container.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay ${isAnimePage ? 'animes' : (type === 'tv' ? 'series' : 'películas')} disponibles en este momento.</p>`;
                 }
             }
             return;
