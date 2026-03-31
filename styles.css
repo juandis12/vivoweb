@@ -1,40 +1,39 @@
 @import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap');
 
 :root {
-    /* Paleta Cinematic Glass 2.0 🎬 */
-    --bg-base: #09090b; /* Profundidad absoluta */
-    --bg-surface: #121217;
-    --primary: #8b5cf6;
-    --primary-glow: rgba(139, 92, 246, 0.5);
-    --secondary: #06b6d4;
-    --secondary-glow: rgba(6, 182, 212, 0.5);
-    --accent-purple: #a855f7;
-    --accent-pink: #f472b6;
+    /* Paleta Abyssal Navy & Vivid Primary (Stitch Sync) 🎬 */
+    --bg-base: #0b122b; /* Abyssal Navy */
+    --bg-surface: #0b122b;
+    --primary: #2563eb; /* Vivid Primary */
+    --primary-container: #1d4ed8;
+    --primary-glow: rgba(37, 99, 235, 0.4);
+    --secondary: #fac15; /* Secondary Highlight */
+    --tertiary: #7c3aed; /* Creative Violet */
     
-    /* Glassmorphism 2.0 */
-    --glass-base: rgba(18, 18, 23, 0.4);
-    --glass-border: rgba(255, 255, 255, 0.05);
-    --glass-blur: 50px;
-    --glass-incandescent: rgba(255, 255, 255, 0.1);
+    /* Cinematic Glass & Depth Tokens */
+    --surface-low: #060c25;
+    --surface-container: #131a33;
+    --surface-high: #181e38;
+    --surface-highest: #2d334e;
     
-    /* Tipografía Netflix / Smart TV */
-    --font-display: 'Inter', sans-serif;
-    --font-body: 'Inter', sans-serif;
-    --text-primary: #f9f5f8;
-    --text-secondary: #d1d5db; /* Más claro para lectura */
-    --text-muted: #9ca3af;
+    --glass-blur: 20px;
+    --glass-surface: rgba(11, 18, 43, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08); /* Ghost Border */
     
-    /* Elevación y Profundidad */
-    --shadow-premium: 0 20px 50px rgba(0, 0, 0, 0.8);
-    --shadow-incandescent: 0 0 20px var(--primary-glow);
+    /* Tipografía Premium */
+    --font-premium: 'Inter', system-ui, -apple-system, sans-serif;
+    --text-primary: #dce1ff; /* On Surface */
+    --text-secondary: #c3c6d7; /* On Surface Variant */
+    --text-muted: #8d90a0; /* Outline */
     
-    /* Animaciones */
-    --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    /* Elevación & Roundness */
+    --radius-md: 0.75rem; 
+    --radius-lg: 1rem;
+    --shadow-premium: 0 40px 80px rgba(0, 0, 0, 0.6);
     
-    /* Espaciados Asimétricos */
-    --side-padding: 6%;
-    --section-gap: 8.5rem; /* Spacing scale 24 */
+    /* Spacing Scale (Stitch Inspired) */
+    --side-padding: 5%;
+    --section-gap: 6rem;
 }
 
 /* ================================================
@@ -99,22 +98,22 @@ button { font-family: inherit; cursor: pointer; }
 .section-subtitle { color: var(--text-muted); font-size: 1.15rem; max-width: 600px; line-height: 1.6; }
 
 /* ================================================
-   3. SPLASH SCREEN
+   3. SPLASH SCREEN (REFINED)
 ================================================ */
 .splash-screen {
     position: fixed; inset: 0; z-index: 9999;
-    background: radial-gradient(circle at center, #1b0c4d 0%, var(--bg-base) 100%);
+    background: radial-gradient(circle at center, #131a33 0%, var(--bg-base) 100%);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px;
     animation: splashFadeOut 0.5s ease 2.2s forwards;
 }
 
 .splash-logo {
-    font-size: 3.5rem; font-weight: 800; letter-spacing: -1px;
-    background: linear-gradient(135deg, #a78bfa 0%, var(--primary) 50%, #6d28d9 100%);
+    font-size: 3.5rem; font-weight: 800; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #dbe1ff 0%, var(--primary) 50%, #1d4ed8 100%);
     -webkit-background-clip: text; 
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.5));
+    filter: drop-shadow(0 0 30px var(--primary-glow));
     animation: splashZoom 0.6s var(--ease-spring) 0.2s both;
 }
 .splash-logo span { color: var(--primary); -webkit-text-fill-color: var(--primary); }
@@ -151,15 +150,17 @@ button { font-family: inherit; cursor: pointer; }
  ================================================ */
 .navbar {
     position: fixed; top: 0; left: 0; right: 0;
-    padding: 20px 4%;
+    padding: 24px var(--side-padding);
     display: flex; align-items: center; gap: 40px; z-index: 1000;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
-    transition: background-color 0.4s ease;
+    background: linear-gradient(to bottom, rgba(11, 18, 43, 0.9) 0%, transparent 100%);
+    backdrop-filter: blur(var(--glass-blur));
+    transition: all 0.4s ease;
 }
 
 .navbar.scrolled {
-    background-color: var(--bg-base);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    background-color: rgba(11, 18, 43, 0.85);
+    padding: 16px var(--side-padding);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
 }
 
 .logo {
@@ -225,14 +226,24 @@ nav a.active::after { width: 24px; }
 .btn-block { width: 100%; padding: 12px; }
 
 .btn-primary { 
-    background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%); 
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%); 
     color: white; 
     box-shadow: 0 10px 25px -5px var(--primary-glow);
 }
 .btn-primary:hover { 
     transform: translateY(-3px) scale(1.02); 
     box-shadow: 0 20px 35px -8px var(--primary-glow); 
-    filter: brightness(1.2);
+    filter: brightness(1.15);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--glass-border);
+}
+.btn-secondary:hover {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .btn-outline {
@@ -257,18 +268,19 @@ nav a.active::after { width: 24px; }
 ================================================ */
 .search-box {
     display: flex; align-items: center; gap: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--surface-highest);
+    border: none;
     border-radius: 50px;
     padding: 8px 16px;
-    width: 42px; overflow: hidden;
-    transition: width 0.4s var(--ease-smooth), border-color 0.3s, background 0.3s;
+    width: 48px; min-height: 48px; overflow: hidden;
+    transition: all 0.4s var(--ease-in-out);
     cursor: pointer;
-    backdrop-filter: blur(10px);
 }
 .search-box:hover, .search-box.active {
-    width: 280px; border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.1);
+    width: 320px;
+}
+.search-box:focus-within {
+    box-shadow: 0 0 0 2px var(--primary);
 }
 .search-box svg { flex-shrink: 0; color: var(--text-secondary); transition: color 0.3s; }
 .search-box:hover svg, .search-box.active svg { color: white; }
@@ -607,6 +619,23 @@ nav a.active::after { width: 24px; }
 
 .movie-card-title { display: none; } /* En Netflix la carátula no tiene título visible a menos que no cargue la foto */
 
+/* Ranked Cards (Top 10 Style) */
+.movie-card.ranked {
+    padding-left: 60px; /* Espacio para el número */
+}
+.rank-number {
+    position: absolute; left: -20px; bottom: -10px;
+    font-size: 140px; font-weight: 900;
+    line-height: 1; color: transparent;
+    -webkit-text-stroke: 4px rgba(255, 255, 255, 0.4);
+    z-index: -1; transform: skewX(-5deg);
+    transition: all 0.4s ease;
+}
+.movie-card.ranked:hover .rank-number {
+    -webkit-text-stroke: 4px var(--primary);
+    transform: skewX(-5deg) scale(1.1) translateX(-10px);
+}
+
 /* Hover Netflix Extremo */
 .movie-card:hover { transform: scale(1.3) translateY(-10px); z-index: 9999; }
 .movie-card:hover .movie-card-inner { 
@@ -616,16 +645,19 @@ nav a.active::after { width: 24px; }
 .movie-card:hover .movie-card-inner img { filter: brightness(1); }
 
 /* Tooltip Animado que se pega debajo (Simulando Netflix Box) */
+/* Frosted Obsidian Tooltip */
 .movie-tooltip {
     position: absolute; top: 100%; left: 0; right: 0;
     width: 100%; z-index: 100;
-    background: #181818;
-    border-radius: 0 0 12px 12px; padding: 15px;
-    box-shadow: 0 15px 45px rgba(0,0,0,0.8);
+    background: var(--glass-surface);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: 0 0 var(--radius-md) var(--radius-md); padding: 16px;
+    box-shadow: var(--shadow-premium);
     opacity: 0; pointer-events: none;
     transform: scaleY(0); transform-origin: top;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid var(--primary);
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    border: 1px solid var(--glass-border);
     border-top: none;
 }
 

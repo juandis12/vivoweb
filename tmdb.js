@@ -80,19 +80,20 @@ export const CATALOG_UI = {
         setTimeout(() => {
             heroTitle.textContent   = movie.title || movie.name;
             heroOverview.textContent = movie.overview || 'Sin descripción disponible.';
-            // En caso que el render fuera con innerHTML, el textContent lo protege nativamente
             heroBanner.style.backgroundImage = `url('${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}')`;
 
             const year   = (movie.release_date || movie.first_air_date || '').split('-')[0];
             const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
-            
-            if (heroMeta) {
-                heroMeta.innerHTML = `
-                    <span class="meta-chip">${year}</span>
-                    <span class="meta-chip badge-gold">⭐ ${rating}</span>
-                    <span class="meta-chip">4K Ultra HD</span>
-                `;
-            }
+            const badge  = document.querySelector('.hero-badge');
+            if (badge) badge.textContent = (movie.media_type === 'tv' ? 'SERIE DESTACADA' : 'PELÍCULA DESTACADA');
+
+            const yearEl = document.getElementById('heroYear');
+            const durationEl = document.getElementById('heroDuration');
+            const ratingEl = document.getElementById('heroRating');
+
+            if (yearEl) yearEl.textContent = year;
+            if (durationEl) durationEl.textContent = movie.runtime ? `${movie.runtime} min` : '2h 15min';
+            if (ratingEl) ratingEl.textContent = `★ ${rating}`;
 
             if (btnPlay) {
                 btnPlay.dataset.tmdbId = movie.id;
@@ -148,14 +149,12 @@ export const CATALOG_UI = {
         const container = document.getElementById(containerId);
         if (!container) return;
         
-        // Actualizar título si se proporciona
         if (titleOverride) {
             const section = container.closest('.catalog-row');
             const rowTitle = section?.querySelector('.row-title');
             if (rowTitle) rowTitle.textContent = titleOverride;
         }
 
-        // Limpiar skeletons si existen
         container.innerHTML = '';
 
         if (!items || items.length === 0) {
@@ -163,33 +162,32 @@ export const CATALOG_UI = {
             return;
         }
 
-        items.forEach(item => {
+        const isRankedRow = containerId.toLowerCase().includes('trending') || containerId.toLowerCase().includes('top');
+
+        items.forEach((item, index) => {
             if (!item.poster_path) return;
             const type = typeOverride || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
             const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
-            const card = this.createMovieCard(item, type, isAvail);
+            const rank = isRankedRow && index < 10 ? index + 1 : null;
+            const card = this.createMovieCard(item, type, isAvail, rank);
             container.appendChild(card);
         });
     },
 
-    createMovieCard(item, type, isAvailable = false) {
+    createMovieCard(item, type, isAvailable = false, rank = null) {
         const card = document.createElement('div');
-        card.className = `movie-card${isAvailable ? ' is-available' : ''}`;
+        card.className = `movie-card${isAvailable ? ' is-available' : ''}${rank ? ' ranked' : ''}`;
         card.dataset.tmdbId = item.id;
         card.dataset.type = type;
-        card.setAttribute('role', 'button');
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('aria-label', `Ver ${item.title || item.name}${isAvailable ? ' (Disponible)' : ''}`);
 
         const year   = (item.release_date || item.first_air_date || '').split('-')[0];
-        const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-        const rawTitle  = item.title || item.name || '';
-        const title  = _escapeHTML(rawTitle);
-        const overview = _escapeHTML(item.overview || 'Sin descripción disponible.');
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : '9.5'; // Soft match fallback
+        const title  = _escapeHTML(item.title || item.name || '');
 
         const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
 
         card.innerHTML = `
+            ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
                 <img src="${CONFIG.TMDB_IMAGE_CARD}${item.poster_path}" alt="${title}" loading="lazy">
                 <div class="movie-card-title">${title}</div>
@@ -209,7 +207,7 @@ export const CATALOG_UI = {
                     <span class="movie-tooltip-year">${year}</span>
                     <span class="badge-hd">HD</span>
                 </div>
-                <div style="font-size: 0.75rem; color: #fff; margin-top: 8px;">${genresList}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px;">${genresList}</div>
             </div>`;
 
         const openDetail = () => window.dispatchEvent(
