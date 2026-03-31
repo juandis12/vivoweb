@@ -40,6 +40,8 @@ export const TMDB_SERVICE = {
     getDetails: (id, type = 'movie') =>
         TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' }),
     search: (query) => TMDB_SERVICE.fetchFromTMDB('/search/multi', { query }),
+    getCredits: (id, type = 'movie') => TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/credits`),
+    getSeasonDetails: (id, seasonNumber) => TMDB_SERVICE.fetchFromTMDB(`/tv/${id}/season/${seasonNumber}`),
 
     async getImagesForAuthBg() {
         const data = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/week');

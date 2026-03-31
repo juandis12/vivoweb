@@ -720,11 +720,8 @@ if (btnHeroInfo) btnHeroInfo.addEventListener('click', (e) => {
     const b = e.currentTarget;
     PLAYER_LOGIC.openDetail(b.dataset.tmdbId, b.dataset.type, supabase);
 });
-const btnModalPlay = document.getElementById('btnModalPlay');
-if (btnModalPlay) btnModalPlay.addEventListener('click', () => {
-    const v = document.getElementById('videoPlayer');
-    if (v && !v.classList.contains('hidden')) v.play().catch(() => {});
-});
+// El manejo de btnModalPlay y btnCloseModal ahora se gestiona directamente en PLAYER_LOGIC.openDetail
+// para una mayor reactividad y menor acoplamiento.
 
 document.addEventListener('DOMContentLoaded', () => initAuth());
 

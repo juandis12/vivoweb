@@ -424,9 +424,12 @@ nav a.active::after { width: 24px; }
 
 .hero-content {
     position: relative; z-index: 10;
-    padding: 0 4%; /* Margen general de Netflix */
-    max-width: 45%;
-    margin-top: 10vh;
+    padding: 0 var(--side-padding);
+    max-width: 600px;
+    margin-top: 5vh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .hero-genre-badge { display: none; } /* Netflix no usa badge en el Hero */
@@ -449,17 +452,22 @@ nav a.active::after { width: 24px; }
 .hero-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
 .hero-buttons .btn { font-size: 1.05rem; padding: 14px 34px; }
 
-/* Indicadores del Hero */
+/* Indicadores del Hero (Dots) */
 .hero-indicators {
-    position: absolute; bottom: 190px; left: var(--side-padding);
-    z-index: 10; display: flex; gap: 6px;
+    display: flex; gap: 8px; margin: 10px 0;
+    z-index: 10;
 }
 .hero-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: rgba(255,255,255,0.35);
-    cursor: pointer; transition: all 0.3s;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer; transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.1);
 }
-.hero-dot.active { width: 24px; border-radius: 3px; background: white; }
+.hero-dot.active { 
+    width: 30px; border-radius: 10px; 
+    background: var(--primary);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
 
 @keyframes heroSlideIn {
     from { opacity: 0; transform: translateY(16px); }
@@ -470,20 +478,28 @@ nav a.active::after { width: 24px; }
    9. CARRUSELES
 ================================================ */
 .catalogs-wrapper {
-    margin-top: -160px; position: relative; z-index: 20;
-    display: flex; flex-direction: column; gap: 50px;
+    margin-top: -100px; position: relative; z-index: 20;
+    display: flex; flex-direction: column; gap: 40px;
+    background: linear-gradient(to bottom, transparent, var(--bg-base) 150px);
 }
 
-.catalog-row { padding-left: var(--side-padding); }
+.catalog-row { 
+    margin-bottom: 2.5rem; 
+    position: relative; 
+    z-index: 1;
+    transition: z-index 0.3s;
+}
+.catalog-row:hover { z-index: 100; }
 
 /* Header de fila: título a la izquierda, "Ver más" a la derecha */
 .row-header {
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; padding: 0 var(--side-padding);
+    margin-bottom: 24px; padding: 0 var(--side-padding);
 }
 .row-title { 
-    font-size: 1.5rem; font-weight: 700; color: #e5e5e5; 
-    display: flex; align-items: center; gap: 10px;
+    font-size: 1.6rem; font-weight: 800; color: #fff; 
+    display: flex; align-items: center; gap: 12px;
+    letter-spacing: -0.01em;
 }
 .row-accent { color: var(--secondary); font-size: 1.4rem; } 
 
@@ -584,30 +600,30 @@ nav a.active::after { width: 24px; }
 .carousel-arrow:disabled { opacity: 0 !important; }
 
 .carousel {
-    display: flex; gap: 14px; overflow-x: auto; 
-    padding: 20px 16px 120px; /* Espacio para el hover */
-    margin-bottom: -80px;      /* Compensar el espacio extra */
+    display: flex; gap: 16px; overflow-x: auto; 
+    padding: 40px var(--side-padding) 140px; /* Padding extra para el scale y tooltip */
+    margin-bottom: -100px;
     scroll-behavior: smooth; scrollbar-width: none; flex: 1;
-    overflow-y: visible;       /* Clave para que no se corte el tooltip */
+    overflow-y: visible;
 }
 .carousel::-webkit-scrollbar { display: none; }
 
 /* Tarjeta de Película Premium (Netflix Billboards) */
 .movie-card {
-    min-width: 180px; height: 270px; /* Ratio 2:3 absoluto */
-    border-radius: 8px; overflow: visible;
+    min-width: 200px; height: 300px; /* Ratio ajustado */
+    border-radius: var(--radius-md); overflow: visible;
     cursor: pointer; position: relative;
-    transition: transform 0.4s var(--ease-spring), box-shadow 0.4s;
+    transition: all 0.45s cubic-bezier(0.2, 1, 0.2, 1);
     flex-shrink: 0;
 }
 
 .movie-card-inner {
     width: 100%; height: 100%;
-    border-radius: 4px; overflow: hidden;
+    border-radius: var(--radius-md); overflow: hidden;
     position: relative;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-    border: none;
-    transition: border 0.3s;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.3s ease;
 }
 
 .movie-card-inner img {
@@ -637,12 +653,17 @@ nav a.active::after { width: 24px; }
 }
 
 /* Hover Netflix Extremo */
-.movie-card:hover { transform: scale(1.3) translateY(-10px); z-index: 9999; }
-.movie-card:hover .movie-card-inner { 
-    box-shadow: 0 15px 40px rgba(0,0,0,0.9); 
-    border-radius: 4px 4px 0 0;
+/* Hover Netflix refined */
+.movie-card:hover { 
+    transform: scale(1.2) translateY(-15px); 
+    z-index: 1000; 
 }
-.movie-card:hover .movie-card-inner img { filter: brightness(1); }
+.movie-card:hover .movie-card-inner { 
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8); 
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-color: var(--primary);
+}
+.movie-card:hover .movie-card-inner img { filter: brightness(1.15); }
 
 /* Tooltip Animado que se pega debajo (Simulando Netflix Box) */
 /* Frosted Obsidian Tooltip */
@@ -675,11 +696,11 @@ nav a.active::after { width: 24px; }
 }
 
 .movie-tooltip-meta { 
-    display: flex; justify-content: flex-start; align-items: center; gap: 8px;
-    font-size: 0.75rem; 
+    display: flex; justify-content: flex-start; align-items: center; gap: 10px;
+    font-size: 0.85rem; 
 }
-.movie-tooltip-rating { color: #06b6d4; font-weight: 800; } /* Cian de marca Match */
-.movie-tooltip-year { color: var(--text-muted); }
+.movie-tooltip-rating { color: #46d369; font-weight: 800; } /* Verde Netflix para match */
+.movie-tooltip-year { color: var(--text-muted); font-weight: 500; }
 
 .movie-tooltip-btn {
     width: 32px; height: 32px; border-radius: 50%;
@@ -728,93 +749,260 @@ nav a.active::after { width: 24px; }
     content: '';
     position: absolute;
     inset: 0;
-    border: 2px solid var(--primary);
-    border-radius: 12px;
+    border: 1.5px solid var(--primary);
+    border-radius: var(--radius-md);
     pointer-events: none;
-    opacity: 0.2;
-    transition: opacity 0.3s;
-    box-shadow: inset 0 0 15px rgba(168, 85, 247, 0.2);
+    opacity: 0.3;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 0 10px rgba(37, 99, 235, 0.2);
 }
-.movie-card.is-available:hover::after { opacity: 1; }
+.movie-card.is-available:hover::after { 
+    opacity: 1;
+    box-shadow: 0 0 20px var(--primary-glow);
+}
 
 /* ================================================
    10. MODAL DE DETALLE Y REPRODUCTOR (ESTILO NETFLIX)
  ================================================ */
 .modal-overlay {
     position: fixed; inset: 0; z-index: 6000;
-    display: flex; align-items: flex-start; justify-content: center; padding: 30px 0;
-    background: rgba(0,0,0,0.7); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-    overflow-y: auto; scrollbar-width: none;
-    animation: fadeIn 0.3s ease;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    opacity: 0; pointer-events: none;
+    transition: all 0.4s var(--ease-spring);
 }
 
-.modal-content {
-    width: 100%; max-width: 850px;
-    background: #181818;
-    border-radius: 10px;
-    overflow: hidden; position: relative;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.8);
-    animation: modalIn 0.3s ease;
-    margin: auto;
+.modal-overlay:not(.hidden) { opacity: 1; pointer-events: auto; }
+
+.modal-content.glass-panel {
+    width: 95%; max-width: 1400px; height: 92vh; margin: 4vh auto;
+    border-radius: 28px; overflow-y: auto; overflow-x: hidden;
+    position: relative; background: #0b122b;
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
 
-/* Backdrop Header: El video o la imagen va arriba abarcando todo el ancho */
-.modal-backdrop {
-    position: relative; width: 100%; aspect-ratio: 16/9;
-    background-size: cover; background-position: center;
-    background-color: #000;
-}
-.modal-backdrop::after {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to top, #181818 0%, transparent 60%);
-}
-
+/* Botón de Cierre Premium */
 .close-modal {
-    position: absolute; top: 15px; right: 15px;
-    z-index: 20; background: rgba(24, 24, 24, 0.8); border: none;
-    color: white; width: 36px; height: 36px; border-radius: 50%;
-    font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
-    transition: all 0.3s ease; cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+    position: absolute; top: 30px; right: 30px; z-index: 100;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.1);
+    color: #fff; font-size: 28px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(20px); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.close-modal:hover { background: rgba(255,255,255,0.25); transform: rotate(90deg) scale(1.1); }
-
-.modal-body {
-    padding: 0 45px 45px;
-    position: relative; z-index: 5;
-    margin-top: -80px; /* Para que el título flote sobre el degradado inferior del backdrop */
+.close-modal:hover {
+    background: #ef4444; border-color: #ef4444; transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
 }
 
-.modal-poster { display: none; } /* En Netflix no existe el poster al lado */
-
-.modal-info h2 { font-size: 2.2rem; font-weight: 800; margin-bottom: 25px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-
-.modal-metadata { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
-.meta-chip {
-    font-size: 0.95rem; font-weight: 500; color: white;
-}
-.badge-match { color: var(--secondary); font-weight: 700; }
-.badge-hd { border: 1px solid rgba(255,255,255,0.4); padding: 0 4px; border-radius: 3px; font-size: 0.7rem; color: rgba(255,255,255,0.9); }
-
-.modal-two-columns {
-    display: grid; grid-template-columns: 2fr 1fr; gap: 40px;
+.modal-viewport {
+    position: relative; width: 100%; height: 70vh; min-height: 500px;
+    display: flex; align-items: flex-end; padding: 60px 80px; overflow: hidden;
 }
 
-.modal-overview-text { color: white; line-height: 1.6; margin-bottom: 30px; font-size: 1rem; }
-
-.modal-actions { display: flex; gap: 12px; margin-bottom: 30px; }
-
-/* Reproductor Premium */
-.player-container {
-    background: #000;
-    aspect-ratio: 16/9;
-    border-radius: 15px; overflow: hidden;
-    position: relative; border: 1px solid var(--glass-border);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-    display: none; /* OCULTO HASTA QUE SE REPRODUZCA */
+.modal-backdrop {
+    position: absolute; inset: 0; background-size: cover; background-position: center 15%;
+    z-index: 0; transition: transform 1s ease;
 }
-.player-container.active { display: block; }
-#videoIframe { width: 100%; height: 100%; border: none; }
+
+.modal-viewport:hover .modal-backdrop { transform: scale(1.03); }
+
+.modal-vignette {
+    position: absolute; inset: 0;
+    background: linear-gradient(0deg, #0b122b 0%, rgba(11,18,43,0.2) 60%, rgba(11,18,43,0.8) 100%);
+    z-index: 1;
+}
+
+.modal-hero-info {
+    position: relative; z-index: 2; max-width: 850px;
+    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(50px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-main-title {
+    font-size: clamp(2.5rem, 7vw, 4.5rem); font-weight: 900; margin-bottom: 18px;
+    line-height: 0.95; text-transform: uppercase; letter-spacing: -3px; color: #fff;
+    text-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+.modal-meta-row {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 40px;
+    color: rgba(255,255,255,0.9); font-size: 1.1rem; font-weight: 600;
+}
+
+.meta-divider {
+    width: 6px; height: 6px; background: var(--primary-accent);
+    border-radius: 50%; box-shadow: 0 0 12px var(--primary-accent);
+}
+
+.rating-imdb { color: #f5c518; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+
+.badge-4k {
+    border: 2px solid rgba(255,255,255,0.4); padding: 4px 12px; border-radius: 8px;
+    font-size: 0.75rem; font-weight: 900; letter-spacing: 2px;
+}
+
+.trending-badge {
+    background: var(--accent-gradient); padding: 8px 18px; border-radius: 10px;
+    font-size: 0.85rem; font-weight: 900; margin-bottom: 25px; display: inline-block;
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+}
+
+.modal-primary-actions { display: flex; align-items: center; gap: 25px; }
+
+.btn-lg {
+    padding: 18px 45px; font-size: 1.2rem; font-weight: 850;
+    border-radius: 16px; display: flex; align-items: center; gap: 14px;
+}
+
+.btn-circle {
+    width: 60px; height: 60px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(25px); transition: 0.4s;
+}
+
+.btn-circle:hover { background: rgba(255,255,255,0.2); transform: scale(1.15); border-color: #fff; }
+
+/* Grilla de Detalles Estilo Stitch */
+.modal-details-grid {
+    display: grid; grid-template-columns: 1fr 320px; gap: 100px; padding: 80px;
+    background: #0b122b;
+}
+
+.section-label {
+    font-size: 0.9rem; text-transform: uppercase; letter-spacing: 3px;
+    color: rgba(255,255,255,0.3); margin-bottom: 25px; font-weight: 800;
+}
+
+.overview-text {
+    font-size: 1.25rem; line-height: 1.8; color: rgba(255,255,255,0.9);
+    margin-bottom: 60px; max-width: 98%;
+}
+
+.details-section { margin-bottom: 70px; }
+
+/* Reparto / Cast Area */
+.cast-row {
+    display: flex; gap: 40px; overflow-x: auto; padding-bottom: 20px; scrollbar-width: none;
+}
+
+.cast-item { flex: 0 0 110px; text-align: center; }
+
+.cast-avatar {
+    width: 90px; height: 90px; border-radius: 50%; margin-bottom: 15px;
+    object-fit: cover; border: 4px solid rgba(255,255,255,0.03); transition: 0.4s;
+}
+
+.cast-item:hover .cast-avatar { transform: translateY(-10px) scale(1.1); border-color: var(--primary-accent); }
+.cast-name { font-size: 1rem; font-weight: 700; color: #fff; display: block; margin-bottom: 4px; }
+.cast-character { font-size: 0.8rem; color: rgba(255,255,255,0.4); font-style: italic; }
+
+/* Sidebar Premium Information */
+.details-side-col { display: flex; flex-direction: column; gap: 40px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.05); }
+.info-block { display: flex; flex-direction: column; gap: 8px; padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.info-label { font-size: 0.8rem; color: rgba(255,255,255,0.3); text-transform: uppercase; font-weight: 800; letter-spacing: 2px; }
+.info-value { font-size: 1.1rem; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
+
+.btn-share {
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    border: none; padding: 20px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    font-weight: 800; color: #fff; cursor: pointer; transition: 0.4s;
+    box-shadow: 0 15px 30px rgba(37, 99, 235, 0.25);
+    margin-top: 20px; font-size: 1rem;
+}
+.btn-share:hover { transform: translateY(-5px); filter: brightness(1.15); box-shadow: 0 20px 40px rgba(37, 99, 235, 0.4); }
+
+/* SECCIÓN EPISODIOS (MODAL SERIES) */
+.series-episodes-section { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 80px; grid-column: span 2; }
+.episodes-header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+.season-label-group { display: flex; flex-direction: column; gap: 8px; }
+.seasons-label { font-size: 0.9rem; color: rgba(255,255,255,0.4); }
+
+.seasons-pills { display: flex; gap: 12px; overflow-x: auto; padding: 5px 0; }
+.season-pill {
+    background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
+    padding: 10px 24px; border-radius: 12px; font-weight: 700; color: #fff;
+    cursor: pointer; transition: 0.3s; white-space: nowrap;
+}
+.season-pill.active { background: #fff; color: #000; border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+
+.episode-card {
+    display: flex; gap: 25px; padding: 20px; border-radius: 20px;
+    background: rgba(255,255,255,0.03); margin-bottom: 20px;
+    cursor: pointer; transition: 0.4s var(--ease-smooth);
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.episode-card:hover {
+    background: rgba(255,255,255,0.08); border-color: var(--primary-accent);
+    transform: translateX(15px);
+}
+
+.ep-thumb-wrapper {
+    position: relative; flex: 0 0 200px; aspect-ratio: 16/9;
+    border-radius: 12px; overflow: hidden;
+}
+
+.ep-thumb { width: 100%; height: 100%; object-fit: cover; }
+.ep-play-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: 0.3s;
+}
+.episode-card:hover .ep-play-overlay { opacity: 1; }
+
+.ep-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.ep-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ep-title { font-weight: 800; font-size: 1.1rem; color: #fff; margin: 0; }
+.ep-status { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; padding: 4px 12px; border-radius: 6px; letter-spacing: 1px; }
+.status-available { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+.status-upcoming { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.15); }
+
+.ep-overview {
+    font-size: 0.9rem; color: rgba(255,255,255,0.45); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; margin-bottom: 12px; font-weight: 400;
+}
+.ep-meta { font-size: 0.85rem; color: rgba(255,255,255,0.3); font-weight: 600; }
+
+.episode-card.disabled { cursor: not-allowed; pointer-events: none; opacity: 0.55; filter: grayscale(0.4); }
+.fullscreen-player {
+    position: fixed; inset: 0; background: #000; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.btn-exit-player {
+    position: absolute; top: 40px; right: 40px; z-index: 10000;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: none; color: #fff;
+    cursor: pointer; backdrop-filter: blur(15px); display: flex;
+    align-items: center; justify-content: center; transition: 0.3s;
+}
+.btn-exit-player:hover { background: #ef4444; transform: rotate(90deg) scale(1.1); }
+
+.loader-wave {
+    display: flex; gap: 6px; height: 30px; justify-content: center; align-items: center;
+}
+.loader-wave span {
+    width: 4px; height: 100%; background: var(--primary-accent);
+    animation: loader-wave 1s infinite ease-in-out;
+}
+@keyframes loader-wave {
+    0%, 40%, 100% { transform: scaleY(0.4); } 
+    20% { transform: scaleY(1); }
+}
+
+.fullscreen-player video, .fullscreen-player iframe {
+    width: 100%; height: 100%; border: none;
+}
 
 
 /* ================================================
@@ -869,68 +1057,24 @@ nav a.active::after { width: 24px; }
     box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
 }
 
-/* Grid de episodios */
-.episodes-section { margin-top: 30px; animation: fadeIn 0.4s ease; }
-.episodes-title {
-    font-size: 1.1rem; font-weight: 700; margin-bottom: 20px;
-    color: var(--text-primary); border-left: 3px solid var(--primary);
-    padding-left: 14px; letter-spacing: -0.5px;
-}
-.episodes-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 5px;
-}
-.episodes-grid::-webkit-scrollbar { width: 3px; }
-.episodes-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
 
-.episode-card {
-    border-radius: 10px; padding: 10px 8px;
-    cursor: pointer; text-align: center;
-    transition: all 0.2s; position: relative;
-    overflow: hidden;
+/* ================================================
+   11. TOAST DE NOTIFICACIÓN
+================================================ */
+.toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    z-index: 9000; background: #222330;
+    color: white; padding: 12px 24px;
+    border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.9rem; font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: all 0.35s var(--ease-spring);
+    pointer-events: none; opacity: 0;
 }
-.episode-card:hover {
-    border-color: var(--primary);
-    background: rgba(139,92,246,0.12);
-    transform: translateY(-2px);
-}
-.episode-card.active {
-    border-color: var(--primary);
-    background: rgba(139,92,246,0.2);
-    box-shadow: 0 0 12px rgba(139,92,246,0.3);
-}
-.episode-card.playing {
-    border-color: #22d3ee;
-    background: rgba(34,211,238,0.1);
-}
-.episode-number {
-    font-size: 1rem; font-weight: 800;
-    color: var(--text-primary); display: block;
-    margin-bottom: 3px;
-}
-.episode-label {
-    font-size: 0.7rem; color: var(--text-muted);
-    font-weight: 500; display: block;
-}
-/* Barra de progreso dentro del episode-card */
-.episode-progress-bar {
-    position: absolute; bottom: 0; left: 0;
-    height: 3px; background: var(--primary);
-    border-radius: 0 0 10px 10px;
-    transition: width 0.3s;
-}
-/* Barra de progreso debajo de la tarjeta del carrusel */
-.movie-card-progress {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    height: 3px; background: #333;
-    border-radius: 0 0 10px 10px;
-    overflow: hidden; z-index: 5;
-}
-.movie-card-progress-fill {
-    height: 100%; background: var(--primary);
-    border-radius: 0 0 10px 10px;
-    transition: width 0.3s;
-}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Ajustes de compatibilidad */
+.modal-overlay.hidden { display: none; }
 /* ================================================
    12. VISTAS DE CUADRÍCULA (GRID)
 ================================================ */
@@ -1220,6 +1364,67 @@ nav a.active::after { width: 24px; }
     #btnLogout {
         padding: 8px;
         min-width: 40px;
+    }
+
+}
+
+/* ================================================
+   13. TARJETA FLOTANTE DE REANUDACIÓN
+================================================ */
+.glass-floating-card {
+    position: fixed; bottom: 40px; right: 40px; width: 420px;
+    background: rgba(15, 15, 25, 0.75); backdrop-filter: blur(40px);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 28px; padding: 22px; z-index: 11000;
+    display: flex; gap: 22px;
+    animation: floatIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    overflow: hidden; justify-content: space-between;
+}
+
+@keyframes floatIn {
+    from { opacity: 0; transform: translateX(80px) scale(0.85); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.floating-card-thumb {
+    width: 110px; height: 160px; border-radius: 18px;
+    object-fit: cover; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.floating-card-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+.floating-badge {
+    font-size: 0.65rem; font-weight: 900; background: var(--primary-accent);
+    color: #fff; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; display: inline-block;
+    letter-spacing: 1px;
+}
+.floating-card-header h3 { font-size: 1.2rem; font-weight: 850; color: #fff; margin: 0; letter-spacing: -0.5px; }
+
+.floating-card-content p { font-size: 0.95rem; color: rgba(255,255,255,0.45); margin: 0 0 20px; font-weight: 500; }
+
+.floating-card-actions { display: flex; align-items: center; gap: 14px; }
+
+.float-btn {
+    border: none; border-radius: 14px; font-weight: 800; cursor: pointer; transition: 0.4s;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.float-btn-primary {
+    background: #fff; color: #000; padding: 12px 24px; gap: 10px; font-size: 1rem; flex: 1;
+}
+.float-btn-primary:hover { background: var(--primary-accent); color: #fff; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
+
+.float-btn-close {
+    background: rgba(255,255,255,0.08); color: #fff; width: 45px; height: 45px; font-size: 1.4rem;
+}
+.float-btn-close:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-radius: 50%; }
+
+@media (max-width: 600px) {
+    .glass-floating-card {
+        width: calc(100% - 32px); bottom: 100px; right: 16px; left: 16px;
+        padding: 16px; gap: 16px;
     }
 }
 
