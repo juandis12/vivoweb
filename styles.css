@@ -227,7 +227,7 @@ nav a.active::after { width: 24px; }
 
 @media (max-width: 600px) {
     #userName { display: none !important; }
-    .user-profile-btn { gap: 10px; }
+    .user-profile-btn { gap: 8px; }
 }
 
 /* ================================================
@@ -1393,11 +1393,11 @@ nav a.active::after { width: 24px; }
     }
 
     .user-profile-btn #userName {
-        display: none !important; /* Force hide username text on mobile */
+        display: none !important;
     }
     
     .avatar {
-        width: 32px; height: 32px; /* Ensure exact size on mobile */
+        width: 32px; height: 32px; min-width: 32px;
     }
 }
 
