@@ -224,13 +224,16 @@ async function toDashboard(user) {
         userNameEl.textContent = nameToShow;
     }
     if (userAvatar) {
-        userAvatar.textContent = nameToShow.charAt(0).toUpperCase();
-        if (user.user_metadata?.avatar_url) {
-            userAvatar.style.backgroundImage = `url('${user.user_metadata.avatar_url}')`;
-            userAvatar.style.backgroundSize = 'cover';
-            userAvatar.style.backgroundPosition = 'center';
-            userAvatar.style.color = 'transparent';
-        }
+        userAvatar.textContent = ""; // Limpiar iniciales
+        userAvatar.style.backgroundImage = `url('./favicon.svg')`;
+        userAvatar.style.backgroundSize = '60%'; // Queda elegante dentro del círculo
+        userAvatar.style.backgroundRepeat = 'no-repeat';
+        userAvatar.style.backgroundPosition = 'center';
+        userAvatar.style.backgroundColor = 'var(--surface-highest)';
+        
+        // Si el usuario ya tenía un avatar manual, se le da prioridad opcionalmente (pero el usuario pidió favicon.svg en TODOS lados)
+        // Por ahora, forzamos branding:
+        userAvatar.style.color = 'transparent';
     }
 
     if (userProfile) {
