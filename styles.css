@@ -217,16 +217,17 @@ nav a.active::after { width: 24px; }
 }
 
 #userName {
-    max-width: 150px;
+    max-width: 100px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     transition: all 0.3s ease;
+    display: inline-block;
 }
 
 @media (max-width: 600px) {
-    #userName { display: none; }
-    .user-profile-btn { gap: 0; }
+    #userName { display: none !important; }
+    .user-profile-btn { gap: 10px; }
 }
 
 /* ================================================
@@ -1391,8 +1392,12 @@ nav a.active::after { width: 24px; }
         flex-shrink: 0;
     }
 
-    .user-profile-btn span.userName {
-        display: none; /* Hide username text on mobile to save space */
+    .user-profile-btn #userName {
+        display: none !important; /* Force hide username text on mobile */
+    }
+    
+    .avatar {
+        width: 32px; height: 32px; /* Ensure exact size on mobile */
     }
 }
 
@@ -1405,13 +1410,22 @@ nav a.active::after { width: 24px; }
         gap: 6px;
     }
     
-    #btnLogout span {
-        display: none; /* Only show icon/compact version of logout */
+    #btnLogout {
+        padding: 0;
+        width: 32px; height: 32px;
+        min-width: 32px;
+        border-radius: 50%;
+        font-size: 0; /* Ocultar texto Salir */
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'%3E%3C/path%3E%3Cpolyline points='16 17 21 12 16 7'%3E%3C/polyline%3E%3Cline x1='21' y1='12' x2='9' y2='12'%3E%3C/line%3E%3C/svg%3E");
+        background-size: 18px;
+        background-repeat: no-repeat;
+        background-position: center;
+        border-color: rgba(255,0,0,0.3);
     }
     
-    #btnLogout {
-        padding: 8px;
-        min-width: 40px;
+    #btnLogout:hover {
+        background-color: rgba(239, 68, 68, 0.2);
+        border-color: #ef4444;
     }
 
 }
