@@ -178,8 +178,9 @@ export const PLAYER_LOGIC = {
         const infoStatus = document.getElementById('infoStatus');
         if (infoStatus) infoStatus.textContent = data.status === 'Ended' ? 'Finalizada' : 'En Emisión';
 
-        // 1. SELECTOR DE TEMPORADAS (Pills)
-        const seasons = (data.seasons || []).filter(s => s.season_number > 0);
+        const seasons = (data.seasons || [])
+            .filter(s => s.season_number > 0)
+            .sort((a, b) => a.season_number - b.season_number);
         const pillsContainer = document.getElementById('seasonsPills');
         const grid = document.getElementById('episodesGrid');
 

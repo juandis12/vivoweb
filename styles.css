@@ -1307,8 +1307,8 @@ nav a.active::after { width: 24px; }
     }
     .close-modal { 
         position: fixed; 
-        top: 12px; 
-        right: 12px; 
+        top: 20px; 
+        right: 20px; 
         width: 36px; 
         height: 36px;
         background: rgba(0,0,0,0.5);
@@ -1319,8 +1319,8 @@ nav a.active::after { width: 24px; }
     /* Grid de Contenido */
     .movies-grid-container { padding-bottom: 150px; }
     .movies-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
     }
     .grid-header { margin-top: 80px; }
     .grid-title { font-size: 1.6rem; }
@@ -1392,7 +1392,6 @@ nav a.active::after { width: 24px; }
         height: 225px;
     }
 
-    /* Fixing overlapping header on mobile */
     .navbar {
         padding: 15px var(--side-padding);
         gap: 12px;
@@ -1400,20 +1399,34 @@ nav a.active::after { width: 24px; }
     }
     
     .navbar nav {
-        display: none !important; /* Hide central nav since it moves to the bottom bar */
+        display: none !important;
     }
     
     .user-actions {
-        gap: 12px;
+        gap: 10px;
         margin-left: initial;
     }
     
+    #btnLogout {
+        padding: 0 !important;
+        width: 34px !important; height: 34px !important;
+        min-width: 34px !important;
+        border-radius: 50% !important;
+        font-size: 0 !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'%3E%3C/path%3E%3Cpolyline points='16 17 21 12 16 7'%3E%3C/polyline%3E%3Cline x1='21' y1='12' x2='9' y2='12'%3E%3C/line%3E%3C/svg%3E") !important;
+        background-size: 16px !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        border: 1.5px solid rgba(255,255,255,0.1) !important;
+        flex-shrink: 0;
+    }
+
     .search-box:hover, .search-box.active {
-        width: 160px; /* More reasonable width for mobile */
+        width: 140px;
     }
     
     .logo {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
         flex-shrink: 0;
     }
 
@@ -1426,34 +1439,11 @@ nav a.active::after { width: 24px; }
     }
 }
 
-@media (max-width: 480px) {
-    .navbar {
-        gap: 8px;
-    }
-    
-    .user-actions {
-        gap: 6px;
-    }
-    
-    #btnLogout {
-        padding: 0 !important;
-        width: 32px !important; height: 32px !important;
-        min-width: 32px !important;
-        border-radius: 50% !important;
-        font-size: 0 !important;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'%3E%3C/path%3E%3Cpolyline points='16 17 21 12 16 7'%3E%3C/polyline%3E%3Cline x1='21' y1='12' x2='9' y2='12'%3E%3C/line%3E%3C/svg%3E") !important;
-        background-size: 16px !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-        border: 1.5px solid rgba(255,255,255,0.1) !important;
-        flex-shrink: 0;
-    }
-    
-    #btnLogout:hover {
-        background-color: rgba(239, 68, 68, 0.2) !important;
-        border-color: #ef4444 !important;
-    }
-
+@media (max-width: 400px) {
+    .navbar { gap: 6px; }
+    .user-actions { gap: 6px; }
+    .logo { font-size: 1.1rem; }
+    .search-box:hover, .search-box.active { width: 120px; }
 }
 
 /* ================================================
