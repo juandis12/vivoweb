@@ -1307,19 +1307,26 @@ nav a.active::after { width: 24px; }
     .hero-content { 
         max-width: 100%; 
         padding: 0 20px 100px;
-        align-items: center; 
-        text-align: center;
+        align-items: center !important; 
+        text-align: center !important;
         justify-content: flex-end; 
     }
-    .hero-content h1 { font-size: 2.3rem; line-height: 1; margin-bottom: 12px; letter-spacing: -1.5px; width: 100%; }
-    .hero-meta-row { justify-content: center; }
-    .hero-overview { -webkit-line-clamp: 4; line-clamp: 4; font-size: 0.95rem; line-height: 1.5; color: rgba(255,255,255,0.8); width: 100%; }
-    .hero-buttons { gap: 12px; margin-top: 15px; justify-content: center; width: 100%; }
-    .hero-buttons .btn { flex: 1; min-width: 140px; padding: 12px 20px; font-size: 0.95rem; }
+    .hero-content h1 { 
+        font-size: 2.3rem; line-height: 1.1; margin-bottom: 12px; 
+        letter-spacing: -1.5px; width: 100%; text-align: center !important;
+    }
+    .hero-meta-row { justify-content: center; width: 100%; }
+    .hero-overview { 
+        -webkit-line-clamp: 4; line-clamp: 4; font-size: 0.95rem; 
+        line-height: 1.5; color: rgba(255,255,255,0.9); width: 100%; 
+        text-align: center !important;
+    }
+    .hero-buttons { gap: 12px; margin-top: 20px; justify-content: center; width: 100%; }
+    .hero-buttons .btn { flex: 1; min-width: 130px; padding: 12px 15px; font-size: 0.9rem; }
 
     .hero-indicators { 
         width: 100%; 
-        justify-content: center; 
+        justify-content: center !important; 
         margin: 15px 0 25px; 
     }
     .hero-buttons .btn { flex: 1; padding: 14px; font-size: 0.9rem; border-radius: 12px; }
