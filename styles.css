@@ -970,16 +970,22 @@ nav a.active::after { width: 24px; }
 .btn-share:hover { transform: translateY(-5px); filter: brightness(1.15); box-shadow: 0 20px 40px rgba(37, 99, 235, 0.4); }
 
 /* SECCIÓN EPISODIOS (MODAL SERIES) */
-.series-episodes-section { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 80px; grid-column: span 2; }
-.episodes-header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
-.season-label-group { display: flex; flex-direction: column; gap: 8px; }
-.seasons-label { font-size: 0.9rem; color: rgba(255,255,255,0.4); }
+.series-episodes-section { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 60px; grid-column: span 2; }
+.episodes-header { margin-bottom: 35px; display: flex; flex-direction: column; gap: 20px; align-items: flex-start; }
+.season-label-group { display: flex; flex-direction: column; gap: 6px; }
+.seasons-label { font-size: 0.85rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; }
 
-.seasons-pills { display: flex; gap: 12px; overflow-x: auto; padding: 5px 0; }
+.seasons-pills { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
+    gap: 12px; 
+    width: 100%;
+}
 .season-pill {
     background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
-    padding: 10px 24px; border-radius: 12px; font-weight: 700; color: #fff;
-    cursor: pointer; transition: 0.3s; white-space: nowrap;
+    padding: 12px 15px; border-radius: 12px; font-weight: 700; color: #fff;
+    cursor: pointer; transition: 0.3s; text-align: center;
+    font-size: 0.9rem;
 }
 .season-pill.active { background: #fff; color: #000; border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
 
