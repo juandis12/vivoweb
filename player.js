@@ -189,6 +189,7 @@ export const PLAYER_LOGIC = {
                 const pill = document.createElement('div');
                 pill.className = 'season-pill';
                 pill.textContent = `Temporada ${season.season_number}`;
+                pill.dataset.season = season.season_number;
                 pill.onclick = () => this.switchSeason(season.season_number, supabaseClient);
                 pillsContainer.appendChild(pill);
             });
@@ -213,7 +214,7 @@ export const PLAYER_LOGIC = {
     async switchSeason(seasonNum, supabaseClient) {
         const pills = document.querySelectorAll('.season-pill');
         pills.forEach(p => {
-            p.classList.toggle('active', p.textContent.includes(`Temporada ${seasonNum}`));
+            p.classList.toggle('active', parseInt(p.dataset.season) === parseInt(seasonNum));
         });
 
         const grid = document.getElementById('episodesGrid');
