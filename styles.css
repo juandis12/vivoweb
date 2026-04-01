@@ -1026,16 +1026,33 @@ nav a.active::after { width: 24px; }
 .fullscreen-player {
     position: fixed; inset: 0; background: #000; z-index: 9999;
     display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0.5s;
+}
+.fullscreen-player:not(.hidden) {
+    opacity: 1; visibility: visible;
+}
+.fullscreen-player.hidden {
+    display: flex !important; /* Mantenemos display para la animación, controlamos con opacity/visibility */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
-.btn-exit-player {
-    position: absolute; top: 40px; right: 40px; z-index: 10000;
-    width: 60px; height: 60px; border-radius: 50%;
-    background: rgba(255,255,255,0.1); border: none; color: #fff;
-    cursor: pointer; backdrop-filter: blur(15px); display: flex;
-    align-items: center; justify-content: center; transition: 0.3s;
+.btn-exit-fullscreen, .btn-exit-player {
+    position: fixed; top: 30px; right: 30px; z-index: 10001;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: rgba(0,0,0,0.5); border: 1.5px solid rgba(255,255,255,0.2);
+    color: #fff; cursor: pointer; backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 24px;
 }
-.btn-exit-player:hover { background: #ef4444; transform: rotate(90deg) scale(1.1); }
+.btn-exit-fullscreen:hover, .btn-exit-player:hover {
+    background: #ef4444; border-color: #ef4444;
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
 
 .loader-wave {
     display: flex; gap: 6px; height: 30px; justify-content: center; align-items: center;
@@ -1164,10 +1181,11 @@ nav a.active::after { width: 24px; }
 
 @media (max-width: 600px) {
     .movies-grid {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 10px;
     }
-    .grid-title { font-size: 1.8rem; }
+    .grid-title { font-size: 1.5rem; }
+    .movie-card .card-info h3 { font-size: 0.75rem; }
 }
 
 /* Loader para carga infinita */

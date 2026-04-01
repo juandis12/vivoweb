@@ -13,6 +13,7 @@ export const PLAYER_LOGIC = {
     currentSeason: null,
     currentEpisode: null,
     seriesData: null,
+    seasonCache: {},
     lastSeriesProgress: null,
     progressTimer: null,
 
@@ -22,6 +23,7 @@ export const PLAYER_LOGIC = {
         this.currentType = type;
         this.currentSeason = null;
         this.currentEpisode = null;
+        this.seasonCache = {}; // Limpiar caché al abrir nuevo detalle
         this._stopProgressTimer();
 
         const modal = document.getElementById('detailModal');
@@ -176,66 +178,27 @@ export const PLAYER_LOGIC = {
         const infoStatus = document.getElementById('infoStatus');
         if (infoStatus) infoStatus.textContent = data.status === 'Ended' ? 'Finalizada' : 'En Emisión';
 
-        // 1. CARGA MASIVA DE EPISODIOS (Paginada)
-        const fetchAllEps = async (seriesId) => {
-            let all = [], start = 0;
-            while (true) {
-                const { data: chunk, error } = await supabaseClient.from('series_episodes')
-                    .select('season_number, episode_number, stream_url')
-                    .eq('tmdb_id', Number(seriesId))
-                    .range(start, start + 999);
-                
-                if (error) { console.error('[VivoTV] Error fetch episodes:', error); break; }
-                if (chunk) all.push(...chunk);
-                if (!chunk || chunk.length < 1000) break;
-                start += 1000;
-            }
-            return all;
-        };
-
-        const dbEpisodes = await fetchAllEps(data.id);
-        console.log(`[VivoTV] Episodios totales encontrados en DB para ID ${data.id}:`, dbEpisodes.length);
-
-        let progressMap = {};
-        const { data: hist } = await supabaseClient.from('watch_history').select('season_number, episode_number, progress_seconds, total_seconds').eq('tmdb_id', String(data.id)).eq('type', 'tv');
-        (hist || []).forEach(h => progressMap[`${h.season_number}_${h.episode_number}`] = h);
-
-        const pills = document.getElementById('seasonsPills');
-        if (pills) pills.innerHTML = ''; 
-
+        // 1. SELECTOR DE TEMPORADAS (Pills)
         const seasons = (data.seasons || []).filter(s => s.season_number > 0);
+        const pillsContainer = document.getElementById('seasonsPills');
         const grid = document.getElementById('episodesGrid');
-        if (grid) {
-            grid.innerHTML = '<div class="marathon-loader"><div class="loader"></div><p>Sincronizando capítulos...</p></div>';
 
-            const renderAllSeasons = async () => {
-                grid.innerHTML = '';
-                console.log(`[VivoTV] Iniciando renderizado de ${seasons.length} temporadas para ID ${data.id}`);
-                
-                for (const season of seasons) {
-                    try {
-                        console.log(`[VivoTV] Preparando Temporada ${season.season_number}...`);
-                        const seasonHeader = document.createElement('h3');
-                        seasonHeader.className = 'season-divider';
-                        seasonHeader.innerHTML = `Temporada ${season.season_number} <span style="font-size:0.8rem;opacity:0.6;font-weight:400;margin-left:10px;">(${season.episode_count} episodios)</span>`;
-                        grid.appendChild(seasonHeader);
-
-                        const dbEpsForSeason = dbEpisodes.filter(e => Number(e.season_number) === Number(season.season_number));
-                        
-                        // Renderizamos la temporada. Si falla internamente, _renderEpisodes ya maneja errores.
-                        await this._renderEpisodes(data.id, season.season_number, season.episode_count, dbEpsForSeason, progressMap, supabaseClient, true);
-                        
-                        console.log(`[VivoTV] Temporada ${season.season_number} completada.`);
-                    } catch (errSeason) {
-                        console.error(`[VivoTV] Error crítico cargando Temporada ${season.season_number}:`, errSeason);
-                        continue; // Saltamos a la siguiente temporada para no romper el resto de la serie
-                    }
-                }
-                console.log(`[VivoTV] Renderizado maratón finalizado para ID ${data.id}`);
-            };
-            renderAllSeasons();
+        if (pillsContainer) {
+            pillsContainer.innerHTML = '';
+            seasons.forEach(season => {
+                const pill = document.createElement('div');
+                pill.className = 'season-pill';
+                pill.textContent = `Temporada ${season.season_number}`;
+                pill.onclick = () => this.switchSeason(season.season_number, supabaseClient);
+                pillsContainer.appendChild(pill);
+            });
         }
 
+        // 2. CARGAR TEMPORADA INICIAL (La última vista o la T1)
+        const initialSeason = this.lastSeriesProgress?.season_number || (seasons[0]?.season_number || 1);
+        await this.switchSeason(initialSeason, supabaseClient);
+
+        // 3. TARJETA FLOTANTE DE REANUDACIÓN
         if (this.lastSeriesProgress) {
             const p = this.lastSeriesProgress;
             this.showFloatingResumeCard({
@@ -247,49 +210,94 @@ export const PLAYER_LOGIC = {
         }
     },
 
-    async _renderEpisodes(tmdbId, seasonNum, totalEps, dbEpisodes, progressMap, supabaseClient, append = false) {
+    async switchSeason(seasonNum, supabaseClient) {
+        const pills = document.querySelectorAll('.season-pill');
+        pills.forEach(p => {
+            p.classList.toggle('active', p.textContent.includes(`Temporada ${seasonNum}`));
+        });
+
         const grid = document.getElementById('episodesGrid');
-        if (!append) grid.innerHTML = '';
-        const seasonData = await TMDB_SERVICE.getSeasonDetails(tmdbId, seasonNum);
-        const epsMap = {};
-        dbEpisodes.forEach(e => epsMap[e.episode_number] = e);
+        grid.innerHTML = '<div class="marathon-loader"><div class="loader"></div><p>Cargando episodios...</p></div>';
 
-        const maxEp = Math.max(totalEps, ...dbEpisodes.map(e => e.episode_number), 0);
-        for (let i = 1; i <= maxEp; i++) {
-            const epData = epsMap[i];
-            const infoTMDB = seasonData.episodes?.find(e => e.episode_number === i) || {};
+        // Si ya está en caché, renderizar de inmediato
+        if (this.seasonCache[seasonNum]) {
+            this._renderEpisodes(seasonNum, this.seasonCache[seasonNum], supabaseClient);
+            return;
+        }
+
+        try {
+            // Cargar datos de TMDB y Supabase en paralelo
+            const [seasonData, dbEps] = await Promise.all([
+                TMDB_SERVICE.getSeasonDetails(this.currentTmdbId, seasonNum),
+                supabaseClient.from('series_episodes')
+                    .select('episode_number, stream_url')
+                    .eq('tmdb_id', Number(this.currentTmdbId))
+                    .eq('season_number', Number(seasonNum))
+            ]);
+
+            const episodes = (seasonData.episodes || []).map(ep => {
+                const dbEp = (dbEps.data || []).find(d => d.episode_number === ep.episode_number);
+                return { ...ep, stream_url: dbEp?.stream_url };
+            });
+
+            this.seasonCache[seasonNum] = episodes;
+            this._renderEpisodes(seasonNum, episodes, supabaseClient);
+        } catch (err) {
+            console.error('Error cargando temporada:', err);
+            grid.innerHTML = '<p class="error-msg">Error al cargar la temporada.</p>';
+        }
+    },
+
+    async _renderEpisodes(seasonNum, episodes, supabaseClient) {
+        const grid = document.getElementById('episodesGrid');
+        grid.innerHTML = '';
+
+        // Obtener progreso de esta temporada
+        let progressMap = {};
+        const { data: hist } = await supabaseClient.from('watch_history')
+            .select('episode_number, progress_seconds')
+            .eq('user_id', this.currentUserId)
+            .eq('tmdb_id', String(this.currentTmdbId))
+            .eq('season_number', seasonNum);
+        
+        (hist || []).forEach(h => progressMap[h.episode_number] = h);
+
+        episodes.forEach(ep => {
             const card = document.createElement('div');
-            card.className = `episode-card${!epData ? ' disabled' : ''}`;
+            const hasStream = !!ep.stream_url;
+            card.className = `episode-card${!hasStream ? ' disabled' : ''}`;
             
-            const statusText = epData ? 'Disponible' : 'Próximamente';
-            const statusClass = epData ? 'status-available' : 'status-upcoming';
-
-            const thumb = infoTMDB.still_path ? 
-                `${CONFIG.TMDB_IMAGE_CARD}${infoTMDB.still_path}` : 
+            const progress = progressMap[ep.episode_number];
+            const isWatched = progress && progress.progress_seconds > 0;
+            const thumb = ep.still_path ? 
+                `${CONFIG.TMDB_IMAGE_CARD}${ep.still_path}` : 
                 (this.seriesData?.backdrop_path ? `${CONFIG.TMDB_IMAGE_CARD}${this.seriesData.backdrop_path}` : '');
 
             card.innerHTML = `
                 <div class="ep-thumb-wrapper">
-                    <img src="${thumb}" class="ep-thumb" alt="EP ${i}">
-                    ${epData ? `<div class="ep-play-overlay"><svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div>` : ''}
+                    <img src="${thumb}" class="ep-thumb" alt="E${ep.episode_number}" loading="lazy">
+                    ${hasStream ? `<div class="ep-play-overlay"><svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div>` : ''}
+                    ${isWatched ? `<div class="ep-progress-bar"><div class="progress-fill" style="width: 100%"></div></div>` : ''}
                 </div>
                 <div class="ep-info">
                     <div class="ep-header-row">
-                        <h4 class="ep-title">E${i}. ${infoTMDB.name || 'Episodio ' + i}</h4>
-                        <span class="ep-status ${statusClass}">${statusText}</span>
+                        <h4 class="ep-title">E${ep.episode_number}. ${ep.name || 'Episodio ' + ep.episode_number}</h4>
+                        <span class="ep-status ${hasStream ? 'status-available' : 'status-upcoming'}">${hasStream ? 'Disponible' : 'Próximamente'}</span>
                     </div>
-                    <p class="ep-overview">${infoTMDB.overview || 'Sin descripción disponible.'}</p>
-                    <p class="ep-meta">${infoTMDB.runtime || '?'} min</p>
+                    <p class="ep-overview">${ep.overview || 'Sin descripción disponible.'}</p>
+                    <p class="ep-meta">${ep.runtime || '?'} min</p>
                 </div>
             `;
-            if (epData) {
+
+            if (hasStream) {
                 card.onclick = () => {
-                    this.currentEpisode = i;
-                    this._playEpisode(tmdbId, seasonNum, epData, supabaseClient);
+                    this.currentSeason = seasonNum;
+                    this.currentEpisode = ep.episode_number;
+                    this._playEpisode(this.currentTmdbId, seasonNum, ep, supabaseClient, progress?.progress_seconds || 0);
                 };
             }
             grid.appendChild(card);
-        }
+        });
     },
 
     async _playEpisode(tmdbId, seasonNum, ep, supabaseClient, seekSeconds = 0) {
