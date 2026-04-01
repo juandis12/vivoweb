@@ -69,8 +69,25 @@ export const PLAYER_LOGIC = {
 
             const btnPlay = document.getElementById('btnModalPlay');
             btnPlay.onclick = async () => {
-                if (type === 'tv') {
-                    seriesInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (type === 'tv' || details.media_type === 'tv') {
+                    // SI ES SERIE: BUSCAR ÚLTIMO VISTO O E1 PARA PLAY INMEDIATO
+                    const targetEp = this.lastSeriesProgress || { season_number: 1, episode_number: 1 };
+                    const { data: epData } = await supabaseClient.from('series_episodes')
+                        .select('stream_url')
+                        .eq('tmdb_id', Number(tmdbId))
+                        .eq('season_number', targetEp.season_number)
+                        .eq('episode_number', targetEp.episode_number)
+                        .maybeSingle();
+
+                    if (epData) {
+                        this.currentSeason = targetEp.season_number;
+                        this.currentEpisode = targetEp.episode_number;
+                        this._playEpisode(tmdbId, targetEp.season_number, epData, supabaseClient, targetEp.progress_seconds || 0);
+                    } else {
+                        // Fallback si no hay stream: scroll a la lista
+                        seriesInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        showToast('Selecciona un episodio disponible');
+                    }
                 } else {
                     await this._loadMovieSource(tmdbId, supabaseClient);
                 }
@@ -299,8 +316,8 @@ export const PLAYER_LOGIC = {
             } else {
                 video.classList.add('hidden');
                 iframe.classList.remove('hidden');
-                // Si es iframe (fuente externa), intentamos pasar el tiempo por parámetro si el proveedor lo soporta
-                // Por defecto solo cargamos el URL
+                // SEGURIDAD: Sandbox para prevenir redirecciones agresivas y anuncios intrusivos
+                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
                 iframe.src = url;
                 this._startIframeTracking();
             }
@@ -418,9 +435,10 @@ export const PLAYER_LOGIC = {
         const btn = document.getElementById('btnAddToMyList');
         const isAdded = btn.classList.contains('added-to-list');
         if (isAdded) {
-            await supabase.from('user_favorites').delete().eq('user_id', this.currentUserId).eq('tmdb_id', this.currentTmdbId);
+            await supabase.from('user_favorites').delete().eq('user_id', this.currentUserId).eq('tmdb_id', Number(this.currentTmdbId));
         } else {
-            await supabase.from('user_favorites').insert({ user_id: this.currentUserId, tmdb_id: this.currentTmdbId, type: this.currentType });
+            // Removido 'type' para cumplir con el esquema actual de la base de datos
+            await supabase.from('user_favorites').insert({ user_id: this.currentUserId, tmdb_id: Number(this.currentTmdbId) });
         }
         this.checkIfFavorite(supabase);
         showToast(isAdded ? 'Eliminado de Mi Lista' : 'Añadido a Mi Lista');

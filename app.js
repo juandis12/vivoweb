@@ -621,9 +621,9 @@ async function loadMyList() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Fetch favorites with type
+    // Fetch favorites (Removido 'type' por incompatibilidad con esquema actual)
     const { data: favs } = await supabase.from('user_favorites')
-        .select('tmdb_id, type')
+        .select('tmdb_id')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -724,4 +724,4 @@ document.addEventListener('click', (e) => {
     carousel.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
 });
 
-// document.addEventListener('DOMContentLoaded', () => initAuth()); // Movido a arriba con initNavbarScroll
+// La inicialización de DOMContentLoaded ya maneja initAuth al inicio del script.

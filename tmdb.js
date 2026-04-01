@@ -4,6 +4,7 @@ import { CONFIG } from './config.js';
  * Servicio TMDB v2.1 — Todas las llamadas a la API de TMDB centralizadas aquí.
  */
 export const TMDB_SERVICE = {
+    _cache: new Map(), // Caché en memoria para evitar peticiones redundantes
 
     // Fix #8: Object.entries() en lugar de for...in (más robusto, evita props heredadas)
     async fetchFromTMDB(endpoint, params = {}) {
@@ -13,7 +14,7 @@ export const TMDB_SERVICE = {
             const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
             url.searchParams.append('path', cleanPath);
         } else {
-            console.warn("⚠️ MODO DESARROLLADOR: Consumiendo TMDB vía Front-end (Live Server detectado). Esto no es seguro para Producción.");
+            if (!CONFIG.USE_PROXY) console.warn("⚠️ MODO DESARROLLADOR: Consumiendo TMDB vía Front-end (Live Server detectado). Esto no es seguro para Producción.");
             const _k = atob(CONFIG._tk);
             url = new URL(`https://api.themoviedb.org/3${endpoint}`);
             url.searchParams.append('api_key', _k);
@@ -37,8 +38,16 @@ export const TMDB_SERVICE = {
     getPopularMovies: (page = 1) => TMDB_SERVICE.fetchFromTMDB('/movie/popular', { page }),
     getTopRated: (page = 1)     => TMDB_SERVICE.fetchFromTMDB('/movie/top_rated', { page }),
     getPopularTV: (page = 1)    => TMDB_SERVICE.fetchFromTMDB('/tv/popular', { page }),
-    getDetails: (id, type = 'movie') =>
-        TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' }),
+    
+    async getDetails(id, type = 'movie') {
+        const cacheKey = `${type}_${id}`;
+        if (this._cache.has(cacheKey)) return this._cache.get(cacheKey);
+        
+        const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
+        if (data && data.id) this._cache.set(cacheKey, data);
+        return data;
+    },
+
     search: (query) => TMDB_SERVICE.fetchFromTMDB('/search/multi', { query }),
     getCredits: (id, type = 'movie') => TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/credits`),
     getSeasonDetails: (id, seasonNumber) => TMDB_SERVICE.fetchFromTMDB(`/tv/${id}/season/${seasonNumber}`),
