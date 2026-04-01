@@ -1303,11 +1303,25 @@ nav a.active::after { width: 24px; }
     .logo { font-size: 1.2rem; }
 
     /* Hero Section */
-    .hero-banner { height: 80vh; min-height: 500px; }
-    .hero-content { max-width: 100%; padding-bottom: 80px; }
-    .hero-content h1 { font-size: 2.2rem; line-height: 1; margin-bottom: 16px; letter-spacing: -1.5px; }
-    .hero-overview { -webkit-line-clamp: 3; line-clamp: 3; font-size: 0.95rem; line-height: 1.6; color: #94a3b8; }
-    .hero-buttons { gap: 10px; margin-top: 10px; }
+    .hero-banner { height: 85vh; min-height: 500px; }
+    .hero-content { 
+        max-width: 100%; 
+        padding: 0 20px 100px;
+        align-items: center; 
+        text-align: center;
+        justify-content: flex-end; 
+    }
+    .hero-content h1 { font-size: 2.3rem; line-height: 1; margin-bottom: 12px; letter-spacing: -1.5px; width: 100%; }
+    .hero-meta-row { justify-content: center; }
+    .hero-overview { -webkit-line-clamp: 4; line-clamp: 4; font-size: 0.95rem; line-height: 1.5; color: rgba(255,255,255,0.8); width: 100%; }
+    .hero-buttons { gap: 12px; margin-top: 15px; justify-content: center; width: 100%; }
+    .hero-buttons .btn { flex: 1; min-width: 140px; padding: 12px 20px; font-size: 0.95rem; }
+
+    .hero-indicators { 
+        width: 100%; 
+        justify-content: center; 
+        margin: 15px 0 25px; 
+    }
     .hero-buttons .btn { flex: 1; padding: 14px; font-size: 0.9rem; border-radius: 12px; }
 
     /* Modales Inmersivos */
