@@ -1402,19 +1402,17 @@ nav a.active::after { width: 24px; }
         display: none !important;
     }
     
-    .user-actions {
-        gap: 10px;
-        margin-left: initial;
-    }
-    
     #btnLogout {
         padding: 0 !important;
-        width: 34px !important; height: 34px !important;
-        min-width: 34px !important;
+        width: 38px !important; height: 38px !important;
+        min-width: 38px !important;
         border-radius: 50% !important;
         font-size: 0 !important;
+        color: transparent !important;
+        overflow: hidden !important;
+        text-indent: -9999px !important;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'%3E%3C/path%3E%3Cpolyline points='16 17 21 12 16 7'%3E%3C/polyline%3E%3Cline x1='21' y1='12' x2='9' y2='12'%3E%3C/line%3E%3C/svg%3E") !important;
-        background-size: 16px !important;
+        background-size: 18px !important;
         background-repeat: no-repeat !important;
         background-position: center !important;
         border: 1.5px solid rgba(255,255,255,0.1) !important;
@@ -1426,7 +1424,7 @@ nav a.active::after { width: 24px; }
     }
     
     .logo {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         flex-shrink: 0;
     }
 
