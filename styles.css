@@ -1181,11 +1181,12 @@ nav a.active::after { width: 24px; }
 
 @media (max-width: 600px) {
     .movies-grid {
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 8px;
     }
-    .grid-title { font-size: 1.5rem; }
-    .movie-card .card-info h3 { font-size: 0.75rem; }
+    .grid-title { font-size: 1.4rem; }
+    .movie-card .card-info h3 { font-size: 0.7rem; }
+    .movie-card .card-info { padding: 8px; }
 }
 
 /* Loader para carga infinita */
@@ -1429,21 +1430,22 @@ nav a.active::after { width: 24px; }
     }
     
     #btnLogout {
-        padding: 0;
-        width: 32px; height: 32px;
-        min-width: 32px;
-        border-radius: 50%;
-        font-size: 0; /* Ocultar texto Salir */
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'%3E%3C/path%3E%3Cpolyline points='16 17 21 12 16 7'%3E%3C/polyline%3E%3Cline x1='21' y1='12' x2='9' y2='12'%3E%3C/line%3E%3C/svg%3E");
-        background-size: 18px;
-        background-repeat: no-repeat;
-        background-position: center;
-        border-color: rgba(255,0,0,0.3);
+        padding: 0 !important;
+        width: 32px !important; height: 32px !important;
+        min-width: 32px !important;
+        border-radius: 50% !important;
+        font-size: 0 !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'%3E%3C/path%3E%3Cpolyline points='16 17 21 12 16 7'%3E%3C/polyline%3E%3Cline x1='21' y1='12' x2='9' y2='12'%3E%3C/line%3E%3C/svg%3E") !important;
+        background-size: 16px !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        border: 1.5px solid rgba(255,255,255,0.1) !important;
+        flex-shrink: 0;
     }
     
     #btnLogout:hover {
-        background-color: rgba(239, 68, 68, 0.2);
-        border-color: #ef4444;
+        background-color: rgba(239, 68, 68, 0.2) !important;
+        border-color: #ef4444 !important;
     }
 
 }
