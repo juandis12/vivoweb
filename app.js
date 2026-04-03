@@ -330,7 +330,12 @@ async function toDashboard(user) {
 
         if (pageType === 'all') {
             await Promise.all([
-                renderRow('trendingCarousel', () => TMDB_SERVICE.getTrending(), null),
+                // TOP 10 TRENDING (Netflix Style)
+                (async () => {
+                    const data = await TMDB_SERVICE.getTrending();
+                    const filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+                    CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds);
+                })(),
                 renderRow('popularMoviesCarousel', () => TMDB_SERVICE.getPopularMovies(), 'movie'),
                 renderRow('topRatedCarousel', () => TMDB_SERVICE.getTopRated(), 'movie'),
                 renderRow('popularTVCarousel', () => TMDB_SERVICE.getPopularTV(), 'tv')

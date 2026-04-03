@@ -34,6 +34,10 @@
     /* Spacing Scale (Stitch Inspired) */
     --side-padding: 5%;
     --section-gap: 6rem;
+    
+    /* Netflix Specific Timings */
+    --ease-netflix: cubic-bezier(0.33, 1, 0.68, 1);
+    --card-expand-delay: 0.3s;
 }
 
 /* ================================================
@@ -155,11 +159,19 @@ button { font-family: inherit; cursor: pointer; }
  ================================================ */
 .navbar {
     position: fixed; top: 0; left: 0; right: 0;
-    padding: 24px var(--side-padding);
+    padding: 28px var(--side-padding);
     display: flex; align-items: center; gap: 40px; z-index: 1000;
-    background: linear-gradient(to bottom, rgba(11, 18, 43, 0.9) 0%, transparent 100%);
-    backdrop-filter: blur(var(--glass-blur));
-    transition: all 0.4s ease;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    backdrop-filter: blur(0px); /* Empieza sin blur */
+    transition: all 0.5s var(--ease-netflix);
+}
+
+.navbar.scrolled {
+    background: rgba(4, 4, 12, 0.95);
+    padding: 16px var(--side-padding);
+    backdrop-filter: blur(25px);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .navbar.scrolled {
@@ -674,17 +686,52 @@ nav a.active::after { width: 24px; }
 }
 
 .movie-card-inner {
-    width: 100%; height: 100%;
-    border-radius: var(--radius-md); overflow: hidden;
     position: relative;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-    border: 1px solid rgba(255,255,255,0.05);
-    transition: all 0.3s ease;
+    aspect-ratio: 2/3;
+    border-radius: var(--radius-md);
+    overflow: visible; /* Importante para el expand */
+    background: var(--surface-container);
+    cursor: pointer;
+    transition: transform 0.4s var(--ease-netflix), box-shadow 0.4s;
+    user-select: none;
+    z-index: 1;
 }
 
-.movie-card-inner img {
+.movie-card:hover {
+    transform: scale(1.15);
+    z-index: 500;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 20px var(--primary-glow);
+}
+
+.movie-card img {
     width: 100%; height: 100%; object-fit: cover;
-    transition: transform 0.5s ease;
+    border-radius: var(--radius-md);
+    transition: transform 0.5s var(--ease-netflix);
+}
+
+/* El icónico Top 10 con números gigantes */
+.top-10-card {
+    position: relative;
+    width: 200px; height: 280px;
+    margin-left: 60px; /* Espacio para el número */
+    flex-shrink: 0;
+}
+.top-10-number {
+    position: absolute;
+    left: -70px; bottom: -15px;
+    font-size: 180px; font-weight: 900;
+    line-height: 1; color: #000;
+    -webkit-text-stroke: 2px #555;
+    z-index: 0; pointer-events: none;
+    font-family: 'Epilogue', sans-serif;
+    transition: all 0.4s var(--ease-netflix);
+}
+.top-10-card:hover .top-10-number {
+    transform: scale(1.1) translateX(-10px);
+    -webkit-text-stroke-color: var(--primary);
+}
+.top-10-card .movie-card {
+    width: 100%; height: 100%;
 }
 
 .movie-card-inner::after { display: none; } /* Netflix no oscurece las carátulas estáticas por default */
@@ -887,11 +934,16 @@ nav a.active::after { width: 24px; }
 }
 
 .modal-backdrop {
-    position: absolute; inset: 0; background-size: cover; background-position: center 15%;
-    z-index: 0; transition: transform 1s ease;
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center 20%;
+    transition: transform 10s linear;
+    animation: kenBurns 20s infinite alternate;
 }
 
-.modal-viewport:hover .modal-backdrop { transform: scale(1.03); }
+@keyframes kenBurns {
+    from { transform: scale(1); }
+    to { transform: scale(1.15); }
+}
 
 .modal-vignette {
     position: absolute; inset: 0;
@@ -925,11 +977,16 @@ nav a.active::after { width: 24px; }
     border-radius: 50%; box-shadow: 0 0 12px var(--primary-accent);
 }
 
-.rating-imdb { color: #f5c518; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+.rating-imdb {
+    color: #f5c518; font-weight: 800; display: flex; align-items: center; gap: 4px;
+}
 
 .badge-4k {
-    border: 2px solid rgba(255,255,255,0.4); padding: 4px 12px; border-radius: 8px;
-    font-size: 0.75rem; font-weight: 900; letter-spacing: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 2px 6px; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 800;
+    color: #fff; letter-spacing: 1px;
 }
 
 .trending-badge {

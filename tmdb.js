@@ -250,4 +250,28 @@ export const CATALOG_UI = {
             grid.appendChild(img);
         });
     },
+
+    renderTop10(containerId, results, availableIds) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        results.forEach((item, index) => {
+            const isAvail = availableIds.has(item.id.toString());
+            const type = item.media_type || (item.title ? 'movie' : 'tv');
+            const card = this.createTop10Card(item, index + 1, isAvail, type);
+            container.appendChild(card);
+        });
+    },
+
+    createTop10Card(item, rank, isAvailable, type) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'top-10-card';
+        const num = document.createElement('div');
+        num.className = 'top-10-number';
+        num.textContent = rank;
+        const card = this.createMovieCard(item, type, isAvailable);
+        wrapper.appendChild(num);
+        wrapper.appendChild(card);
+        return wrapper;
+    }
 };

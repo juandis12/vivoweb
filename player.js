@@ -130,17 +130,48 @@ export const PLAYER_LOGIC = {
         if (castGrid && credits?.cast) {
             castGrid.innerHTML = '';
             credits.cast.slice(0, 8).forEach(actor => {
+                const photo = actor.profile_path ? `${CONFIG.TMDB_IMAGE_CARD}${actor.profile_path}` : 'https://via.placeholder.com/150x150?text=SIN+FOTO';
                 const item = document.createElement('div');
                 item.className = 'cast-item';
-                const photo = actor.profile_path ? `${CONFIG.TMDB_IMAGE_CARD}${actor.profile_path}` : 'img/no-avatar.jpg';
                 item.innerHTML = `
-                    <img src="${photo}" class="cast-avatar" alt="${actor.name}" loading="lazy">
-                    <span class="cast-name">${actor.name}</span>
-                    <span class="cast-character">${actor.character}</span>
+                    <div class="cast-avatar-w"><img src="${photo}" alt="${actor.name}" loading="lazy"></div>
+                    <p class="cast-name">${actor.name}</p>
+                    <p class="cast-char">${actor.character}</p>
                 `;
                 castGrid.appendChild(item);
             });
         }
+
+        // --- RELACIONADOS (More Like This) ---
+        this.renderSimilar(data.id, data.title ? 'movie' : 'tv');
+    },
+
+    async renderSimilar(id, type) {
+        const container = document.getElementById('seriesInfo'); // Reutilizamos un contenedor o añadimos uno
+        // Para simplificar, añadiremos una sección de similares al final del grid de detalles
+        let similarSection = document.getElementById('similarTitlesSection');
+        if (!similarSection) {
+            similarSection = document.createElement('section');
+            similarSection.id = 'similarTitlesSection';
+            similarSection.className = 'details-section';
+            similarSection.innerHTML = `
+                <h3 class="section-label">Títulos Similares</h3>
+                <div class="similar-grid" id="similarGrid"></div>
+            `;
+            document.querySelector('.details-main-col').appendChild(similarSection);
+        }
+
+        const grid = document.getElementById('similarGrid');
+        grid.innerHTML = '<div class="loader-v"></div>';
+        
+        try {
+            const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/similar`);
+            grid.innerHTML = '';
+            (data.results || []).slice(0, 6).forEach(item => {
+                const card = CATALOG_UI.createMovieCard(item, type, true); // Asumimos disponibles para demo
+                grid.appendChild(card);
+            });
+        } catch (e) { grid.innerHTML = ''; }
     },
 
     async _checkMovieProgress(tmdbId, supabaseClient) {
