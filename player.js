@@ -135,8 +135,10 @@ export const PLAYER_LOGIC = {
                 item.className = 'cast-item';
                 item.innerHTML = `
                     <div class="cast-avatar-w"><img src="${photo}" alt="${actor.name}" loading="lazy"></div>
-                    <p class="cast-name">${actor.name}</p>
-                    <p class="cast-char">${actor.character}</p>
+                    <div class="cast-info">
+                        <p class="cast-name">${actor.name}</p>
+                        <p class="cast-char">${actor.character}</p>
+                    </div>
                 `;
                 castGrid.appendChild(item);
             });
@@ -404,25 +406,28 @@ export const PLAYER_LOGIC = {
 
     _getSmartUrl(url) {
         if (!url) return '';
+        let cleanUrl = url.trim();
+
         // 1. YouTube
-        if (url.includes('youtube.com/watch?v=')) {
-            const id = url.split('v=')[1].split('&')[0];
+        if (cleanUrl.includes('youtube.com/watch?v=') || cleanUrl.includes('youtube.com/v/')) {
+            const id = cleanUrl.split(/v\/|v=/)[1].split(/[?&]/)[0];
             return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
         }
-        if (url.includes('youtu.be/')) {
-            const id = url.split('youtu.be/')[1].split('?')[0];
+        if (cleanUrl.includes('youtu.be/')) {
+            const id = cleanUrl.split('youtu.be/')[1].split(/[?&]/)[0];
             return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
         }
-        // 2. Vimeo
-        if (url.includes('vimeo.com/') && !url.includes('player.vimeo.com')) {
-            const id = url.split('vimeo.com/')[1].split('?')[0];
+        // 2. Vimeo (Fix para soportar subdominios y parámetros extra)
+        if (cleanUrl.includes('vimeo.com/') && !cleanUrl.includes('player.vimeo.com')) {
+            const parts = cleanUrl.split('vimeo.com/')[1].split(/[?&]/);
+            const id = parts[0];
             return `https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0&portrait=0`;
         }
         // 3. Facebook
-        if (url.includes('facebook.com/') && !url.includes('plugins/video.php')) {
-            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&width=1280`;
+        if (cleanUrl.includes('facebook.com/') && !cleanUrl.includes('plugins/video.php')) {
+            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=0&width=1280`;
         }
-        return url;
+        return cleanUrl;
     },
 
     _startVideoTracking(video, seek) {

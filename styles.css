@@ -1037,21 +1037,32 @@ nav a.active::after { width: 24px; }
 
 .details-section { margin-bottom: 70px; }
 
-/* Reparto / Cast Area */
+/* Reparto / Cast Area Premium (Disney+/Netflix style) */
 .cast-row {
-    display: flex; gap: 40px; overflow-x: auto; padding-bottom: 20px; scrollbar-width: none;
+    display: flex; gap: 24px; overflow-x: auto; padding: 10px 0 30px; 
+    scrollbar-width: none; -ms-overflow-style: none;
 }
+.cast-row::-webkit-scrollbar { display: none; }
 
-.cast-item { flex: 0 0 110px; text-align: center; }
-
-.cast-avatar {
-    width: 90px; height: 90px; border-radius: 50%; margin-bottom: 15px;
-    object-fit: cover; border: 4px solid rgba(255,255,255,0.03); transition: 0.4s;
+.cast-item {
+    flex: 0 0 100px; text-align: center; transition: transform 0.4s var(--ease-spring);
 }
+.cast-item:hover { transform: translateY(-8px); }
 
-.cast-item:hover .cast-avatar { transform: translateY(-10px) scale(1.1); border-color: var(--primary-accent); }
-.cast-name { font-size: 1rem; font-weight: 700; color: #fff; display: block; margin-bottom: 4px; }
-.cast-character { font-size: 0.8rem; color: rgba(255,255,255,0.4); font-style: italic; }
+.cast-avatar-w {
+    width: 85px; height: 85px; border-radius: 50%; overflow: hidden;
+    margin: 0 auto 12px; border: 3px solid rgba(255,255,255,0.05);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    transition: all 0.4s var(--ease-spring);
+}
+.cast-item:hover .cast-avatar-w {
+    border-color: var(--primary);
+    box-shadow: 0 0 25px var(--primary-glow);
+}
+.cast-avatar-w img { width: 100%; height: 100%; object-fit: cover; }
+
+.cast-name { font-size: 0.9rem; font-weight: 800; color: #fff; display: block; margin-bottom: 2px; }
+.cast-char { font-size: 0.75rem; color: rgba(255,255,255,0.45); font-weight: 500; }
 
 /* Sidebar Premium Information */
 .details-side-col { display: flex; flex-direction: column; gap: 40px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.05); }

@@ -11,9 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body class="page-movies">
-
-    <!-- Splash Screen animado -->
+<body class="page-movies"    <!-- Splash Screen animado -->
     <div id="splashScreen" class="splash-screen">
         <div class="splash-logo">VIVO<span>TV</span></div>
         <div class="splash-bars">
@@ -21,9 +19,9 @@
         </div>
     </div>
 
-    <!-- Navbar -->
+    <!-- Navbar Premium Glassmorphism -->
     <header class="navbar" id="navbar">
-        <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">VIVO<span>TV</span></a></div>
+        <div class="logo">VIVO<span>TV</span></div>
         <nav id="mainNav" class="hidden">
             <a href="index.html">Inicio</a>
             <a href="peliculas.html" class="active">Películas</a>
@@ -32,18 +30,21 @@
             <a href="milista.html">Mi Lista</a>
         </nav>
         <div class="user-actions">
-            <div class="search-box" id="searchBox">
+            <!-- Barra de Búsqueda Expandible -->
+            <div class="search-box hidden" id="searchBox">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <input type="text" id="searchInput" placeholder="Buscar películas...">
+                <input type="text" id="searchInput" placeholder="Buscar títulos, géneros...">
                 <button class="btn-clear-search hidden" id="btnClearSearch">&times;</button>
             </div>
-            <div id="userProfile" class="user-profile-btn">
+            <!-- Perfil -->
+            <div id="userProfile" class="hidden user-profile-btn">
                 <div class="avatar" id="userAvatar">U</div>
                 <span id="userName">Usuario</span>
                 <button id="btnLogout" class="btn btn-outline btn-sm">Salir</button>
             </div>
         </div>
     </header>
+der>
 
     <!-- Contenido de Películas -->
     <main id="dashboardSection" class="dashboard-container">
@@ -164,9 +165,6 @@
             </header>
             
             <div id="gridContainer" class="movies-grid">
-                <!-- Se llenará dinámicamente -->
-            </div>
-            
             <div id="gridLoader" class="grid-loader hidden">
                 <div class="loader"></div>
             </div>
@@ -210,7 +208,7 @@
                 </div>
             </div>
 
-            <!-- Sección de información detallada (Amazon/Hulu Style) -->
+            <!-- Sección de información detallada -->
             <div class="modal-details-grid">
                 <div class="details-main-col">
                     <section class="details-section">
@@ -221,22 +219,6 @@
                     <section class="details-section" id="castSection">
                         <h3 class="section-label">Reparto Principal</h3>
                         <div class="cast-row" id="modalCast">
-                            <!-- Se llena dinámicamente -->
-                        </div>
-                    </section>
-
-                    <!-- SECCIÓN SERIES: TEMPORADAS Y EPISODIOS -->
-                    <section id="seriesInfo" class="series-episodes-section hidden">
-                        <div class="episodes-header">
-                            <div class="season-label-group">
-                                <h3 class="section-label">Episodios</h3>
-                                <p class="seasons-label">Explora las temporadas disponibles:</p>
-                            </div>
-                            <div class="season-select-wrapper">
-                                <div class="seasons-pills" id="seasonsPills"></div>
-                            </div>
-                        </div>
-                        <div class="episodes-container" id="episodesGrid">
                             <!-- Se llena dinámicamente -->
                         </div>
                     </section>
@@ -269,7 +251,7 @@
                 </aside>
             </div>
             
-            <!-- REPRODUCTOR INTEGRADO (OCULTO INICIALMENTE) -->
+            <!-- REPRODUCTOR INTEGRADO -->
             <div id="playerContainer" class="fullscreen-player hidden">
                 <button class="btn-exit-fullscreen" id="btnExitPlayer">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -282,6 +264,10 @@
                 </div>
                 <video id="videoPlayer" class="hidden" controls crossorigin="anonymous" playsinline></video>
                 <iframe id="videoIframe" class="hidden" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+            </div>
+        </div>
+    </div>
+lscreen allow="autoplay; encrypted-media"></iframe>
             </div>
         </div>
     </div>
