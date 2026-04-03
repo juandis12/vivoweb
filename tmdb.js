@@ -173,14 +173,12 @@ export const CATALOG_UI = {
             return;
         }
 
-        const isRankedRow = containerId.toLowerCase().includes('trending') || containerId.toLowerCase().includes('top');
-
+        // El usuario quiere estilo premium vertical en TODO, solo con números si es estrictamente necesario (Top 10)
         items.forEach((item, index) => {
             if (!item.poster_path) return;
             const type = typeOverride || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
             const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
-            const rank = isRankedRow && index < 10 ? index + 1 : null;
-            const card = this.createMovieCard(item, type, isAvail, rank);
+            const card = this.createMovieCard(item, type, isAvail);
             container.appendChild(card);
         });
     },

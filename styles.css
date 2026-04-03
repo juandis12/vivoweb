@@ -676,13 +676,17 @@ nav a.active::after { width: 24px; }
 }
 .carousel::-webkit-scrollbar { display: none; }
 
-/* Tarjeta de Película Premium (Netflix Billboards) */
+/* Tarjeta de Película Premium (Estilo Netflix Global) */
 .movie-card {
-    min-width: 200px; height: 300px; /* Ratio ajustado */
+    min-width: 180px; width: 180px; /* Tamaño base consistente */
+    aspect-ratio: 2/3;
     border-radius: var(--radius-md); overflow: visible;
     cursor: pointer; position: relative;
-    transition: all 0.45s cubic-bezier(0.2, 1, 0.2, 1);
+    transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
     flex-shrink: 0;
+}
+@media (min-width: 1024px) {
+    .movie-card { min-width: 200px; width: 200px; }
 }
 
 .movie-card-inner {
@@ -712,9 +716,13 @@ nav a.active::after { width: 24px; }
 /* El icónico Top 10 con números gigantes */
 .top-10-card {
     position: relative;
-    width: 200px; height: 280px;
+    width: 180px; height: auto;
+    aspect-ratio: 2/3;
     margin-left: 60px; /* Espacio para el número */
     flex-shrink: 0;
+}
+@media (min-width: 1024px) {
+    .top-10-card { width: 200px; }
 }
 .top-10-number {
     position: absolute;
