@@ -251,6 +251,11 @@
         };
 
         function selectProfile(p) {
+            // --- LIMPIEZA DE MEMORIA (Fase 4) ---
+            // Borra todo lo que TMDB haya guardado en caché para este usuario
+            // previniendo que el contenido de Adultos se filtre al perfil de Niños.
+            sessionStorage.clear(); 
+            
             localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
             window.location.href = 'index.html';
         }
