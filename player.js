@@ -17,6 +17,7 @@ export const PLAYER_LOGIC = {
     lastSeriesProgress: null,
     progressTimer: null,
     trailerTimer: null,
+    marathonTimer: null,
 
     async openDetail(tmdbId, type = 'movie', supabaseClient, availableIds = new Set()) {
         this._stopTrailer(); // Detener tráiler previo si existe
@@ -385,6 +386,9 @@ export const PLAYER_LOGIC = {
 
     async _playEpisode(tmdbId, seasonNum, ep, supabaseClient, seekSeconds = 0) {
         this._stopTrailer();
+        this._cancelMarathon();
+        this.currentSeason = seasonNum;
+        this.currentEpisode = ep.episode_number;
         this._playSource(ep.stream_url, seekSeconds);
         // El guardado de progreso se iniciará automáticamente mediante el timer del reproductor
     },
@@ -395,12 +399,23 @@ export const PLAYER_LOGIC = {
         const container = document.getElementById('playerContainer');
         const loader = document.getElementById('playerLoader');
 
+        // Reset listeners previos para evitar duplicados
+        video.onended = null;
+
         container.classList.remove('hidden');
         loader.classList.remove('hidden');
 
         // --- CONVERSOR INTELIGENTE DE URLS ---
         const smartUrl = this._getSmartUrl(url);
         const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
+        
+        // Listener para fin de video (Solo streams directos)
+        if (isDirectStream && this.currentType === 'tv') {
+            video.onended = () => {
+                const nextEp = this._getNextEpisode();
+                if (nextEp) this._showMarathonCountdown(nextEp, _supabase);
+            };
+        }
         const isFacebook = smartUrl.includes('facebook.com');
         
         setTimeout(() => {
@@ -690,6 +705,7 @@ export const PLAYER_LOGIC = {
     closeModal() {
         this._stopProgressTimer();
         this._stopTrailer();
+        this._cancelMarathon();
         document.getElementById('detailModal').classList.add('hidden');
         document.getElementById('playerContainer').classList.add('hidden');
         document.getElementById('videoPlayer').pause();
@@ -738,6 +754,76 @@ export const PLAYER_LOGIC = {
             }, 500);
 
         } catch (e) { console.error('Error auto trailer:', e); }
+    },
+
+    _getNextEpisode() {
+        if (!this.seriesData || !this.currentSeason || !this.currentEpisode) return null;
+        const currentS = this.seasonCache[this.currentSeason] || [];
+        
+        // 1. Buscar en la temporada actual
+        const nextInSeason = currentS.find(ep => ep.episode_number === this.currentEpisode + 1);
+        if (nextInSeason) return { season: this.currentSeason, data: nextInSeason };
+
+        // 2. Buscar en la siguiente temporada (provisionalmente T+1, E1)
+        const nextSeasonNum = this.currentSeason + 1;
+        // Nota: Esto requeriría precargar la siguiente temporada si no está en caché o hacer un fetch.
+        // Por ahora, solo permitimos salto automático dentro de la misma temporada ya cargada.
+        return null; 
+    },
+
+    _showMarathonCountdown(nextEp, supabaseClient) {
+        this._cancelMarathon();
+        const container = document.getElementById('playerContainer');
+        let overlay = document.querySelector('.marathon-overlay');
+        
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'marathon-overlay';
+            container.appendChild(overlay);
+        }
+
+        overlay.innerHTML = `
+            <div class="marathon-countdown-w">
+                <div class="marathon-circle-bg"></div>
+                <div class="marathon-progress"></div>
+                <div class="marathon-text" id="marathonSecs">10</div>
+            </div>
+            <div class="marathon-info">
+                <p>SIGUIENTE EPISODIO</p>
+                <h3>Temporada ${nextEp.season} • Episodio ${nextEp.data.episode_number}</h3>
+            </div>
+            <div class="marathon-actions">
+                <button class="btn-marathon btn-marathon-next" id="btnMarathonNow">REPRODUCIR AHORA</button>
+                <button class="btn-marathon btn-marathon-cancel" id="btnMarathonCancel">CANCELAR</button>
+            </div>
+        `;
+
+        overlay.classList.add('visible');
+
+        let timeLeft = 10;
+        const textSecs = document.getElementById('marathonSecs');
+        
+        document.getElementById('btnMarathonNow').onclick = () => {
+            this._cancelMarathon();
+            this._playEpisode(this.currentTmdbId, nextEp.season, nextEp.data, supabaseClient);
+        };
+        
+        document.getElementById('btnMarathonCancel').onclick = () => this._cancelMarathon();
+
+        this.marathonTimer = setInterval(() => {
+            timeLeft--;
+            if (textSecs) textSecs.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                this._cancelMarathon();
+                this._playEpisode(this.currentTmdbId, nextEp.season, nextEp.data, supabaseClient);
+            }
+        }, 1000);
+    },
+
+    _cancelMarathon() {
+        if (this.marathonTimer) clearInterval(this.marathonTimer);
+        const overlay = document.querySelector('.marathon-overlay');
+        if (overlay) overlay.classList.remove('visible');
     }
 };
 

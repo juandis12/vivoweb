@@ -220,33 +220,29 @@ async function toDashboard(user) {
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
-    const nameToShow = user.user_metadata?.username || user.email.split('@')[0];
-    
+    // --- GESTIÓN DE PERFILES (Fase 3) ---
+    let currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    if (!currentProfile) {
+        currentProfile = { id: 'p1', name: 'Principal', color: 'color-1' };
+        localStorage.setItem('vivotv_current_profile', JSON.stringify(currentProfile));
+    }
+
     if (userNameEl) {
-        userNameEl.textContent = nameToShow;
+        userNameEl.textContent = currentProfile.name;
     }
     if (userAvatar) {
-        userAvatar.textContent = ""; // Limpiar iniciales
-        userAvatar.style.backgroundImage = `url('./favicon.svg')`;
-        userAvatar.style.backgroundSize = '60%'; // Queda elegante dentro del círculo
-        userAvatar.style.backgroundRepeat = 'no-repeat';
-        userAvatar.style.backgroundPosition = 'center';
-        userAvatar.style.backgroundColor = 'var(--surface-highest)';
-        
-        // Si el usuario ya tenía un avatar manual, se le da prioridad opcionalmente (pero el usuario pidió favicon.svg en TODOS lados)
-        // Por ahora, forzamos branding:
-        userAvatar.style.color = 'transparent';
+        userAvatar.textContent = currentProfile.name[0];
+        userAvatar.style.backgroundImage = 'none';
+        userAvatar.className = `avatar ${currentProfile.color}`;
+        userAvatar.style.backgroundColor = ''; // Usar clase CSS
+        userAvatar.style.color = '#fff';
+        userAvatar.style.fontWeight = 'bold';
     }
 
     if (userProfile) {
         userProfile.style.cursor = 'pointer';
-        userProfile.onclick = async () => {
-            const newUrl = prompt("Cambiar logo de perfil (URL de imagen):", user.user_metadata?.avatar_url || "");
-            if (newUrl !== null) {
-                const { error } = await supabase.auth.updateUser({ data: { avatar_url: newUrl } });
-                if (error) showToast("Error al actualizar perfil", "error");
-                else { showToast("¡Logo actualizado!"); location.reload(); }
-            }
+        userProfile.onclick = () => {
+            window.location.href = 'profiles.html';
         };
     }
 

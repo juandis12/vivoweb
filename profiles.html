@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¿Quién está viendo? | VivoTV</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #0b122b;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .profile-container {
+            text-align: center;
+            animation: fadeIn 0.8s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } }
+        
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 40px;
+            letter-spacing: -1px;
+        }
+        .profiles-grid {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+        }
+        .profile-item {
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 12px;
+            background: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .profile-item:hover .profile-avatar {
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+        .profile-name {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+        .profile-item:hover .profile-name {
+            color: #fff;
+        }
+        .manage-btn {
+            margin-top: 80px;
+            padding: 12px 35px;
+            border: 1px solid var(--text-muted);
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        .manage-btn:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        /* Colores de perfiles */
+        .color-1 { background: #2563eb; }
+        .color-2 { background: #7c3aed; }
+        .color-3 { background: #db2777; }
+        .color-4 { background: #059669; }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <h1>¿Quién está viendo?</h1>
+        <div class="profiles-grid" id="profilesGrid">
+            <!-- Dinámico -->
+        </div>
+        <button class="manage-btn" id="btnManage">Administrar Perfiles</button>
+    </div>
+
+    <script type="module">
+        const PROFILES = [
+            { id: 'p1', name: 'Principal', color: 'color-1' },
+            { id: 'p2', name: 'Niños', color: 'color-2' },
+            { id: 'p3', name: 'Invitado', color: 'color-3' }
+        ];
+
+        const grid = document.getElementById('profilesGrid');
+        PROFILES.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'profile-item';
+            div.innerHTML = `
+                <div class="profile-avatar ${p.color}">
+                    ${p.name[0]}
+                </div>
+                <div class="profile-name">${p.name}</div>
+            `;
+            div.onclick = () => {
+                localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
+                window.location.href = 'index.html';
+            };
+            grid.appendChild(div);
+        });
+    </script>
+</body>
+</html>
