@@ -371,6 +371,7 @@ export const PLAYER_LOGIC = {
         container.classList.remove('hidden');
         loader.classList.remove('hidden');
         const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(url);
+        const isFacebook = url.includes('facebook.com');
         
         setTimeout(() => {
             loader.classList.add('hidden');
@@ -381,8 +382,18 @@ export const PLAYER_LOGIC = {
             } else {
                 video.classList.add('hidden');
                 iframe.classList.remove('hidden');
-                // SEGURIDAD: Sandbox para prevenir redirecciones agresivas y anuncios intrusivos
-                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                
+                // --- AJUSTE DE BYPASS PREMIUM ---
+                // Para Facebook, relajamos el sandbox para evitar bloqueos por origen
+                if (isFacebook) {
+                    iframe.removeAttribute('sandbox'); // Facebook es muy estricto con el sandbox
+                    iframe.setAttribute('referrerpolicy', 'no-referrer');
+                } else {
+                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                    iframe.removeAttribute('referrerpolicy');
+                }
+                
+                iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen');
                 iframe.src = url;
                 this._startIframeTracking();
             }
