@@ -63,10 +63,10 @@ export const PLAYER_LOGIC = {
             if (details.popularity > 500) trending.classList.remove('hidden');
 
             // --- TRÁILER AUTOMÁTICO (Netflix Style) ---
-            // Iniciamos el temporizador de 30 segundos
+            // Iniciamos el temporizador de 10 segundos
             this.trailerTimer = setTimeout(() => {
                 this._startAutoplayTrailer(tmdbId, type);
-            }, 30000); 
+            }, 10000); 
 
             if (type === 'tv' || details.media_type === 'tv') {
                 this.seriesData = details;
