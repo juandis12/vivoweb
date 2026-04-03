@@ -206,7 +206,8 @@ export const CATALOG_UI = {
                     <div class="available-badge">
                         <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
                         DISPONIBLE
-                    </div>` : ''}
+                    </div>` : `
+                    <div class="coming-soon-badge">PRÓXIMAMENTE</div>`}
             </div>
             <div class="movie-tooltip">
                 <div class="movie-tooltip-actions">

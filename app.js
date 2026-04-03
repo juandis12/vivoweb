@@ -43,6 +43,8 @@ let availableMovies = new Set();
 let availableSeries = new Set();
 let availableIds    = new Set();
 let searchTimeout   = null;
+let lastSearchResults = [];
+let currentFilter     = 'all';
 
 // ================================================
 // INNOVACIÓN: UI INTERACTIVA
@@ -105,14 +107,14 @@ if (searchInput) {
         searchTimeout = setTimeout(async () => {
             const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query: q });
             if (res && res.results) {
-                const filtered = res.results.filter(item => availableIds.has(item.id.toString()));
-                const isMoviesPage = document.body.classList.contains('page-movies');
-                const isSeriesPage = document.body.classList.contains('page-series');
                 const isSearchPage = window.location.pathname.includes('busqueda.html');
                 
                 if (isSearchPage) {
-                    renderSearchResults(filtered, q);
+                    executeSearch(q);
                 } else {
+                    const filtered = res.results.filter(item => availableIds.has(item.id.toString()));
+                    const isMoviesPage = document.body.classList.contains('page-movies');
+                    const isSeriesPage = document.body.classList.contains('page-series');
                     const targetId = isMoviesPage ? 'popularCarousel' : (isSeriesPage ? 'popularCarousel' : 'trendingCarousel');
                     CATALOG_UI.renderCarousel(targetId, filtered, null, availableIds, `🔍 Resultados para "${q}"`);
                 }
@@ -578,39 +580,110 @@ function mapError(msg) {
 async function initSearchPage() {
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
-    if (!q) return;
+    
+    // Selectores específicos de la página de búsqueda
+    const headerTitle = document.getElementById('searchHeader');
+    const mainInput   = document.getElementById('mainSearchInput');
+    const filterPills = document.querySelectorAll('.filter-pill');
+    
+    if (q) {
+        if (headerTitle) headerTitle.textContent = `Resultados para "${q}"`;
+        if (mainInput)   mainInput.value = q;
+        if (searchInput) searchInput.value = q; // Sync navbar
+        
+        executeSearch(q);
+    }
 
-    const titleEl = document.getElementById('searchTitle');
-    const searchInput = document.getElementById('searchInput');
-    if (titleEl) titleEl.textContent = `Resultados para "${q}"`;
-    if (searchInput) searchInput.value = q;
+    // Evento para el Input Principal de la página
+    if (mainInput) {
+        mainInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (searchInput) searchInput.value = val; // Sync navbar
+            
+            if (searchTimeout) clearTimeout(searchTimeout);
+            if (val.length < 3) return;
 
+            searchTimeout = setTimeout(() => executeSearch(val), 500);
+        });
+    }
+
+    // Eventos para los Filtros (Pills)
+    filterPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            filterPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            currentFilter = pill.dataset.filter;
+            applyLocalFilter();
+        });
+    });
+}
+
+async function executeSearch(query) {
     const grid = document.getElementById('searchResultsGrid');
-    if (grid) CATALOG_UI.showSkeletons('searchResultsGrid', 12);
+    if (!grid) return;
 
-    const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query: q });
-    if (res && res.results) {
-        const filtered = res.results.filter(item => availableIds.has(item.id.toString()));
-        renderSearchResults(filtered, q);
+    CATALOG_UI.showSkeletons('searchResultsGrid', 12);
+    
+    try {
+        const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query });
+        if (res && res.results) {
+            // Guardamos todos los resultados para filtrar localmente después
+            lastSearchResults = res.results.filter(item => item.media_type !== 'person');
+            applyLocalFilter();
+            
+            // Actualizar URL sin recargar
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('q', query);
+            window.history.pushState({}, '', newUrl);
+        }
+    } catch (e) {
+        console.error('Search error:', e);
     }
 }
 
-function renderSearchResults(results, query) {
+function applyLocalFilter() {
+    let filtered = [...lastSearchResults];
+    
+    if (currentFilter === 'movie') {
+        filtered = filtered.filter(i => i.media_type === 'movie');
+    } else if (currentFilter === 'tv') {
+        filtered = filtered.filter(i => i.media_type === 'tv' && !i.genre_ids?.includes(16));
+    } else if (currentFilter === 'anime') {
+        filtered = filtered.filter(i => i.genre_ids?.includes(16));
+    }
+
+    renderSearchResults(filtered);
+}
+
+function renderSearchResults(results) {
     const grid = document.getElementById('searchResultsGrid');
     const empty = document.getElementById('noResultsState');
     if (!grid) return;
 
     grid.innerHTML = '';
+    
     if (!results || results.length === 0) {
         empty?.classList.remove('hidden');
         return;
     }
 
     empty?.classList.add('hidden');
-    results.forEach(item => {
+    
+    results.forEach((item, index) => {
         const type = item.media_type || (item.title ? 'movie' : 'tv');
-        const card = CATALOG_UI.createMovieCard(item, type, true);
+        const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
+        const card = CATALOG_UI.createMovieCard(item, type, isAvail);
+        
+        // Animación de entrada escalonada
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
         grid.appendChild(card);
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 50);
     });
 }
 
