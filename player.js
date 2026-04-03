@@ -205,9 +205,16 @@ export const PLAYER_LOGIC = {
             const p = this.lastSeriesProgress;
             this.showFloatingResumeCard({
                 thumb: `${CONFIG.TMDB_IMAGE_CARD}${this.seriesData?.poster_path || ''}`,
-                title: 'Continuar Serie',
+                title: p.progress_seconds > ((this.seriesData?.last_episode_to_air?.runtime || 45) * 60 * 0.95) ? 'Ver Siguiente' : 'Continuar Serie',
                 desc: `T${p.season_number} E${p.episode_number} • ${this.formatTime(p.progress_seconds)}`,
-                onResume: () => this.resumeLastEpisode(p.season_number, p.episode_number, p.progress_seconds, supabaseClient)
+                onResume: () => {
+                    const isFinished = p.progress_seconds > ((this.seriesData?.last_episode_to_air?.runtime || 45) * 60 * 0.95);
+                    if (isFinished) {
+                        this.playNextEpisodeFrom(p.season_number, p.episode_number, supabaseClient);
+                    } else {
+                        this.resumeLastEpisode(p.season_number, p.episode_number, p.progress_seconds, supabaseClient);
+                    }
+                }
             });
         }
     },
@@ -264,6 +271,9 @@ export const PLAYER_LOGIC = {
         
         (hist || []).forEach(h => progressMap[h.episode_number] = h);
 
+        const runtimeMap = {};
+        episodes.forEach(e => runtimeMap[e.episode_number] = e.runtime || 45); // Fallback runtime
+
         episodes.forEach(ep => {
             const card = document.createElement('div');
             const hasStream = !!ep.stream_url;
@@ -279,7 +289,21 @@ export const PLAYER_LOGIC = {
                 <div class="ep-thumb-wrapper">
                     <img src="${thumb}" class="ep-thumb" alt="E${ep.episode_number}" loading="lazy">
                     ${hasStream ? `<div class="ep-play-overlay"><svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div>` : ''}
-                    ${isWatched ? `<div class="ep-progress-bar"><div class="progress-fill" style="width: 100%"></div></div>` : ''}
+                    
+                    ${(() => {
+                        const prog = progressMap[ep.episode_number];
+                        if (!prog) return '';
+                        const totalSecs = (ep.runtime || 45) * 60;
+                        const isFullyWatched = prog.progress_seconds > (totalSecs * 0.95);
+                        
+                        if (isFullyWatched) {
+                            return `<div class="watched-badge"><svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VISTO</div>`;
+                        } else if (prog.progress_seconds > 60) {
+                            const pct = Math.min((prog.progress_seconds / totalSecs) * 100, 100);
+                            return `<div class="ep-progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>`;
+                        }
+                        return '';
+                    })()}
                 </div>
                 <div class="ep-info">
                     <div class="ep-header-row">
@@ -339,11 +363,22 @@ export const PLAYER_LOGIC = {
         video.play().catch(() => {});
         
         // Limpiamos listeners previos
-        video.ontimeupdate = null;
         video.ontimeupdate = () => {
             const cur = Math.floor(video.currentTime);
+            const total = Math.floor(video.duration);
+
             if (cur > 0 && cur % 15 === 0) { // Guardamos cada 15 segundos
                 this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+            }
+
+            // Detección de "Siguiente Episodio" (2 minutos antes de terminar)
+            if (this.currentType === 'tv' && total > 300) { // Solo si dura más de 5min
+                const remaining = total - cur;
+                if (remaining <= 120 && remaining > 5) { // Entre 2min y 5 seg antes del fin
+                    this._showNextEpisodeButton();
+                } else if (remaining <= 5 || remaining > 125) {
+                    this._hideNextEpisodeButton();
+                }
             }
         };
     },
@@ -463,14 +498,14 @@ export const PLAYER_LOGIC = {
             <img src="${thumb}" class="floating-card-thumb" alt="Preview">
             <div class="floating-card-content">
                 <div class="floating-card-header">
-                    <span class="floating-badge">CONTINUAR</span>
+                    <span class="floating-badge">CATÁLOGO</span>
                     <h3>${title}</h3>
                 </div>
                 <p>${desc}</p>
                 <div class="floating-card-actions">
                     <button class="float-btn float-btn-primary" id="btnFloatResume">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                        Reproducir
+                        ${title.includes('Siguiente') ? 'Siguiente' : 'Reproducir'}
                     </button>
                     <button class="float-btn float-btn-close" id="btnFloatClose">&times;</button>
                 </div>
@@ -481,8 +516,70 @@ export const PLAYER_LOGIC = {
         document.getElementById('btnFloatResume').onclick = () => { card.remove(); onResume(); };
         document.getElementById('btnFloatClose').onclick = () => { card.remove(); };
         
-        // Auto-remove after 15s if not interacted
-        setTimeout(() => card?.remove(), 15000);
+        // Auto-remove after 30s
+        setTimeout(() => card?.remove(), 30000);
+    },
+
+    _showNextEpisodeButton() {
+        if (document.querySelector('.next-episode-overlay')) return;
+        const container = document.getElementById('playerContainer');
+        const nextOverlay = document.createElement('div');
+        nextOverlay.className = 'next-episode-overlay';
+        nextOverlay.innerHTML = `
+            <button class="next-btn-premium" id="btnSkipToNext">
+                <span>Siguiente Episodio</span>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+        `;
+        container.appendChild(nextOverlay);
+        
+        document.getElementById('btnSkipToNext').onclick = () => {
+            this._hideNextEpisodeButton();
+            this.playNextEpisode();
+        };
+    },
+
+    _hideNextEpisodeButton() {
+        document.querySelector('.next-episode-overlay')?.remove();
+    },
+
+    async playNextEpisode() {
+        await this.playNextEpisodeFrom(this.currentSeason, this.currentEpisode, _supabase);
+    },
+
+    async playNextEpisodeFrom(seasonNum, epNum, supabase) {
+        // 1. Buscar en la temporada actual (Caché)
+        const currentSeasonEps = this.seasonCache[seasonNum];
+        if (currentSeasonEps) {
+            const nextEp = currentSeasonEps.find(e => e.episode_number === epNum + 1);
+            if (nextEp && nextEp.stream_url) {
+                this._playEpisode(this.currentTmdbId, seasonNum, nextEp, supabase, 0);
+                this.currentEpisode = nextEp.episode_number;
+                return;
+            }
+        }
+
+        // 2. Si no hay más en esta temporada, buscar en DB para T+1 E1
+        const { data: nextData } = await supabase.from('series_episodes')
+            .select('season_number, episode_number, stream_url')
+            .eq('tmdb_id', Number(this.currentTmdbId))
+            .or(`and(season_number.eq.${seasonNum},episode_number.gt.${epNum}),season_number.gt.${seasonNum}`)
+            .order('season_number', { ascending: true })
+            .order('episode_number', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+        if (nextData && nextData.stream_url) {
+            this.currentSeason = nextData.season_number;
+            this.currentEpisode = nextData.episode_number;
+            this._playEpisode(this.currentTmdbId, nextData.season_number, nextData, supabase, 0);
+            
+            // Actualizar UI del modal en segundo plano si está abierto
+            this.switchSeason(nextData.season_number, supabase);
+        } else {
+            showToast('Has llegado al final de los episodios disponibles.');
+            this._hideNextEpisodeButton();
+        }
     },
 
     formatTime(s) {
