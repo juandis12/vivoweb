@@ -52,26 +52,38 @@ let currentFilter     = 'all';
 function filterItemsByProfile(items) {
     if (!items || !Array.isArray(items)) return [];
     
+    // Sincronización robusta: leer siempre el perfil de localStorage
     const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    
+    // Si no hay perfil o no es modo niños, devolvemos todo
     if (!currentProfile?.isKids) return items;
 
-    const ALLOWED_GENRES = [16, 10751, 12, 35]; // Animación, Familia, Aventura, Comedia
-    const EXCLUDED_GENRES = [27, 80, 53, 10749, 18]; // Terror, Crimen, Suspenso, Romance, Drama pesado
+    // --- MODO NUCLEAR NIÑOS (Fase Final) ---
+    // Solo permitimos cosas con estas etiquetas EXPLICITAMENTE
+    const MANDATORY_GENRES = [10751, 10762]; // Familia, Kids
+    const SAFE_GENRES      = [16, 12, 35];   // Animación, Aventura, Comedia (Solo si acompañan a Familia o son seguros)
+    const BANNED_GENRES    = [18, 27, 80, 53, 10749, 10767, 10763]; // Adulto, Terror, Crimen, Suspenso, Romance, Talk, News
+
+    console.log(`[PARENTAL GUARD] Filtrando ${items.length} ítems para perfil de niños...`);
 
     return items.filter(item => {
         const genres = item.genres || item.genre_ids || [];
         const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
         
-        // --- SEGURIDAD ADICIONAL (Fase 4) ---
-        // Si no hay géneros detectados, ocultamos por seguridad en perfil Niños
+        // REGLA 1: Si no hay información de género, ocultar en modo Niños (Safe Mode)
         if (genreIds.length === 0) return false;
 
-        // Debe tener al menos uno de los permitidos (Especialmente Animación o Familia)
-        const hasAllowed = genreIds.some(id => [16, 10751].includes(id));
-        // No debe tener ninguno de los prohibidos
-        const hasExcluded = genreIds.some(id => EXCLUDED_GENRES.includes(id));
+        // REGLA 2: Bloqueo absoluto si tiene géneros prohibidos (Terror, Crimen, etc.)
+        const hasBanned = genreIds.some(id => BANNED_GENRES.includes(id));
+        if (hasBanned) return false;
+
+        // REGLA 3: Permitir solo si es FAMILIAR o para NIÑOS
+        const isFamily = genreIds.some(id => MANDATORY_GENRES.includes(id));
         
-        return hasAllowed && !hasExcluded;
+        // REGLA 4: Si es Animación (16), debe ser también Aventura o Comedia (evita el drama denso)
+        const isSafeAnimation = genreIds.includes(16) && genreIds.some(id => [12, 35, 10751].includes(id));
+
+        return isFamily || isSafeAnimation;
     });
 }
 

@@ -173,6 +173,18 @@
         .color-4 { background: linear-gradient(135deg, #059669, #065f46); }
         
         .hidden { display: none !important; }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 2rem; }
+            .profiles-grid { gap: 20px; }
+            .profile-item { width: 120px; }
+            .profile-avatar { width: 110px; height: 110px; font-size: 3rem; }
+            .profile-name-input { font-size: 1rem; }
+            .kids-badge { padding: 2px 8px; font-size: 0.65rem; }
+            .subtitle { font-size: 0.9rem; margin-bottom: 25px; }
+            .actions-container { margin-top: 40px; flex-direction: column; gap: 12px; padding: 0 40px; }
+            .btn-vtv { width: 100%; padding: 12px; font-size: 0.8rem; }
+        }
     </style>
 </head>
 <body class="selection-mode" id="bodyRoot">
@@ -251,12 +263,17 @@
         };
 
         function selectProfile(p) {
-            // --- LIMPIEZA DE MEMORIA (Fase 4) ---
-            // Borra todo lo que TMDB haya guardado en caché para este usuario
-            // previniendo que el contenido de Adultos se filtre al perfil de Niños.
-            sessionStorage.clear(); 
+            // --- LIMPIEZA DE MEMORIA (Fase Final) ---
+            sessionStorage.clear();
+            localStorage.removeItem('vivotv_trending_cache');
             
-            localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
+            // Re-leer el perfil más actual de la lista maestra por ID
+            const allProfiles = JSON.parse(localStorage.getItem('vivotv_all_profiles')) || [];
+            const latestProfile = allProfiles.find(x => x.id === p.id) || p;
+            
+            console.log(`[VivoTV] Seleccionando Perfil: ${latestProfile.name} (Modo Niños: ${latestProfile.isKids})`);
+            
+            localStorage.setItem('vivotv_current_profile', JSON.stringify(latestProfile));
             window.location.href = 'index.html';
         }
 
