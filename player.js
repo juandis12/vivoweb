@@ -16,8 +16,10 @@ export const PLAYER_LOGIC = {
     seasonCache: {},
     lastSeriesProgress: null,
     progressTimer: null,
+    trailerTimer: null,
 
     async openDetail(tmdbId, type = 'movie', supabaseClient, availableIds = new Set()) {
+        this._stopTrailer(); // Detener tráiler previo si existe
         this.availableIds = availableIds; // Guardar para uso en similares
         _supabase = supabaseClient;
         this.currentTmdbId = tmdbId;
@@ -59,6 +61,12 @@ export const PLAYER_LOGIC = {
 
             if (details.popularity > 500) trending.classList.remove('hidden');
 
+            // --- TRÁILER AUTOMÁTICO (Netflix Style) ---
+            // Iniciamos el temporizador de 30 segundos
+            this.trailerTimer = setTimeout(() => {
+                this._startAutoplayTrailer(tmdbId, type);
+            }, 30000); 
+
             if (type === 'tv' || details.media_type === 'tv') {
                 this.seriesData = details;
                 await this.detectGlobalSeriesProgress(tmdbId, supabaseClient);
@@ -72,6 +80,7 @@ export const PLAYER_LOGIC = {
 
             const btnPlay = document.getElementById('btnModalPlay');
             btnPlay.onclick = async () => {
+                this._stopTrailer();
                 if (type === 'tv' || details.media_type === 'tv') {
                     // SI ES SERIE: BUSCAR ÚLTIMO VISTO O E1 PARA PLAY INMEDIATO
                     const targetEp = this.lastSeriesProgress || { season_number: 1, episode_number: 1 };
@@ -374,6 +383,7 @@ export const PLAYER_LOGIC = {
     },
 
     async _playEpisode(tmdbId, seasonNum, ep, supabaseClient, seekSeconds = 0) {
+        this._stopTrailer();
         this._playSource(ep.stream_url, seekSeconds);
         // El guardado de progreso se iniciará automáticamente mediante el timer del reproductor
     },
@@ -678,11 +688,48 @@ export const PLAYER_LOGIC = {
 
     closeModal() {
         this._stopProgressTimer();
+        this._stopTrailer();
         document.getElementById('detailModal').classList.add('hidden');
         document.getElementById('playerContainer').classList.add('hidden');
         document.getElementById('videoPlayer').pause();
         document.getElementById('videoIframe').src = '';
         document.body.style.overflow = '';
+    },
+
+    _stopTrailer() {
+        if (this.trailerTimer) clearTimeout(this.trailerTimer);
+        const container = document.querySelector('.auto-trailer-container');
+        if (container) {
+            container.classList.remove('visible');
+            setTimeout(() => container.remove(), 1000); // Darle tiempo a la transición CSS
+        }
+    },
+
+    async _startAutoplayTrailer(id, type) {
+        try {
+            const data = await TMDB_SERVICE.getVideos(id, type);
+            const trailer = (data.results || []).find(v => 
+                (v.type === 'Trailer' || v.type === 'Teaser') && v.site === 'YouTube'
+            );
+
+            if (!trailer) return;
+
+            const modalViewport = document.querySelector('.modal-viewport');
+            if (!modalViewport) return;
+
+            let container = document.createElement('div');
+            container.className = 'auto-trailer-container';
+            container.innerHTML = `
+                <iframe src="https://www.youtube.com/embed/${trailer.key}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&loop=1&playlist=${trailer.key}" 
+                        frameborder="0" allow="autoplay; encrypted-media"></iframe>
+            `;
+
+            modalViewport.prepend(container);
+            
+            // Forzar reflow y mostrar con fade
+            setTimeout(() => container.classList.add('visible'), 100);
+
+        } catch (e) { console.error('Error auto trailer:', e); }
     }
 };
 

@@ -51,6 +51,7 @@ export const TMDB_SERVICE = {
     search: (query) => TMDB_SERVICE.fetchFromTMDB('/search/multi', { query }),
     getCredits: (id, type = 'movie') => TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/credits`),
     getSeasonDetails: (id, seasonNumber) => TMDB_SERVICE.fetchFromTMDB(`/tv/${id}/season/${seasonNumber}`),
+    getVideos: (id, type = 'movie') => TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/videos`),
 
     async getImagesForAuthBg() {
         const data = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/week');
