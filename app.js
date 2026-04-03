@@ -47,6 +47,31 @@ let lastSearchResults = [];
 let currentFilter     = 'all';
 
 // ================================================
+// CENTRALIZACIÓN: FILTRO POR PERFIL (Fase 3 Global)
+// ================================================
+function filterItemsByProfile(items) {
+    if (!items || !Array.isArray(items)) return [];
+    
+    const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    if (!currentProfile?.isKids) return items;
+
+    const ALLOWED_GENRES = [16, 10751, 12, 35]; // Animación, Familia, Aventura, Comedia
+    const EXCLUDED_GENRES = [27, 80, 53, 10749, 18]; // Terror, Crimen, Suspenso, Romance, Drama pesado
+
+    return items.filter(item => {
+        const genres = item.genres || item.genre_ids || [];
+        const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
+        
+        // Debe tener al menos uno de los permitidos (Especialmente Animación o Familia)
+        const hasAllowed = genreIds.some(id => [16, 10751].includes(id));
+        // No debe tener ninguno de los prohibidos
+        const hasExcluded = genreIds.some(id => EXCLUDED_GENRES.includes(id));
+        
+        return hasAllowed && !hasExcluded;
+    });
+}
+
+// ================================================
 // INNOVACIÓN: UI INTERACTIVA
 // ================================================
 function initMagneticHover() {
@@ -112,7 +137,9 @@ if (searchInput) {
                 if (isSearchPage) {
                     executeSearch(q);
                 } else {
-                    const filtered = res.results.filter(item => availableIds.has(item.id.toString()));
+                    let filtered = res.results.filter(item => availableIds.has(item.id.toString()));
+                    filtered = filterItemsByProfile(filtered); // Aplicar filtro global
+                    
                     const isMoviesPage = document.body.classList.contains('page-movies');
                     const isSeriesPage = document.body.classList.contains('page-series');
                     const targetId = isMoviesPage ? 'popularCarousel' : (isSeriesPage ? 'popularCarousel' : 'trendingCarousel');
@@ -300,8 +327,9 @@ async function toDashboard(user) {
             heroData = await TMDB_SERVICE.getTrending();
         }
 
-        // Filtrar Hero solo disponibles
-        heroItems = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString())).slice(0, 8);
+        // Filtrar Hero solo disponibles Y según perfil
+        let availableHeroItems = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString()));
+        heroItems = filterItemsByProfile(availableHeroItems).slice(0, 8);
         
         if (heroItems.length && document.getElementById('heroBanner')) {
             CATALOG_UI.renderHero(heroItems[0], heroItems);
@@ -316,7 +344,8 @@ async function toDashboard(user) {
             const el = document.getElementById(containerId);
             if (!el) return;
             const data = await fetchFn();
-            const filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+            let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+            filtered = filterItemsByProfile(filtered); // Aplicar filtro global
             CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
             
             const section = el.closest('.catalog-row');
@@ -337,7 +366,8 @@ async function toDashboard(user) {
                 // TOP 10 TRENDING (Netflix Style)
                 (async () => {
                     const data = await TMDB_SERVICE.getTrending();
-                    const filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+                    let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+                    filtered = filterItemsByProfile(filtered); // Aplicar filtro global
                     CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds);
                 })(),
                 renderRow('popularMoviesCarousel', () => TMDB_SERVICE.getPopularMovies(), 'movie'),
@@ -431,27 +461,10 @@ async function loadGridData(type, page, append = false) {
                 }
 
                 if (loader) loader.classList.add('hidden');
-
-                // --- FILTRO PARENTAL (Fase 3 Final) ---
-                const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+ 
+                // Aplicar Filtrado Global por Perfil (Helper Centralizado)
                 let finalItems = detailsArray.filter(item => item && item.poster_path);
-                
-                if (currentProfile?.isKids) {
-                    const ALLOWED_GENRES = [16, 10751, 12, 35]; // Animación, Familia, Aventura, Comedia
-                    const EXCLUDED_GENRES = [27, 80, 53, 10749, 18]; // Terror, Crimen, Suspenso, Romance, Drama pesado
-                    
-                    finalItems = finalItems.filter(item => {
-                        const genres = item.genres || item.genre_ids || [];
-                        const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
-                        
-                        // Debe tener al menos uno de los permitidos (Especialmente Animación o Familia)
-                        const hasAllowed = genreIds.some(id => [16, 10751].includes(id));
-                        // No debe tener ninguno de los prohibidos
-                        const hasExcluded = genreIds.some(id => EXCLUDED_GENRES.includes(id));
-                        
-                        return hasAllowed && !hasExcluded;
-                    });
-                }
+                finalItems = filterItemsByProfile(finalItems);
 
                 if (isAnimePage) {
                     finalItems = finalItems.filter(item => {
@@ -659,19 +672,7 @@ async function executeSearch(query) {
         const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query });
         if (res && res.results) {
             let lastResults = res.results.filter(item => item.media_type !== 'person');
-            
-            // --- FILTRO PARENTAL EN BÚSQUEDA (Refinado 10 años) ---
-            const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
-            if (currentProfile?.isKids) {
-                const ALLOWED_GENRES = [16, 10751, 12, 35];
-                const EXCLUDED_GENRES = [27, 80, 53, 10749, 18];
-                lastResults = lastResults.filter(item => {
-                    const genres = item.genre_ids || [];
-                    const hasAllowed = genres.some(id => [16, 10751].includes(id));
-                    const hasExcluded = genres.some(id => EXCLUDED_GENRES.includes(id));
-                    return hasAllowed && !hasExcluded;
-                });
-            }
+            lastResults = filterItemsByProfile(lastResults); // Aplicar filtro global
 
             lastSearchResults = lastResults;
             applyLocalFilter();
