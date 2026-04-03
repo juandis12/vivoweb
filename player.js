@@ -17,7 +17,8 @@ export const PLAYER_LOGIC = {
     lastSeriesProgress: null,
     progressTimer: null,
 
-    async openDetail(tmdbId, type = 'movie', supabaseClient) {
+    async openDetail(tmdbId, type = 'movie', supabaseClient, availableIds = new Set()) {
+        this.availableIds = availableIds; // Guardar para uso en similares
         _supabase = supabaseClient;
         this.currentTmdbId = tmdbId;
         this.currentType = type;
@@ -54,7 +55,7 @@ export const PLAYER_LOGIC = {
 
             const details = await TMDB_SERVICE.getDetails(tmdbId, type);
             const credits = await TMDB_SERVICE.getCredits(tmdbId, type);
-            this.updateModalUI(details, credits);
+            this.updateModalUI(details, credits, availableIds);
 
             if (details.popularity > 500) trending.classList.remove('hidden');
 
@@ -109,7 +110,7 @@ export const PLAYER_LOGIC = {
         }
     },
 
-    updateModalUI(data, credits = null) {
+    updateModalUI(data, credits = null, availableIds = new Set()) {
         document.getElementById('modalTitle').textContent = data.title || data.name;
         document.getElementById('modalOverview').textContent = data.overview || 'Sin descripción disponible.';
         
@@ -145,12 +146,10 @@ export const PLAYER_LOGIC = {
         }
 
         // --- RELACIONADOS (More Like This) ---
-        this.renderSimilar(data.id, data.title ? 'movie' : 'tv');
+        this.renderSimilar(data.id, data.title ? 'movie' : 'tv', availableIds);
     },
 
-    async renderSimilar(id, type) {
-        const container = document.getElementById('seriesInfo'); // Reutilizamos un contenedor o añadimos uno
-        // Para simplificar, añadiremos una sección de similares al final del grid de detalles
+    async renderSimilar(id, type, availableIds) {
         let similarSection = document.getElementById('similarTitlesSection');
         if (!similarSection) {
             similarSection = document.createElement('section');
@@ -160,20 +159,35 @@ export const PLAYER_LOGIC = {
                 <h3 class="section-label">Títulos Similares</h3>
                 <div class="similar-grid" id="similarGrid"></div>
             `;
-            document.querySelector('.details-main-col').appendChild(similarSection);
+            const mainCol = document.querySelector('.details-main-col');
+            if (mainCol) mainCol.appendChild(similarSection);
         }
 
         const grid = document.getElementById('similarGrid');
-        grid.innerHTML = '<div class="loader-v"></div>';
+        if (!grid) return;
+        
+        grid.innerHTML = '<div class="loader-wave"><span></span><span></span><span></span></div>';
         
         try {
             const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/similar`);
             grid.innerHTML = '';
-            (data.results || []).slice(0, 6).forEach(item => {
-                const card = CATALOG_UI.createMovieCard(item, type, true); // Asumimos disponibles para demo
+            
+            const results = (data.results || []).slice(0, 12);
+            if (results.length === 0) {
+                similarSection.classList.add('hidden');
+                return;
+            }
+
+            similarSection.classList.remove('hidden');
+            results.forEach(item => {
+                const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
+                const card = CATALOG_UI.createMovieCard(item, type, isAvail);
                 grid.appendChild(card);
             });
-        } catch (e) { grid.innerHTML = ''; }
+        } catch (e) { 
+            console.error('Error similar titles:', e);
+            similarSection.classList.add('hidden');
+        }
     },
 
     async _checkMovieProgress(tmdbId, supabaseClient) {

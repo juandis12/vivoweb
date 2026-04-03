@@ -773,7 +773,7 @@ async function loadRecentlyWatched() {
 window.addEventListener('update-my-list', loadMyList);
 window.addEventListener('update-recent', loadRecentlyWatched);
 if (btnFav) btnFav.addEventListener('click', () => PLAYER_LOGIC.toggleFavorite(supabase));
-window.addEventListener('open-movie-detail', (e) => { PLAYER_LOGIC.openDetail(e.detail.tmdbId, e.detail.type, supabase); });
+window.addEventListener('open-movie-detail', (e) => { PLAYER_LOGIC.openDetail(e.detail.tmdbId, e.detail.type, supabase, availableIds); });
 const btnCloseModal = document.getElementById('btnCloseModal');
 if (btnCloseModal) btnCloseModal.addEventListener('click', () => PLAYER_LOGIC.closeModal());
 const btnHeroPlay = document.getElementById('btnHeroPlay');
