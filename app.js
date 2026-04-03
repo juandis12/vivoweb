@@ -62,6 +62,10 @@ function filterItemsByProfile(items) {
         const genres = item.genres || item.genre_ids || [];
         const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
         
+        // --- SEGURIDAD ADICIONAL (Fase 4) ---
+        // Si no hay géneros detectados, ocultamos por seguridad en perfil Niños
+        if (genreIds.length === 0) return false;
+
         // Debe tener al menos uno de los permitidos (Especialmente Animación o Familia)
         const hasAllowed = genreIds.some(id => [16, 10751].includes(id));
         // No debe tener ninguno de los prohibidos
