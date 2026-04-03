@@ -437,14 +437,19 @@ async function loadGridData(type, page, append = false) {
                 let finalItems = detailsArray.filter(item => item && item.poster_path);
                 
                 if (currentProfile?.isKids) {
-                    const EXCLUDED_GENRES = [27, 80, 53]; // Terror, Crimen, Suspenso fuerte
+                    const ALLOWED_GENRES = [16, 10751, 12, 35]; // Animación, Familia, Aventura, Comedia
+                    const EXCLUDED_GENRES = [27, 80, 53, 10749, 18]; // Terror, Crimen, Suspenso, Romance, Drama pesado
+                    
                     finalItems = finalItems.filter(item => {
                         const genres = item.genres || item.genre_ids || [];
-                        const hasExcluded = genres.some(g => {
-                            const id = typeof g === 'object' ? g.id : g;
-                            return EXCLUDED_GENRES.includes(id);
-                        });
-                        return !hasExcluded;
+                        const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
+                        
+                        // Debe tener al menos uno de los permitidos (Especialmente Animación o Familia)
+                        const hasAllowed = genreIds.some(id => [16, 10751].includes(id));
+                        // No debe tener ninguno de los prohibidos
+                        const hasExcluded = genreIds.some(id => EXCLUDED_GENRES.includes(id));
+                        
+                        return hasAllowed && !hasExcluded;
                     });
                 }
 
@@ -655,13 +660,16 @@ async function executeSearch(query) {
         if (res && res.results) {
             let lastResults = res.results.filter(item => item.media_type !== 'person');
             
-            // --- FILTRO PARENTAL EN BÚSQUEDA ---
+            // --- FILTRO PARENTAL EN BÚSQUEDA (Refinado 10 años) ---
             const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
             if (currentProfile?.isKids) {
-                const EXCLUDED_GENRES = [27, 80, 53];
+                const ALLOWED_GENRES = [16, 10751, 12, 35];
+                const EXCLUDED_GENRES = [27, 80, 53, 10749, 18];
                 lastResults = lastResults.filter(item => {
                     const genres = item.genre_ids || [];
-                    return !genres.some(id => EXCLUDED_GENRES.includes(id));
+                    const hasAllowed = genres.some(id => [16, 10751].includes(id));
+                    const hasExcluded = genres.some(id => EXCLUDED_GENRES.includes(id));
+                    return hasAllowed && !hasExcluded;
                 });
             }
 
