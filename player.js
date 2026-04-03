@@ -38,7 +38,8 @@ export const PLAYER_LOGIC = {
         const trending = document.getElementById('trendingBadge');
 
         modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        document.documentElement.classList.add('no-scroll');
+        document.body.classList.add('no-scroll');
         playerContainer.classList.add('hidden');
         mainContent.classList.remove('hidden');
         trending.classList.add('hidden');
@@ -693,12 +694,15 @@ export const PLAYER_LOGIC = {
         document.getElementById('playerContainer').classList.add('hidden');
         document.getElementById('videoPlayer').pause();
         document.getElementById('videoIframe').src = '';
-        document.body.style.overflow = '';
+        document.documentElement.classList.remove('no-scroll');
+        document.body.classList.remove('no-scroll');
     },
 
     _stopTrailer() {
         if (this.trailerTimer) clearTimeout(this.trailerTimer);
         const container = document.querySelector('.auto-trailer-container');
+        const backdrop = document.getElementById('modalBackdrop');
+        if (backdrop) backdrop.classList.remove('fade-out');
         if (container) {
             container.classList.remove('visible');
             setTimeout(() => container.remove(), 1000); // Darle tiempo a la transición CSS
@@ -727,7 +731,11 @@ export const PLAYER_LOGIC = {
             modalViewport.prepend(container);
             
             // Forzar reflow y mostrar con fade
-            setTimeout(() => container.classList.add('visible'), 100);
+            setTimeout(() => {
+                const backdrop = document.getElementById('modalBackdrop');
+                if (backdrop) backdrop.classList.add('fade-out');
+                container.classList.add('visible');
+            }, 500);
 
         } catch (e) { console.error('Error auto trailer:', e); }
     }

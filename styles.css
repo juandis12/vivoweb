@@ -63,6 +63,12 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Fix: Bloqueo de scroll cuando el modal está abierto */
+.no-scroll {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
 img { display: block; }
 a { text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
@@ -944,12 +950,13 @@ nav a.active::after { width: 24px; }
 .modal-backdrop {
     position: absolute; inset: 0;
     background-size: cover; background-position: center 20%;
-    transition: transform 10s linear;
+    transition: opacity 1s ease;
     animation: kenBurns 20s infinite alternate;
 }
+.modal-backdrop.fade-out { opacity: 0; }
 
 .auto-trailer-container {
-    position: absolute; inset: 0; z-index: 1;
+    position: absolute; inset: 0; z-index: 2; /* Mayor que el backdrop */
     opacity: 0; transition: opacity 1.5s ease;
     pointer-events: none; overflow: hidden;
 }
