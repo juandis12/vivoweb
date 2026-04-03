@@ -143,17 +143,25 @@ async function initAuth() {
     const isProtected = protectedPages.some(p => window.location.pathname.includes(p));
 
     if (session) {
-        // Si hay sesión y estamos en login/registro, ir al home
-        const loginPages = ['login_screen.html', 'registro.html'];
-        const isLogin = loginPages.some(p => window.location.pathname.includes(p));
-        if (isLogin) {
+        // --- GESTIÓN DE PERFILES (Fase 3: Selección obligatoria) ---
+        const currentProfile = localStorage.getItem('vivotv_current_profile');
+        const loginPages = ['login_screen.html', 'registro.html', 'profiles.html'];
+        const isOnAuthPage = loginPages.some(p => window.location.pathname.includes(p));
+
+        if (!currentProfile && !window.location.pathname.includes('profiles.html')) {
+            window.location.href = 'profiles.html';
+            return;
+        }
+
+        if (isOnAuthPage && currentProfile) {
             window.location.href = 'index.html';
             return;
         }
+        
         await toDashboard(session.user);
     } else {
         if (isProtected) {
-            window.location.href = 'index.html'; // El index tiene el form de login
+            window.location.href = 'index.html';
             return;
         }
         toAuth();
@@ -424,14 +432,31 @@ async function loadGridData(type, page, append = false) {
 
                 if (loader) loader.classList.add('hidden');
 
-                // Si es Anime, filtramos localmente los que NO tengan género 16 (Animación)
+                // --- FILTRO PARENTAL (Fase 3 Final) ---
+                const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
                 let finalItems = detailsArray.filter(item => item && item.poster_path);
-                if (isAnimePage) {
-                    finalItems = finalItems.filter(item => item.genres?.some(g => g.id === 16));
+                
+                if (currentProfile?.isKids) {
+                    const EXCLUDED_GENRES = [27, 80, 53]; // Terror, Crimen, Suspenso fuerte
+                    finalItems = finalItems.filter(item => {
+                        const genres = item.genres || item.genre_ids || [];
+                        const hasExcluded = genres.some(g => {
+                            const id = typeof g === 'object' ? g.id : g;
+                            return EXCLUDED_GENRES.includes(id);
+                        });
+                        return !hasExcluded;
+                    });
                 }
 
-                // Mantenemos el orden de la base de datos (últimos subidos primero)
-                // ya no ordenamos por fecha de estreno de TMDB para evitar que los nuevos se pierdan al final.
+                if (isAnimePage) {
+                    finalItems = finalItems.filter(item => {
+                        const genres = item.genres || item.genre_ids || [];
+                        return genres.some(g => {
+                            const id = typeof g === 'object' ? g.id : g;
+                            return id === 16;
+                        });
+                    });
+                }
 
                 finalItems.forEach(item => {
                     const card = CATALOG_UI.createMovieCard(item, type, true);
@@ -628,10 +653,21 @@ async function executeSearch(query) {
     try {
         const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query });
         if (res && res.results) {
-            // Guardamos todos los resultados para filtrar localmente después
-            lastSearchResults = res.results.filter(item => item.media_type !== 'person');
-            applyLocalFilter();
+            let lastResults = res.results.filter(item => item.media_type !== 'person');
             
+            // --- FILTRO PARENTAL EN BÚSQUEDA ---
+            const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+            if (currentProfile?.isKids) {
+                const EXCLUDED_GENRES = [27, 80, 53];
+                lastResults = lastResults.filter(item => {
+                    const genres = item.genre_ids || [];
+                    return !genres.some(id => EXCLUDED_GENRES.includes(id));
+                });
+            }
+
+            lastSearchResults = lastResults;
+            applyLocalFilter();
+
             // Actualizar URL sin recargar
             const newUrl = new URL(window.location);
             newUrl.searchParams.set('q', query);
@@ -698,10 +734,11 @@ async function loadMyList() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Fetch favorites (Removido 'type' por incompatibilidad con esquema actual)
+    // Fetch favorites x Perfil (Expansión SQL Script)
     const { data: favs } = await supabase.from('user_favorites')
         .select('tmdb_id')
         .eq('user_id', user.id)
+        .eq('profile_id', currentProfile.id)
         .order('created_at', { ascending: false });
 
     // Handle dedicated page grid if exists
@@ -747,7 +784,12 @@ async function loadRecentlyWatched() {
     if (!section || !carousel || !supabase) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: history } = await supabase.from('watch_history').select('*').eq('user_id', user.id).order('last_watched', { ascending: false }).limit(20);
+    const { data: history } = await supabase.from('watch_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('profile_id', currentProfile.id)
+        .order('last_watched', { ascending: false })
+        .limit(20);
     if (!history?.length) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
     carousel.innerHTML = '';

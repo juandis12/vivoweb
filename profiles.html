@@ -4,16 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>¿Quién está viendo? | VivoTV</title>
-    
-    <!-- PWA & Mobile Meta -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="VivoTV">
-    <link rel="apple-touch-icon" href="pwa-icon-512.png">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0b122b">
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-    
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
@@ -26,110 +16,266 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
+            font-family: 'Manrope', sans-serif;
         }
         .profile-container {
             text-align: center;
             animation: fadeIn 0.8s ease;
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } }
         
         h1 {
             font-size: 3.5rem;
             font-weight: 800;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             letter-spacing: -1px;
         }
+        .subtitle {
+            color: #94a3b8;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
         .profiles-grid {
             display: flex;
-            gap: 30px;
+            gap: 35px;
             justify-content: center;
+            flex-wrap: wrap;
         }
         .profile-item {
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 160px;
+            position: relative;
         }
         .profile-avatar {
             width: 150px;
             height: 150px;
-            border-radius: 12px;
-            background: var(--primary);
-            margin-bottom: 15px;
+            border-radius: 16px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 4rem;
+            font-size: 4.5rem;
             position: relative;
-            border: 3px solid transparent;
+            border: 4px solid transparent;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             transition: all 0.3s;
+            overflow: hidden;
         }
         .profile-item:hover .profile-avatar {
             border-color: #fff;
-            transform: scale(1.1);
+            transform: scale(1.08);
+            box-shadow: 0 15px 45px rgba(0,0,0,0.7);
         }
-        .profile-name {
-            font-size: 1.2rem;
-            color: var(--text-muted);
-            font-weight: 700;
-        }
-        .profile-item:hover .profile-name {
-            color: #fff;
-        }
-        .manage-btn {
-            margin-top: 80px;
-            padding: 12px 35px;
-            border: 1px solid var(--text-muted);
+        .profile-name-input {
             background: transparent;
-            color: var(--text-muted);
+            border: none;
+            color: #fff;
+            font-size: 1.3rem;
+            text-align: center;
+            width: 100%;
+            font-weight: 700;
+            padding: 5px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        .admin-mode .profile-name-input {
+            background: rgba(255,255,255,0.15);
+            border-bottom: 2px solid #fff;
+            pointer-events: auto;
+        }
+        
+        .kids-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #fde047;
+            color: #000;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Edit Overlays */
+        .edit-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: 0.3s;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+        .admin-mode .edit-overlay { opacity: 1; pointer-events: auto; }
+        .edit-icon { font-size: 2rem; margin-bottom: 10px; }
+        
+        .kids-toggle-label {
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            background: rgba(0,0,0,0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+
+        /* Buttons */
+        .actions-container {
+            margin-top: 70px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .btn-vtv {
+            padding: 14px 45px;
+            border: 2px solid #575c76;
+            background: transparent;
+            color: #94a3b8;
             font-weight: 700;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 2px;
             transition: 0.3s;
+            border-radius: 8px;
         }
-        .manage-btn:hover {
+        .btn-vtv:hover {
             color: #fff;
             border-color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+        .btn-primary-vtv {
+            background: #fff;
+            color: #0b122b;
+            border-color: #fff;
+        }
+        .btn-primary-vtv:hover {
+            background: #e2e8f0;
+            color: #000;
         }
 
-        /* Colores de perfiles */
-        .color-1 { background: #2563eb; }
-        .color-2 { background: #7c3aed; }
-        .color-3 { background: #db2777; }
-        .color-4 { background: #059669; }
+        /* Profile Colors */
+        .color-1 { background: linear-gradient(135deg, #2563eb, #1e40af); }
+        .color-2 { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+        .color-3 { background: linear-gradient(135deg, #db2777, #9d174d); }
+        .color-4 { background: linear-gradient(135deg, #059669, #065f46); }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
-<body>
+<body class="selection-mode" id="bodyRoot">
     <div class="profile-container">
-        <h1>¿Quién está viendo?</h1>
+        <h1 id="mainTitle">¿Quién está viendo?</h1>
+        <p class="subtitle" id="mainSubtitle">Selecciona un perfil para empezar a disfrutar.</p>
+        
         <div class="profiles-grid" id="profilesGrid">
             <!-- Dinámico -->
         </div>
-        <button class="manage-btn" id="btnManage">Administrar Perfiles</button>
+
+        <div class="actions-container">
+            <button class="btn-vtv" id="btnAdmin">Administrar Perfiles</button>
+            <button class="btn-vtv btn-primary-vtv hidden" id="btnFinish">Listo</button>
+        </div>
     </div>
 
     <script type="module">
-        const PROFILES = [
-            { id: 'p1', name: 'Principal', color: 'color-1' },
-            { id: 'p2', name: 'Niños', color: 'color-2' },
-            { id: 'p3', name: 'Invitado', color: 'color-3' }
+        let isEditing = false;
+        const DEFAULT_PROFILES = [
+            { id: 'p1', name: 'Principal', color: 'color-1', isKids: false },
+            { id: 'p2', name: 'Niños', color: 'color-2', isKids: true },
+            { id: 'p3', name: 'Invitado', color: 'color-3', isKids: false }
         ];
 
+        // Cargar perfiles guardados o usar los default
+        let profiles = JSON.parse(localStorage.getItem('vivotv_all_profiles')) || DEFAULT_PROFILES;
+
         const grid = document.getElementById('profilesGrid');
-        PROFILES.forEach(p => {
-            const div = document.createElement('div');
-            div.className = 'profile-item';
-            div.innerHTML = `
-                <div class="profile-avatar ${p.color}">
-                    ${p.name[0]}
-                </div>
-                <div class="profile-name">${p.name}</div>
-            `;
-            div.onclick = () => {
-                localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
-                window.location.href = 'index.html';
-            };
-            grid.appendChild(div);
-        });
+        const btnAdmin = document.getElementById('btnAdmin');
+        const btnFinish = document.getElementById('btnFinish');
+        const bodyRoot = document.getElementById('bodyRoot');
+        const mainTitle = document.getElementById('mainTitle');
+        const mainSubtitle = document.getElementById('mainSubtitle');
+
+        function renderProfiles() {
+            grid.innerHTML = '';
+            profiles.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'profile-item';
+                item.innerHTML = `
+                    <div class="profile-avatar ${p.color}">
+                        ${p.name[0]}
+                        ${p.isKids ? '<span class="kids-badge">Niños</span>' : ''}
+                        <div class="edit-overlay">
+                            <span class="edit-icon">✏️</span>
+                            <label class="kids-toggle-label">
+                                <input type="checkbox" ${p.isKids ? 'checked' : ''} onchange="updateKidsMode('${p.id}', this.checked)">
+                                Modo Niños
+                            </label>
+                        </div>
+                    </div>
+                    <input type="text" class="profile-name-input" value="${p.name}" 
+                           oninput="updateProfileName('${p.id}', this.value)" maxlength="15">
+                `;
+                
+                item.onclick = (e) => {
+                    if (isEditing) return;
+                    selectProfile(p);
+                };
+                grid.appendChild(item);
+            });
+        }
+
+        window.updateProfileName = (id, newName) => {
+            const p = profiles.find(x => x.id === id);
+            if (p) p.name = newName;
+            localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
+        };
+
+        window.updateKidsMode = (id, checked) => {
+            const p = profiles.find(x => x.id === id);
+            if (p) p.isKids = checked;
+            localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
+            renderProfiles();
+        };
+
+        function selectProfile(p) {
+            localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
+            window.location.href = 'index.html';
+        }
+
+        btnAdmin.onclick = () => {
+            isEditing = true;
+            bodyRoot.classList.add('admin-mode');
+            btnAdmin.classList.add('hidden');
+            btnFinish.classList.remove('hidden');
+            mainTitle.textContent = 'Administrar Perfiles';
+            mainSubtitle.textContent = 'Edita nombres y configura los filtros parentales.';
+            renderProfiles();
+        };
+
+        btnFinish.onclick = () => {
+            isEditing = false;
+            bodyRoot.classList.remove('admin-mode');
+            btnFinish.classList.add('hidden');
+            btnAdmin.classList.remove('hidden');
+            mainTitle.textContent = '¿Quién está viendo?';
+            mainSubtitle.textContent = 'Selecciona un perfil para empezar a disfrutar.';
+            renderProfiles();
+        };
+
+        renderProfiles();
     </script>
 </body>
 </html>

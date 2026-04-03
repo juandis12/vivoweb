@@ -513,23 +513,31 @@ export const PLAYER_LOGIC = {
         if (!supabaseClient || !this.currentUserId) return;
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) return;
+        
+        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        if (!profile) return;
 
         await supabaseClient.from('watch_history').upsert({
             user_id: user.id,
+            profile_id: profile.id, // Fase 3
             tmdb_id: String(tmdbId),
             type,
             season_number: season || 0,
             episode_number: episode || 0,
             progress_seconds: seconds,
             last_watched: new Date().toISOString()
-        }, { onConflict: 'user_id,tmdb_id,type,season_number,episode_number' });
+        }, { onConflict: 'user_id,profile_id,tmdb_id,type,season_number,episode_number' });
     },
 
     async _getProgress(tmdbId, type, season, episode, supabaseClient) {
         if (!supabaseClient || !this.currentUserId) return null;
+        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        if (!profile) return null;
+
         let query = supabaseClient.from('watch_history')
             .select('progress_seconds')
             .eq('user_id', this.currentUserId)
+            .eq('profile_id', profile.id) // Fase 3
             .eq('tmdb_id', String(tmdbId))
             .eq('type', type)
             .eq('season_number', season || 0)
@@ -578,10 +586,16 @@ export const PLAYER_LOGIC = {
     async checkIfFavorite(supabase) {
         const btn = document.getElementById('btnAddToMyList');
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user || !btn) return;
+        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        if (!user || !btn || !profile) return;
 
         this.currentUserId = user.id;
-        const { data } = await supabase.from('user_favorites').select('id').eq('user_id', user.id).eq('tmdb_id', Number(this.currentTmdbId)).maybeSingle();
+        const { data } = await supabase.from('user_favorites')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('profile_id', profile.id) // Fase 3
+            .eq('tmdb_id', Number(this.currentTmdbId))
+            .maybeSingle();
         
         btn.classList.toggle('added-to-list', !!data);
         const text = document.getElementById('favBtnText');
@@ -591,11 +605,20 @@ export const PLAYER_LOGIC = {
     async toggleFavorite(supabase) {
         const btn = document.getElementById('btnAddToMyList');
         const isAdded = btn.classList.contains('added-to-list');
+        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        if (!profile) return;
+
         if (isAdded) {
-            await supabase.from('user_favorites').delete().eq('user_id', this.currentUserId).eq('tmdb_id', Number(this.currentTmdbId));
+            await supabase.from('user_favorites').delete()
+                .eq('user_id', this.currentUserId)
+                .eq('profile_id', profile.id) // Fase 3
+                .eq('tmdb_id', Number(this.currentTmdbId));
         } else {
-            // Removido 'type' para cumplir con el esquema actual de la base de datos
-            await supabase.from('user_favorites').insert({ user_id: this.currentUserId, tmdb_id: Number(this.currentTmdbId) });
+            await supabase.from('user_favorites').insert({ 
+                user_id: this.currentUserId, 
+                profile_id: profile.id, // Fase 3
+                tmdb_id: Number(this.currentTmdbId) 
+            });
         }
         this.checkIfFavorite(supabase);
         showToast(isAdded ? 'Eliminado de Mi Lista' : 'Añadido a Mi Lista');
