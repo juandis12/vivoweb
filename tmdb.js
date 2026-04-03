@@ -8,6 +8,9 @@ export const TMDB_SERVICE = {
 
     // Fix #8: Object.entries() en lugar de for...in (más robusto, evita props heredadas)
     async fetchFromTMDB(endpoint, params = {}) {
+        const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        const isKids = currentProfile?.isKids === true;
+        
         let url;
         if (CONFIG.USE_PROXY) {
             url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
@@ -19,6 +22,19 @@ export const TMDB_SERVICE = {
             url = new URL(`https://api.themoviedb.org/3${endpoint}`);
             url.searchParams.append('api_key', _k);
             url.searchParams.append('language', 'es-MX');
+        }
+
+        // --- FILTRO DE RED: PARENTAL CONTROL (Fase 5) ---
+        // Si el perfil es de NIÑOS, inyectamos parámetros de certificación G/PG
+        if (isKids) {
+            url.searchParams.append('certification_country', 'US');
+            url.searchParams.append('certification.lte', 'PG');
+            url.searchParams.append('include_adult', 'false');
+            
+            // Si es un endpoint de discovery, forzamos que no traiga nada R o PG-13
+            if (endpoint.includes('/discover/') || endpoint.includes('/trending/')) {
+                // TMDB maneja estos parámetros para el Discovery API
+            }
         }
 
         Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, val));
