@@ -370,8 +370,11 @@ export const PLAYER_LOGIC = {
 
         container.classList.remove('hidden');
         loader.classList.remove('hidden');
-        const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(url);
-        const isFacebook = url.includes('facebook.com');
+
+        // --- CONVERSOR INTELIGENTE DE URLS ---
+        const smartUrl = this._getSmartUrl(url);
+        const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
+        const isFacebook = smartUrl.includes('facebook.com');
         
         setTimeout(() => {
             loader.classList.add('hidden');
@@ -384,9 +387,8 @@ export const PLAYER_LOGIC = {
                 iframe.classList.remove('hidden');
                 
                 // --- AJUSTE DE BYPASS PREMIUM ---
-                // Para Facebook, relajamos el sandbox para evitar bloqueos por origen
                 if (isFacebook) {
-                    iframe.removeAttribute('sandbox'); // Facebook es muy estricto con el sandbox
+                    iframe.removeAttribute('sandbox');
                     iframe.setAttribute('referrerpolicy', 'no-referrer');
                 } else {
                     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
@@ -394,10 +396,33 @@ export const PLAYER_LOGIC = {
                 }
                 
                 iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen');
-                iframe.src = url;
+                iframe.src = smartUrl;
                 this._startIframeTracking();
             }
         }, 1000);
+    },
+
+    _getSmartUrl(url) {
+        if (!url) return '';
+        // 1. YouTube
+        if (url.includes('youtube.com/watch?v=')) {
+            const id = url.split('v=')[1].split('&')[0];
+            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+        }
+        if (url.includes('youtu.be/')) {
+            const id = url.split('youtu.be/')[1].split('?')[0];
+            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+        }
+        // 2. Vimeo
+        if (url.includes('vimeo.com/') && !url.includes('player.vimeo.com')) {
+            const id = url.split('vimeo.com/')[1].split('?')[0];
+            return `https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0&portrait=0`;
+        }
+        // 3. Facebook
+        if (url.includes('facebook.com/') && !url.includes('plugins/video.php')) {
+            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&width=1280`;
+        }
+        return url;
     },
 
     _startVideoTracking(video, seek) {
