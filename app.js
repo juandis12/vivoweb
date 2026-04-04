@@ -213,6 +213,16 @@ async function initAuth() {
         toAuth();
     }
 
+    // --- DETECCIÓN DE ERRORES EN URL (Fase 9) ---
+    const hash = window.location.hash;
+    if (hash.includes('error_code=otp_expired')) {
+        showToast("⚠️ El enlace de recuperación ha caducado. Por favor, solicita uno nuevo.");
+        window.history.replaceState(null, null, window.location.pathname); // Limpiar hash
+    } else if (hash.includes('error_description')) {
+        showToast("⚠️ Error en el enlace de recuperación. Inténtalo de nuevo.");
+        window.history.replaceState(null, null, window.location.pathname);
+    }
+
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN')  await toDashboard(session.user);
         if (event === 'SIGNED_OUT') toAuth();
