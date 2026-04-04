@@ -421,7 +421,7 @@
                     <div class="profile-avatar ${p.color}">
                         ${p.name[0]}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
-                        ${this._isOccupied(p) ? '<div class="occupied-badge">EN USO</div>' : ''}
+                        ${_isOccupied(p) ? '<div class="occupied-badge">EN USO</div>' : ''}
                         <div class="edit-overlay">
                             <span class="edit-icon">✏️</span>
                             <label class="kids-toggle-label">
@@ -438,7 +438,7 @@
                            maxlength="15">
                 `;
 
-                if (this._isOccupied(p)) item.classList.add('occupied');
+                if (_isOccupied(p)) item.classList.add('occupied');
                 
                 item.onclick = (e) => {
                     if (isEditing || e.target.closest('.edit-overlay') || e.target.closest('.profile-name-input')) return;
@@ -448,13 +448,14 @@
             });
         }
 
-        window._isOccupied = (p) => {
+        function _isOccupied(p) {
             if (!p.last_heartbeat) return false;
             const last = new Date(p.last_heartbeat).getTime();
             const now  = new Date().getTime();
             const diff = (now - last) / 1000;
             return diff < 20; // Margen de 20s (User quería 15, damos 5 de gracia por lag red)
-        };
+        }
+        window._isOccupied = _isOccupied; // Hacerlo global por si acaso
 
         window.updateProfileName = (id, newName) => {
             const p = profiles.find(x => x.id === id);
