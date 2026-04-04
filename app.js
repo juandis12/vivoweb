@@ -189,6 +189,9 @@ async function initAuth() {
     const isProtected = protectedPages.some(p => window.location.pathname.includes(p));
 
     if (session) {
+        // --- SESIÓN DE PERFIL (Fase 8) ---
+        const currentProfile = sessionStorage.getItem('vivotv_current_profile');
+        
         const isRecovery = window.location.hash.toLowerCase().includes('type=recovery');
         const loginPages = ['login_screen.html', 'registro.html', 'profiles.html'];
         const isOnAuthPage = loginPages.some(p => window.location.pathname.includes(p));
