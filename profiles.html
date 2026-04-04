@@ -322,12 +322,14 @@
 
     <script type="module">
         import { CONFIG } from './config.js';
+        import { showToast } from './utils.js';
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
         const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
         let isEditing = false;
-        let profiles = []; // Ahora se cargan de DB
+        let profiles = [];
+        let updateTimers = {}; // Para debounce por perfil
 
         const DEFAULT_PROFILES = [
             { name: 'Principal', color: 'color-1', is_kids: false },
@@ -403,7 +405,6 @@
                     </div>
                     <input type="text" class="profile-name-input" value="${p.name}" 
                            oninput="updateProfileName('${p.id}', this.value)" 
-                           onchange="updateProfileName('${p.id}', this.value)" 
                            maxlength="15">
                 `;
                 
@@ -415,16 +416,27 @@
             });
         }
 
-        window.updateProfileName = async (id, newName) => {
+        window.updateProfileName = (id, newName) => {
             const p = profiles.find(x => x.id === id);
-            if (p) {
-                p.name = newName;
+            if (!p) return;
+            
+            p.name = newName;
+            
+            // --- OPTIMIZACIÓN: DEBOUNCE (Fase 11) ---
+            clearTimeout(updateTimers[id]);
+            updateTimers[id] = setTimeout(async () => {
                 const { error } = await supabase
                     .from('vivotv_profiles')
                     .update({ name: newName })
                     .eq('id', id);
-                if (error) console.error('[VivoTV] Error actualizando nombre:', error);
-            }
+                
+                if (error) {
+                    console.error('[VivoTV] Error:', error);
+                    showToast('Error al sincronizar nombre', 'error');
+                } else {
+                    showToast(`Sincronizado: ${newName}`, 'success', 1000);
+                }
+            }, 800);
         };
 
         window.updateKidsMode = async (id, checked) => {
@@ -435,8 +447,13 @@
                     .from('vivotv_profiles')
                     .update({ is_kids: checked })
                     .eq('id', id);
-                if (error) console.error('[VivoTV] Error actualizando modo niños:', error);
-                renderProfiles();
+                
+                if (error) {
+                    showToast('Error al cambiar modo parental', 'error');
+                } else {
+                    showToast(checked ? 'Modo Niños activado' : 'Perfil habilitado para todo público', 'info');
+                    renderProfiles();
+                }
             }
         };
 
@@ -547,7 +564,7 @@
                     alert("Error guardando PIN.");
                     console.error(error);
                 } else {
-                    alert("PIN actualizado con éxito.");
+                    showToast("PIN actualizado con éxito.", "success");
                     renderProfiles();
                 }
             } else {
