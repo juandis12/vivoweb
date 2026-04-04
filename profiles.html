@@ -397,8 +397,8 @@
                 }
             }
 
-            // --- LIMPIEZA DE MEMORIA (Fase Final) ---
-            sessionStorage.clear();
+            // --- LIMPIEZA DE SESIÓN (Fase Final: Solo perfil) ---
+            sessionStorage.removeItem('vivotv_current_profile');
             localStorage.removeItem('vivotv_trending_cache');
             
             console.log(`[VivoTV] Seleccionando Perfil: ${latestProfile.name} (Modos Niños: ${latestProfile.isKids})`);
