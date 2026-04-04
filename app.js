@@ -189,12 +189,11 @@ async function initAuth() {
     const isProtected = protectedPages.some(p => window.location.pathname.includes(p));
 
     if (session) {
-        // --- GESTIÓN DE PERFILES (Fase 3: Selección obligatoria) ---
-        const currentProfile = localStorage.getItem('vivotv_current_profile');
+        const isRecovery = window.location.hash.toLowerCase().includes('type=recovery');
         const loginPages = ['login_screen.html', 'registro.html', 'profiles.html'];
         const isOnAuthPage = loginPages.some(p => window.location.pathname.includes(p));
 
-        if (!currentProfile && !window.location.pathname.includes('profiles.html')) {
+        if (!currentProfile && !window.location.pathname.includes('profiles.html') && !isRecovery) {
             window.location.href = 'profiles.html';
             return;
         }
