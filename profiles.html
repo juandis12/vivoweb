@@ -101,6 +101,35 @@
             font-weight: 800;
             text-transform: uppercase;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 5;
+        }
+
+        /* --- NUEVO: OCUPADO STATE (Fase 12) --- */
+        .profile-item.occupied {
+            cursor: not-allowed;
+        }
+        .profile-item.occupied .profile-avatar {
+            opacity: 0.4;
+            filter: grayscale(1);
+            border-color: #ef4444;
+            pointer-events: none;
+        }
+        .occupied-badge {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ef4444;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            z-index: 6;
         }
 
         /* Edit Overlays */
@@ -392,6 +421,7 @@
                     <div class="profile-avatar ${p.color}">
                         ${p.name[0]}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
+                        ${this._isOccupied(p) ? '<div class="occupied-badge">EN USO</div>' : ''}
                         <div class="edit-overlay">
                             <span class="edit-icon">✏️</span>
                             <label class="kids-toggle-label">
@@ -407,6 +437,8 @@
                            oninput="updateProfileName('${p.id}', this.value)" 
                            maxlength="15">
                 `;
+
+                if (this._isOccupied(p)) item.classList.add('occupied');
                 
                 item.onclick = (e) => {
                     if (isEditing || e.target.closest('.edit-overlay') || e.target.closest('.profile-name-input')) return;
@@ -415,6 +447,14 @@
                 grid.appendChild(item);
             });
         }
+
+        window._isOccupied = (p) => {
+            if (!p.last_heartbeat) return false;
+            const last = new Date(p.last_heartbeat).getTime();
+            const now  = new Date().getTime();
+            const diff = (now - last) / 1000;
+            return diff < 20; // Margen de 20s (User quería 15, damos 5 de gracia por lag red)
+        };
 
         window.updateProfileName = (id, newName) => {
             const p = profiles.find(x => x.id === id);
@@ -458,6 +498,21 @@
         };
 
         async function selectProfile(p) {
+            if (isEditing) return;
+
+            // --- BLOQUEO ESTRICTO (Fase 14) ---
+            // Volver a verificar en la DB antes de entrar
+            const { data: dbProfile, error } = await supabase
+                .from('vivotv_profiles')
+                .select('last_heartbeat')
+                .eq('id', p.id)
+                .maybeSingle();
+            
+            if (dbProfile && _isOccupied(dbProfile)) {
+                showToast("❌ Perfil en uso. Por favor, elige otro.", "error");
+                return;
+            }
+
             // Validar PIN si existe
             if (p.pin) {
                 const entered = await showPinPad(`🔒 Perfil Protegido`);
@@ -594,8 +649,9 @@
             await loadProfilesFromDB();
         };
 
-        // Iniciar carga
+        // Iniciar carga y refresco automático cada 15s
         loadProfilesFromDB();
+        setInterval(loadProfilesFromDB, 15000);
     </script>
 </body>
 </html>

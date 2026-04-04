@@ -45,7 +45,8 @@ let availableIds    = new Set();
 let searchTimeout   = null;
 let lastSearchResults = [];
 let currentFilter     = 'all';
-let currentProfile    = null; // Global (Fase 6)
+let currentProfile    = null;
+let heartbeatTimer    = null;
 
 // ================================================
 // CENTRALIZACIÓN: FILTRO POR PERFIL (Fase 3 Global)
@@ -398,6 +399,9 @@ async function toDashboard(user) {
     if (mobileNav)   mobileNav.classList.remove('hidden');
     if (searchBox)   searchBox.classList.remove('hidden');
     
+    // --- NUEVO: CORAZÓN DE SESIÓN (Margen 15s) ---
+    startHeartbeat();
+    
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
 
     // 1. Cargar disponibilidad (CON CACHÉ)
@@ -709,6 +713,7 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
 
 if (btnLogout) btnLogout.addEventListener('click', async () => { 
     stopHeroRotation(); 
+    await stopHeartbeat(); // Detener latido y liberar perfil
     sessionStorage.clear();
     await supabase.auth.signOut(); 
     window.location.reload();
@@ -737,7 +742,38 @@ function mapError(msg) {
     return msg;
 }
 
-// NUEVO: Debounce para búsqueda
+// --- MOTOR DE LATIDOS (Fase 12: Sesión Estricta) ---
+async function startHeartbeat() {
+    if (!supabase || !currentProfile) return;
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+
+    // 1. Pulso inicial inmediato
+    const sendPulse = async () => {
+        try {
+            await supabase
+                .from('vivotv_profiles')
+                .update({ last_heartbeat: new Date().toISOString() })
+                .eq('id', currentProfile.id);
+        } catch(e) { console.warn('[VivoTV] Heartbeat error:', e); }
+    };
+
+    sendPulse();
+    heartbeatTimer = setInterval(sendPulse, 10000); // Latido cada 10s
+    console.log('[VivoTV] Sistema de concurrencia activo (Frecuencia 10s).');
+}
+
+async function stopHeartbeat() {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+    
+    if (currentProfile && supabase) {
+        // Marcamos como inactivo inmediatamente al salir
+        await supabase
+            .from('vivotv_profiles')
+            .update({ last_heartbeat: null })
+            .eq('id', currentProfile.id);
+    }
+}
 
 async function initSearchPage() {
     const params = new URLSearchParams(window.location.search);
