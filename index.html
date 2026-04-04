@@ -86,8 +86,10 @@
                             <svg id="eyeIcon" viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                         </button>
                     </div>
+                 </div>
+                <div style="text-align: right; margin-top: -10px; margin-bottom: 20px;">
+                    <a href="#" id="forgotPassword" style="color: var(--primary); font-size: 0.85rem; text-decoration: none;">¿Olvidaste tu contraseña?</a>
                 </div>
-                
                 <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">
                     <span id="btnText">Iniciar Sesión</span>
                     <span class="loader hidden" id="btnLoader"></span>
@@ -371,6 +373,30 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script type="module" src="./app.js"></script>
     <!-- Script PWA -->
+    <!-- Modal de Recuperación de Contraseña -->
+    <div id="resetPasswordModal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" style="max-width: 400px; margin: 20px auto; position: relative;">
+            <div class="modal-viewport" style="padding: 30px;">
+                <h2 style="margin-bottom: 20px; color: #fff; font-size: 1.5rem;">🔑 Nueva Contraseña</h2>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">
+                    Introduce tu nueva clave de acceso de al menos 6 caracteres.
+                </p>
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label style="display: block; color: #94a3b8; margin-bottom: 8px; font-size: 0.85rem;">Nueva Contraseña</label>
+                    <input type="password" id="newPassword" placeholder="••••••••" minlength="6" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 8px; width: 100%;">
+                </div>
+                <div class="input-group" style="margin-bottom: 25px;">
+                    <label style="display: block; color: #94a3b8; margin-bottom: 8px; font-size: 0.85rem;">Confirmar Contraseña</label>
+                    <input type="password" id="confirmNewPassword" placeholder="••••••••" minlength="6" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 8px; width: 100%;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: stretch;">
+                    <button class="btn btn-primary" id="btnSaveNewPassword" style="flex: 1; padding: 12px;">Guardar</button>
+                    <button class="btn btn-secondary" id="btnCancelReset" style="flex: 1; padding: 12px;">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

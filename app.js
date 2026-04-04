@@ -216,7 +216,68 @@ async function initAuth() {
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN')  await toDashboard(session.user);
         if (event === 'SIGNED_OUT') toAuth();
+        
+        // --- RECUPERACIÓN DE CONTRASEÑA (Fase 9) ---
+        if (event === 'PASSWORD_RECOVERY') {
+            console.log('[SUPABASE] Modo Recuperación detectado.');
+            const modal = document.getElementById('resetPasswordModal');
+            if (modal) modal.classList.remove('hidden');
+        }
     });
+
+    // Lógica para el botón de "Olvidé mi contraseña"
+    const btnForgot = document.getElementById('forgotPassword');
+    if (btnForgot) {
+        btnForgot.onclick = async (e) => {
+            e.preventDefault();
+            const email = prompt("Introduce tu correo electrónico para enviarte un enlace de recuperación:");
+            if (!email) return;
+
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + window.location.pathname,
+            });
+
+            if (error) {
+                showToast(`Error: ${error.message}`);
+            } else {
+                showToast("¡Email enviado! Revisa tu bandeja de entrada.");
+            }
+        };
+    }
+
+    // Lógica para guardar la nueva contraseña
+    const btnSaveNew = document.getElementById('btnSaveNewPassword');
+    const resetModal = document.getElementById('resetPasswordModal');
+    if (btnSaveNew && resetModal) {
+        btnSaveNew.onclick = async () => {
+            const pass1 = document.getElementById('newPassword').value;
+            const pass2 = document.getElementById('confirmNewPassword').value;
+
+            if (pass1.length < 6) {
+                showToast("La contraseña debe tener al menos 6 caracteres.");
+                return;
+            }
+            if (pass1 !== pass2) {
+                showToast("Las contraseñas no coinciden.");
+                return;
+            }
+
+            const { error } = await supabase.auth.updateUser({ password: pass1 });
+            if (error) {
+                showToast(`Error al actualizar: ${error.message}`);
+            } else {
+                showToast("¡Contraseña actualizada con éxito!");
+                resetModal.classList.add('hidden');
+                // Opcional: Cerrar sesión para que vuelvan a entrar
+                await supabase.auth.signOut();
+            }
+        };
+
+        const btnCancelReset = document.getElementById('btnCancelReset');
+        if (btnCancelReset) {
+            btnCancelReset.onclick = () => resetModal.classList.add('hidden');
+        }
+    }
 }
 
 // NUEVO: Obtener IDs disponibles en Supabase
