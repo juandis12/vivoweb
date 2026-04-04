@@ -47,6 +47,7 @@ let lastSearchResults = [];
 let currentFilter     = 'all';
 let currentProfile    = null;
 let heartbeatTimer    = null;
+let sessionChannel    = null;
 
 // ================================================
 // CENTRALIZACIÓN: FILTRO POR PERFIL (Fase 3 Global)
@@ -401,6 +402,7 @@ async function toDashboard(user) {
     
     // --- NUEVO: CORAZÓN DE SESIÓN (Margen 15s) ---
     startHeartbeat();
+    subscribeToSessionChanges();
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
 
@@ -751,7 +753,10 @@ async function startHeartbeat() {
     const sendPulse = async () => {
         try {
             await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
-        } catch(e) { console.warn('[VivoTV] Heartbeat error:', e); }
+        } catch(e) { 
+            console.warn('[VivoTV] Heartbeat error:', e); 
+            // Si el error es de red prolongado, podríamos cerrar sesión por seguridad
+        }
     };
 
     sendPulse();
@@ -763,11 +768,64 @@ async function stopHeartbeat() {
     if (heartbeatTimer) clearInterval(heartbeatTimer);
     heartbeatTimer = null;
     
+    if (sessionChannel) {
+        supabase.removeChannel(sessionChannel);
+        sessionChannel = null;
+    }
+
     if (currentProfile && supabase) {
         // Marcamos como inactivo inmediatamente al salir (RPC)
         await supabase.rpc('vivotv_release_session', { pid: currentProfile.id });
     }
 }
+
+// --- SISTEMA DE EXPULSIÓN (Fase 16: Realtime) ---
+function subscribeToSessionChanges() {
+    if (!supabase || !currentProfile) return;
+
+    if (sessionChannel) supabase.removeChannel(sessionChannel);
+
+    sessionChannel = supabase
+        .channel(`session-${currentProfile.id}`)
+        .on('postgres_changes', { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'vivotv_profiles',
+            filter: `id=eq.${currentProfile.id}`
+        }, (payload) => {
+            const { last_heartbeat } = payload.new;
+            
+            // Si last_heartbeat es NULL, significa que nos han expulsado (Released)
+            if (last_heartbeat === null) {
+                console.warn('[VivoTV] Sesión finalizada remotamente.');
+                handleRemoteLogout();
+            }
+        })
+        .subscribe();
+}
+
+function handleRemoteLogout() {
+    stopHeartbeat();
+    showToast("⚠️ Tu sesión ha sido finalizada desde otro dispositivo.", "error", 5000);
+    setTimeout(() => {
+        window.location.href = 'profiles.html';
+    }, 2000);
+}
+
+// Re-verificar sesión al volver a la pestaña (por si Realtime se pausó)
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && currentProfile) {
+        const { data } = await supabase
+            .from('vivotv_profiles')
+            .select('last_heartbeat')
+            .eq('id', currentProfile.id)
+            .maybeSingle();
+        
+        if (data && data.last_heartbeat === null) {
+            handleRemoteLogout();
+        }
+    }
+});
 
 // Escuchar cierre de pestaña para liberar inmediatamente
 window.addEventListener('beforeunload', stopHeartbeat);
