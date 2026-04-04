@@ -521,7 +521,7 @@ export const PLAYER_LOGIC = {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) return;
         
-        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
         if (!profile) return;
 
         await supabaseClient.from('watch_history').upsert({
@@ -593,7 +593,7 @@ export const PLAYER_LOGIC = {
     async checkIfFavorite(supabase) {
         const btn = document.getElementById('btnAddToMyList');
         const { data: { user } } = await supabase.auth.getUser();
-        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
         if (!user || !btn || !profile) return;
 
         this.currentUserId = user.id;

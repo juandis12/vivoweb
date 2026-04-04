@@ -321,15 +321,19 @@
     </div>
 
     <script type="module">
-        let isEditing = false;
-        const DEFAULT_PROFILES = [
-            { id: 'p1', name: 'Principal', color: 'color-1', isKids: false },
-            { id: 'p2', name: 'Niños', color: 'color-2', isKids: true },
-            { id: 'p3', name: 'Invitado', color: 'color-3', isKids: false }
-        ];
+        import { CONFIG } from './config.js';
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-        // Cargar perfiles guardados o usar los default
-        let profiles = JSON.parse(localStorage.getItem('vivotv_all_profiles')) || DEFAULT_PROFILES;
+        const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+        let isEditing = false;
+        let profiles = []; // Ahora se cargan de DB
+
+        const DEFAULT_PROFILES = [
+            { name: 'Principal', color: 'color-1', is_kids: false },
+            { name: 'Niños', color: 'color-2', is_kids: true },
+            { name: 'Invitado', color: 'color-3', is_kids: false }
+        ];
 
         const grid = document.getElementById('profilesGrid');
         const btnAdmin = document.getElementById('btnAdmin');
@@ -337,6 +341,45 @@
         const bodyRoot = document.getElementById('bodyRoot');
         const mainTitle = document.getElementById('mainTitle');
         const mainSubtitle = document.getElementById('mainSubtitle');
+
+        // --- CARGA DESDE DB (Fase 10) ---
+        async function loadProfilesFromDB() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            let { data, error } = await supabase
+                .from('vivotv_profiles')
+                .select('*')
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('[VivoTV] Error cargando perfiles:', error);
+                return;
+            }
+
+            // Si es cuenta nueva, crear perfiles por defecto
+            if (!data || data.length === 0) {
+                console.log('[VivoTV] Creando perfiles iniciales en nube...');
+                const toInsert = DEFAULT_PROFILES.map(p => ({ ...p, user_id: user.id }));
+                const { data: inserted, error: insError } = await supabase
+                    .from('vivotv_profiles')
+                    .insert(toInsert)
+                    .select();
+                
+                if (insError) {
+                    console.error('[VivoTV] Error creando perfiles:', insError);
+                    profiles = DEFAULT_PROFILES; // Fallback local
+                } else {
+                    profiles = inserted;
+                }
+            } else {
+                profiles = data;
+            }
+            renderProfiles();
+        }
 
         function renderProfiles() {
             grid.innerHTML = '';
@@ -346,11 +389,11 @@
                 item.innerHTML = `
                     <div class="profile-avatar ${p.color}">
                         ${p.name[0]}
-                        ${p.isKids ? '<span class="kids-badge">Niños</span>' : ''}
+                        ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
                         <div class="edit-overlay">
                             <span class="edit-icon">✏️</span>
                             <label class="kids-toggle-label">
-                                <input type="checkbox" ${p.isKids ? 'checked' : ''} onchange="updateKidsMode('${p.id}', this.checked)">
+                                <input type="checkbox" ${p.is_kids ? 'checked' : ''} onchange="updateKidsMode('${p.id}', this.checked)">
                                 Modo Niños
                             </label>
                             <button class="lock-btn" onclick="manageProfilePin('${p.id}')">
@@ -365,38 +408,44 @@
                 `;
                 
                 item.onclick = (e) => {
-                    if (isEditing || e.target.closest('.edit-overlay')) return;
+                    if (isEditing || e.target.closest('.edit-overlay') || e.target.closest('.profile-name-input')) return;
                     selectProfile(p);
                 };
                 grid.appendChild(item);
             });
         }
 
-        window.updateProfileName = (id, newName) => {
+        window.updateProfileName = async (id, newName) => {
             const p = profiles.find(x => x.id === id);
             if (p) {
                 p.name = newName;
-                localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
-                console.log(`[VivoTV] Nombre actualizado para ${id}: ${newName}`);
+                const { error } = await supabase
+                    .from('vivotv_profiles')
+                    .update({ name: newName })
+                    .eq('id', id);
+                if (error) console.error('[VivoTV] Error actualizando nombre:', error);
             }
         };
 
-        window.updateKidsMode = (id, checked) => {
+        window.updateKidsMode = async (id, checked) => {
             const p = profiles.find(x => x.id === id);
-            if (p) p.isKids = checked;
-            localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
-            renderProfiles();
+            if (p) {
+                p.is_kids = checked;
+                const { error } = await supabase
+                    .from('vivotv_profiles')
+                    .update({ is_kids: checked })
+                    .eq('id', id);
+                if (error) console.error('[VivoTV] Error actualizando modo niños:', error);
+                renderProfiles();
+            }
         };
 
         async function selectProfile(p) {
-            // Re-leer el perfil más actual de la lista maestra por ID
-            const allProfiles = JSON.parse(localStorage.getItem('vivotv_all_profiles')) || [];
-            const latestProfile = allProfiles.find(x => x.id === p.id) || p;
-
-            if (latestProfile.pin) {
+            // Validar PIN si existe
+            if (p.pin) {
                 const entered = await showPinPad(`🔒 Perfil Protegido`);
                 if (!entered) return;
-                if (entered !== latestProfile.pin) {
+                if (entered !== p.pin) {
                     shakePinPad();
                     return;
                 }
@@ -406,10 +455,10 @@
             sessionStorage.removeItem('vivotv_current_profile');
             localStorage.removeItem('vivotv_trending_cache');
             
-            console.log(`[VivoTV] Seleccionando Perfil: ${latestProfile.name} (Modos Niños: ${latestProfile.isKids})`);
+            console.log(`[VivoTV] Seleccionando Perfil: ${p.name} (Modos Niños: ${p.is_kids})`);
             
             // --- SESIÓN TEMPORAL (Fase 8) ---
-            sessionStorage.setItem('vivotv_current_profile', JSON.stringify(latestProfile));
+            sessionStorage.setItem('vivotv_current_profile', JSON.stringify(p));
             window.location.href = 'index.html';
         }
 
@@ -490,9 +539,17 @@
             const confirmPin = await showPinPad("Confirma el nuevo PIN");
             if (newPin === confirmPin) {
                 p.pin = newPin;
-                localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
-                alert("PIN actualizado con éxito.");
-                renderProfiles();
+                const { error } = await supabase
+                    .from('vivotv_profiles')
+                    .update({ pin: newPin })
+                    .eq('id', id);
+                if (error) {
+                    alert("Error guardando PIN.");
+                    console.error(error);
+                } else {
+                    alert("PIN actualizado con éxito.");
+                    renderProfiles();
+                }
             } else {
                 alert("Los PINs no coinciden.");
             }
@@ -508,7 +565,7 @@
             renderProfiles();
         };
 
-        btnFinish.onclick = () => {
+        btnFinish.onclick = async () => {
             isEditing = false;
             bodyRoot.classList.remove('admin-mode');
             btnFinish.classList.add('hidden');
@@ -516,13 +573,12 @@
             mainTitle.textContent = '¿Quién está viendo?';
             mainSubtitle.textContent = 'Selecciona un perfil para empezar a disfrutar.';
             
-            // Forzar guardado final y re-render
-            localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
-            console.log('[VivoTV] Todos los cambios de perfil guardados en dispositivo.');
-            renderProfiles();
+            // Forzar recarga final
+            await loadProfilesFromDB();
         };
 
-        renderProfiles();
+        // Iniciar carga
+        loadProfilesFromDB();
     </script>
 </body>
 </html>

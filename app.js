@@ -59,7 +59,7 @@ function filterItemsByProfile(items) {
     }
     
     // Si no hay perfil o no es modo niños, devolvemos todo
-    if (!currentProfile?.isKids) return items;
+    if (!currentProfile?.is_kids) return items;
 
     // --- MODO NUCLEAR NIÑOS (Fase Final) ---
     // Solo permitimos cosas con estas etiquetas EXPLICITAMENTE
