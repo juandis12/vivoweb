@@ -292,9 +292,20 @@ async function initAuth() {
     }
 }
 
-// NUEVO: Obtener IDs disponibles en Supabase
+// NUEVO: Obtener IDs disponibles en Supabase con Caché de Sesión
 async function fetchAvailableIds() {
     if (!supabase) return;
+
+    // --- OPTIMIZACIÓN: CACHÉ DE CATÁLOGO ---
+    const cached = sessionStorage.getItem('vivotv_catalog_ids');
+    if (cached) {
+        const decoded = JSON.parse(cached);
+        availableMovies = new Set(decoded.movies);
+        availableSeries = new Set(decoded.series);
+        availableIds = new Set(decoded.all);
+        console.log('[VivoTV] Catálogo cargado desde caché ultra-rápida.');
+        return;
+    }
 
     try {
         const fetchAllIds = async (tableName) => {
@@ -336,7 +347,14 @@ async function fetchAvailableIds() {
             });
         }
 
-        console.log('[VivoTV] Catálogo en tiempo real sincronizado con Supabase.');
+        // Guardar en sesión
+        sessionStorage.setItem('vivotv_catalog_ids', JSON.stringify({
+            movies: Array.from(availableMovies),
+            series: Array.from(availableSeries),
+            all: Array.from(availableIds)
+        }));
+
+        console.log('[VivoTV] Catálogo en tiempo real sincronizado y guardado en sesión.');
     } catch (e) { 
         console.error('Error fetching available IDs:', e);
         showToast('Error cargando biblioteca. Revisa tu conexión.');
@@ -382,7 +400,7 @@ async function toDashboard(user) {
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
 
-    // 1. Cargar disponibilidad
+    // 1. Cargar disponibilidad (CON CACHÉ)
     await fetchAvailableIds();
 
     // 2. Inicializar Páginas Específicas
@@ -571,10 +589,13 @@ async function loadGridData(type, page, append = false) {
                     });
                 }
 
+                // --- OPTIMIZACIÓN: DOCUMENT FRAGMENT ---
+                const fragment = document.createDocumentFragment();
                 finalItems.forEach(item => {
                     const card = CATALOG_UI.createMovieCard(item, type, true);
-                    container.appendChild(card);
+                    fragment.appendChild(card);
                 });
+                container.appendChild(fragment);
             } else {
                 if (loader) loader.classList.add('hidden');
                 if (!append) {
@@ -592,12 +613,14 @@ async function loadGridData(type, page, append = false) {
         if (loader) loader.classList.add('hidden');
         
         if (data.results?.length) {
+            const fragment = document.createDocumentFragment();
             data.results.forEach(item => {
                 if (!item.poster_path) return;
                 const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
                 const card = CATALOG_UI.createMovieCard(item, type, isAvail);
-                container.appendChild(card);
+                fragment.appendChild(card);
             });
+            container.appendChild(fragment);
         }
     } catch (e) {
         console.error('Error cargando grid:', e);
@@ -810,6 +833,8 @@ function renderSearchResults(results) {
 
     empty?.classList.add('hidden');
     
+    // --- OPTIMIZACIÓN: DOCUMENT FRAGMENT ---
+    const fragment = document.createDocumentFragment();
     results.forEach((item, index) => {
         const type = item.media_type || (item.title ? 'movie' : 'tv');
         const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
@@ -818,7 +843,7 @@ function renderSearchResults(results) {
         // Animación de entrada escalonada
         card.style.opacity = '0';
         card.style.transform = 'translateY(20px)';
-        grid.appendChild(card);
+        fragment.appendChild(card);
         
         setTimeout(() => {
             card.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
@@ -826,6 +851,7 @@ function renderSearchResults(results) {
             card.style.transform = 'translateY(0)';
         }, index * 50);
     });
+    grid.appendChild(fragment);
 }
 
 async function loadMyList() {

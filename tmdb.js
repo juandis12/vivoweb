@@ -56,11 +56,23 @@ export const TMDB_SERVICE = {
     getPopularTV: (page = 1)    => TMDB_SERVICE.fetchFromTMDB('/tv/popular', { page }),
     
     async getDetails(id, type = 'movie') {
-        const cacheKey = `${type}_${id}`;
+        const cacheKey = `vivotv_cache_${type}_${id}`;
+        // 1. Memory Cache
         if (this._cache.has(cacheKey)) return this._cache.get(cacheKey);
         
+        // 2. Persistent Cache (Session)
+        const stored = sessionStorage.getItem(cacheKey);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            this._cache.set(cacheKey, parsed);
+            return parsed;
+        }
+        
         const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
-        if (data && data.id) this._cache.set(cacheKey, data);
+        if (data && data.id) {
+            this._cache.set(cacheKey, data);
+            sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        }
         return data;
     },
 
@@ -190,14 +202,16 @@ export const CATALOG_UI = {
             return;
         }
 
-        // El usuario quiere estilo premium vertical en TODO, solo con números si es estrictamente necesario (Top 10)
+        // --- OPTIMIZACIÓN: DOCUMENT FRAGMENT ---
+        const fragment = document.createDocumentFragment();
         items.forEach((item, index) => {
             if (!item.poster_path) return;
             const type = typeOverride || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
             const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
             const card = this.createMovieCard(item, type, isAvail);
-            container.appendChild(card);
+            fragment.appendChild(card);
         });
+        container.appendChild(fragment);
     },
 
     createMovieCard(item, type, isAvailable = false, rank = null) {
@@ -257,25 +271,29 @@ export const CATALOG_UI = {
         const grid = document.getElementById('authBgGrid');
         if (!grid) return;
         grid.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         movies.forEach(m => {
             const img  = document.createElement('img');
             img.src    = `${CONFIG.TMDB_IMAGE_CARD}${m.poster_path || m.backdrop_path}`;
             img.alt    = '';
             img.loading = 'lazy';
-            grid.appendChild(img);
+            fragment.appendChild(img);
         });
+        grid.appendChild(fragment);
     },
 
     renderTop10(containerId, results, availableIds) {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         results.forEach((item, index) => {
             const isAvail = availableIds.has(item.id.toString());
             const type = item.media_type || (item.title ? 'movie' : 'tv');
             const card = this.createTop10Card(item, index + 1, isAvail, type);
-            container.appendChild(card);
+            fragment.appendChild(card);
         });
+        container.appendChild(fragment);
     },
 
     createTop10Card(item, rank, isAvailable, type) {
