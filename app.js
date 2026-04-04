@@ -55,7 +55,7 @@ function filterItemsByProfile(items) {
     
     // Si no se ha cargado el perfil global, lo cargamos
     if (!currentProfile) {
-        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
     }
     
     // Si no hay perfil o no es modo niños, devolvemos todo
@@ -275,12 +275,13 @@ async function toDashboard(user) {
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
     
-    // --- GESTIÓN DE PERFILES (Fase 6 Global) ---
-    currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    // --- GESTIÓN DE PERFILES (Fase 8: Sesión Temporal) ---
+    currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
     
     if (!currentProfile) {
-        currentProfile = { id: 'p1', name: 'Principal', color: 'color-1', isKids: false };
-        localStorage.setItem('vivotv_current_profile', JSON.stringify(currentProfile));
+        console.warn('[VivoTV] No hay perfil en sesión. Redirigiendo...');
+        window.location.href = 'profiles.html';
+        return;
     }
 
     if (userNameEl) {

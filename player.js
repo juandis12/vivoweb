@@ -538,7 +538,7 @@ export const PLAYER_LOGIC = {
 
     async _getProgress(tmdbId, type, season, episode, supabaseClient) {
         if (!supabaseClient || !this.currentUserId) return null;
-        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
         if (!profile) return null;
 
         let query = supabaseClient.from('watch_history')
