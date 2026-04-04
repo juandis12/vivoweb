@@ -359,7 +359,9 @@
                         </div>
                     </div>
                     <input type="text" class="profile-name-input" value="${p.name}" 
-                           oninput="updateProfileName('${p.id}', this.value)" maxlength="15">
+                           oninput="updateProfileName('${p.id}', this.value)" 
+                           onchange="updateProfileName('${p.id}', this.value)" 
+                           maxlength="15">
                 `;
                 
                 item.onclick = (e) => {
@@ -372,8 +374,11 @@
 
         window.updateProfileName = (id, newName) => {
             const p = profiles.find(x => x.id === id);
-            if (p) p.name = newName;
-            localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
+            if (p) {
+                p.name = newName;
+                localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
+                console.log(`[VivoTV] Nombre actualizado para ${id}: ${newName}`);
+            }
         };
 
         window.updateKidsMode = (id, checked) => {
@@ -510,6 +515,10 @@
             btnAdmin.classList.remove('hidden');
             mainTitle.textContent = '¿Quién está viendo?';
             mainSubtitle.textContent = 'Selecciona un perfil para empezar a disfrutar.';
+            
+            // Forzar guardado final y re-render
+            localStorage.setItem('vivotv_all_profiles', JSON.stringify(profiles));
+            console.log('[VivoTV] Todos los cambios de perfil guardados en dispositivo.');
             renderProfiles();
         };
 
