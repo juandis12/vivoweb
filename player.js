@@ -474,6 +474,9 @@ export const PLAYER_LOGIC = {
         if (seek > 0) video.currentTime = seek;
         video.play().catch(() => {});
         
+        // --- PULSO INICIAL (Fase 6) ---
+        // Guardar progreso inmediatamente al iniciar para sincronización global instantánea
+        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(seek), _supabase);
         // Limpiamos listeners previos
         video.ontimeupdate = () => {
             const cur = Math.floor(video.currentTime);
@@ -497,6 +500,10 @@ export const PLAYER_LOGIC = {
 
     _startIframeTracking() {
         this._stopProgressTimer();
+        
+        // --- PULSO INICIAL (Fase 6) ---
+        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, 0, _supabase);
+
         let elapsed = 0;
         this.progressTimer = setInterval(() => {
             elapsed += 15;

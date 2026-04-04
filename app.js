@@ -45,6 +45,7 @@ let availableIds    = new Set();
 let searchTimeout   = null;
 let lastSearchResults = [];
 let currentFilter     = 'all';
+let currentProfile    = null; // Global (Fase 6)
 
 // ================================================
 // CENTRALIZACIÓN: FILTRO POR PERFIL (Fase 3 Global)
@@ -52,8 +53,10 @@ let currentFilter     = 'all';
 function filterItemsByProfile(items) {
     if (!items || !Array.isArray(items)) return [];
     
-    // Sincronización robusta: leer siempre el perfil de localStorage
-    const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    // Si no se ha cargado el perfil global, lo cargamos
+    if (!currentProfile) {
+        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    }
     
     // Si no hay perfil o no es modo niños, devolvemos todo
     if (!currentProfile?.isKids) return items;
@@ -271,10 +274,12 @@ async function toDashboard(user) {
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
-    // --- GESTIÓN DE PERFILES (Fase 3) ---
-    let currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    
+    // --- GESTIÓN DE PERFILES (Fase 6 Global) ---
+    currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    
     if (!currentProfile) {
-        currentProfile = { id: 'p1', name: 'Principal', color: 'color-1' };
+        currentProfile = { id: 'p1', name: 'Principal', color: 'color-1', isKids: false };
         localStorage.setItem('vivotv_current_profile', JSON.stringify(currentProfile));
     }
 
