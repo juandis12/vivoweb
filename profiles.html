@@ -104,15 +104,14 @@
             z-index: 5;
         }
 
-        /* --- NUEVO: OCUPADO STATE (Fase 12) --- */
+        /* --- NUEVO: OCUPADO STATE (Fase 14 - Server Synced) --- */
         .profile-item.occupied {
-            cursor: not-allowed;
+            cursor: default;
         }
         .profile-item.occupied .profile-avatar {
             opacity: 0.4;
             filter: grayscale(1);
             border-color: #ef4444;
-            pointer-events: none;
         }
         .occupied-badge {
             position: absolute;
@@ -130,6 +129,31 @@
             white-space: nowrap;
             letter-spacing: 0.5px;
             z-index: 6;
+        }
+        .release-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            cursor: pointer;
+            z-index: 10;
+            display: none;
+            transition: 0.2s;
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+        .profile-item.occupied:hover .release-btn {
+            display: block;
+        }
+        .release-btn:hover {
+            background: #dc2626;
+            transform: translate(-50%, -50%) scale(1.1);
         }
 
         /* Edit Overlays */
@@ -373,7 +397,9 @@
         const mainTitle = document.getElementById('mainTitle');
         const mainSubtitle = document.getElementById('mainSubtitle');
 
-        // --- CARGA DESDE DB (Fase 10) ---
+        // --- CARGA DESDE DB (Fase 15: Server Synced) ---
+        let globalServerNow = new Date();
+
         async function loadProfilesFromDB() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
@@ -381,34 +407,23 @@
                 return;
             }
 
-            let { data, error } = await supabase
-                .from('vivotv_profiles')
-                .select('*')
-                .order('created_at', { ascending: true });
+            // Usar RPC para traer perfiles + tiempo de servidor exacto
+            const { data, error } = await supabase.rpc('vivotv_get_profiles_synced');
 
             if (error) {
-                console.error('[VivoTV] Error cargando perfiles:', error);
+                console.error('[VivoTV] RPC Sync Error:', error);
+                
+                // Fallback a select normal si falla el RPC (aunque perderíamos precisión)
+                const { data: fallbackData } = await supabase.from('vivotv_profiles').select('*');
+                if (fallbackData) profiles = fallbackData;
                 return;
             }
 
-            // Si es cuenta nueva, crear perfiles por defecto
-            if (!data || data.length === 0) {
-                console.log('[VivoTV] Creando perfiles iniciales en nube...');
-                const toInsert = DEFAULT_PROFILES.map(p => ({ ...p, user_id: user.id }));
-                const { data: inserted, error: insError } = await supabase
-                    .from('vivotv_profiles')
-                    .insert(toInsert)
-                    .select();
-                
-                if (insError) {
-                    console.error('[VivoTV] Error creando perfiles:', insError);
-                    profiles = DEFAULT_PROFILES; // Fallback local
-                } else {
-                    profiles = inserted;
-                }
-            } else {
+            if (data && data.length > 0) {
                 profiles = data;
+                globalServerNow = new Date(data[0].server_now); // Usar tiempo de servidor
             }
+            
             renderProfiles();
         }
 
@@ -421,7 +436,10 @@
                     <div class="profile-avatar ${p.color}">
                         ${p.name[0]}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
-                        ${_isOccupied(p) ? '<div class="occupied-badge">EN USO</div>' : ''}
+                        ${_isOccupied(p) ? `
+                            <div class="occupied-badge">EN USO</div>
+                            <button class="release-btn" onclick="forceRelease('${p.id}')">LIBERAR</button>
+                        ` : ''}
                         <div class="edit-overlay">
                             <span class="edit-icon">✏️</span>
                             <label class="kids-toggle-label">
@@ -450,11 +468,23 @@
 
         function _isOccupied(p) {
             if (!p.last_heartbeat) return false;
+            
+            // --- CÁLCULO PRECISO (Basado en Horario Servidor) ---
             const last = new Date(p.last_heartbeat).getTime();
-            const now  = new Date().getTime();
+            const now  = globalServerNow.getTime(); // Ya sincronizado en loadProfilesFromDB
+            
             const diff = (now - last) / 1000;
-            return diff < 20; // Margen de 20s (User quería 15, damos 5 de gracia por lag red)
+            return diff < 15; // User quiere margen estricto de 15s
         }
+
+        window.forceRelease = async (id) => {
+            if (!confirm('¿Deseas liberar este perfil a la fuerza? Se cerrará la sesión en el otro dispositivo.')) return;
+            const { error } = await supabase.rpc('vivotv_release_session', { pid: id });
+            if (!error) {
+                showToast('Perfil liberado con éxito', 'success');
+                loadProfilesFromDB();
+            }
+        };
         window._isOccupied = _isOccupied; // Hacerlo global por si acaso
 
         window.updateProfileName = (id, newName) => {

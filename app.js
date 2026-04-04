@@ -742,24 +742,21 @@ function mapError(msg) {
     return msg;
 }
 
-// --- MOTOR DE LATIDOS (Fase 12: Sesión Estricta) ---
+// --- MOTOR DE LATIDOS (Fase 12: Sesión Estricta por Servidor) ---
 async function startHeartbeat() {
     if (!supabase || !currentProfile) return;
     if (heartbeatTimer) clearInterval(heartbeatTimer);
 
-    // 1. Pulso inicial inmediato
+    // 1. Pulso inicial inmediato mediante RPC (Servidor pone la hora)
     const sendPulse = async () => {
         try {
-            await supabase
-                .from('vivotv_profiles')
-                .update({ last_heartbeat: new Date().toISOString() })
-                .eq('id', currentProfile.id);
+            await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
         } catch(e) { console.warn('[VivoTV] Heartbeat error:', e); }
     };
 
     sendPulse();
     heartbeatTimer = setInterval(sendPulse, 10000); // Latido cada 10s
-    console.log('[VivoTV] Sistema de concurrencia activo (Frecuencia 10s).');
+    console.log('[VivoTV] Sistema de concurrencia activo (Server-Side).');
 }
 
 async function stopHeartbeat() {
@@ -767,13 +764,14 @@ async function stopHeartbeat() {
     heartbeatTimer = null;
     
     if (currentProfile && supabase) {
-        // Marcamos como inactivo inmediatamente al salir
-        await supabase
-            .from('vivotv_profiles')
-            .update({ last_heartbeat: null })
-            .eq('id', currentProfile.id);
+        // Marcamos como inactivo inmediatamente al salir (RPC)
+        await supabase.rpc('vivotv_release_session', { pid: currentProfile.id });
     }
 }
+
+// Escuchar cierre de pestaña para liberar inmediatamente
+window.addEventListener('beforeunload', stopHeartbeat);
+window.addEventListener('pagehide', stopHeartbeat); // Más fiable en móviles
 
 async function initSearchPage() {
     const params = new URLSearchParams(window.location.search);
