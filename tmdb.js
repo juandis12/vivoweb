@@ -226,8 +226,8 @@ export const CATALOG_UI = {
 
         const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
 
-        // Lógica de "Visto" (> 90%) - Fase Precision
-        const isWatched = progress && progress >= 90;
+        // Lógica de "Visto" (> 95%) - Fase Persistencia
+        const isWatched = progress && progress >= 95;
 
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
@@ -247,7 +247,7 @@ export const CATALOG_UI = {
                     </div>` : `
                     <div class="coming-soon-badge">PRÓXIMAMENTE</div>`)}
 
-                ${progress && !isWatched ? `
+                ${(progress !== null && progress > 0) && !isWatched ? `
                     <div class="card-progress-bar">
                         <div class="card-progress-fill" style="width: ${progress}%"></div>
                     </div>

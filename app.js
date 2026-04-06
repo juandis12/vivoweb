@@ -693,7 +693,7 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
                 options: { 
                     data: { 
                         username: username,
-                        name: username // Para cumplir con el NOT NULL si persiste
+                        name: username 
                     } 
                 }
             });
@@ -1043,12 +1043,16 @@ async function loadRecentlyWatched() {
         .eq('user_id', user.id)
         .eq('profile_id', currentProfile.id)
         .order('last_watched', { ascending: false })
-        .limit(20);
+        .limit(50); // Aumentado de 20 a 50 (Fase Persistencia)
         
-    if (!history?.length) { section.classList.add('hidden'); return; }
+    if (!history?.length) { 
+        if (section) section.classList.add('hidden'); 
+        return; 
+    }
     
     carousel.innerHTML = '';
     
+    // Filtro para mostrar solo el último progreso de cada título
     const seen = new Set();
     const unique = history.filter(h => {
         const id = String(h.tmdb_id);
@@ -1057,16 +1061,12 @@ async function loadRecentlyWatched() {
         return true;
     });
 
-    // 🚀 OPTIMIZACIÓN: Carga paralela de detalles
-    const detailsPromises = unique.map(item => 
+    const results = await Promise.all(unique.map(item => 
         TMDB_SERVICE.getDetails(item.tmdb_id, item.type)
             .then(details => ({ details, historyItem: item }))
             .catch(() => null)
-    );
-
-    const results = await Promise.all(detailsPromises);
+    ));
     
-    // Detectar sección para filtrado (Fase 10X UX)
     const path = window.location.pathname;
     const isPeliculasPage = path.includes('peliculas.html');
     const isSeriesPage = path.includes('series.html');
@@ -1078,20 +1078,21 @@ async function loadRecentlyWatched() {
         if (!res || !res.details || !res.details.poster_path) return;
         const { details, historyItem } = res;
         
-        // Determinar si es Anime (ID 16 en TMDB)
         const genreIds = details.genres ? details.genres.map(g => g.id) : (details.genre_ids || []);
         const isItemAnime = genreIds.includes(16);
 
-        // Aplicar Filtros de Sección
         if (isPeliculasPage && historyItem.type !== 'movie') return;
         if (isSeriesPage && (historyItem.type !== 'tv' || isItemAnime)) return;
         if (isAnimePage && (historyItem.type !== 'tv' || !isItemAnime)) return;
         
-        // Estimación de progreso
         let progressPercent = null;
-        if (historyItem.progress_seconds && details.runtime) {
-            const totalSecs = details.runtime * 60;
+        let runtime = details.runtime || (details.episode_run_time ? details.episode_run_time[0] : null);
+        
+        if (historyItem.progress_seconds && runtime) {
+            const totalSecs = runtime * 60;
             progressPercent = Math.min(100, Math.floor((historyItem.progress_seconds / totalSecs) * 100));
+        } else if (historyItem.progress_seconds > 0) {
+            progressPercent = 5; 
         }
 
         const card = CATALOG_UI.createMovieCard(details, historyItem.type, true, null, progressPercent);
@@ -1099,12 +1100,66 @@ async function loadRecentlyWatched() {
         renderedCount++;
     });
 
-    // Si después de filtrar no quedó nada, ocultar sección
     if (renderedCount === 0) {
         section.classList.add('hidden');
     } else {
         section.classList.remove('hidden');
     }
+}
+
+async function loadFullHistory() {
+    const grid = document.getElementById('historyGrid');
+    const emptyState = document.getElementById('emptyHistoryState');
+    if (!grid || !supabase) return;
+
+    if (!currentProfile) {
+        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+    }
+    if (!currentProfile) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: history } = await supabase.from('watch_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('profile_id', currentProfile.id)
+        .order('last_watched', { ascending: false })
+        .limit(200); // Límite amplio para la página de Historial
+
+    if (!history?.length) {
+        grid.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        return;
+    }
+
+    grid.innerHTML = '';
+    const seen = new Set();
+    const unique = history.filter(h => {
+        const id = String(h.tmdb_id);
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
+
+    const details = await Promise.all(unique.map(item => 
+        TMDB_SERVICE.getDetails(item.tmdb_id, item.type)
+            .then(d => ({ ...d, historyItem: item }))
+            .catch(() => null)
+    ));
+
+    details.forEach(item => {
+        if (!item || !item.poster_path) return;
+        
+        let progressPercent = null;
+        let runtime = item.runtime || (item.episode_run_time ? item.episode_run_time[0] : null);
+        if (item.historyItem.progress_seconds && runtime) {
+            progressPercent = Math.min(100, Math.floor((item.historyItem.progress_seconds / (runtime * 60)) * 100));
+        }
+
+        const card = CATALOG_UI.createMovieCard(item, item.historyItem.type, true, null, progressPercent);
+        grid.appendChild(card);
+    });
 }
 
 window.addEventListener('update-my-list', loadMyList);
@@ -1166,6 +1221,13 @@ const stopDragging = (e) => {
 
 document.addEventListener('mouseup', stopDragging);
 document.addEventListener('mouseleave', stopDragging);
+
+// --- INICIALIZACIÓN DE PÁGINA DE HISTORIAL (Fase Historial) ---
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.location.pathname.includes('historial.html')) {
+        loadFullHistory();
+    }
+});
 
 // Manejo de Flechas
 document.addEventListener('click', (e) => {

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Historial - VivoTV</title>
+    
+    <!-- PWA & Mobile Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VivoTV">
+    <link rel="apple-touch-icon" href="pwa-icon-512.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b122b">
+    
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/scrollreveal"></script>
+</head>
+<body class="bg-mesh">
+    <!-- Navbar -->
+    <header class="navbar" id="navbar">
+        <div class="logo">VIVO<span>TV</span></div>
+        <nav id="mainNav" class="hidden">
+            <a href="index.html">Inicio</a>
+            <a href="peliculas.html">Películas</a>
+            <a href="series.html">Series</a>
+            <a href="anime.html">Anime</a>
+            <a href="milista.html">Mi Lista</a>
+            <a href="historial.html" class="active">Historial</a>
+        </nav>
+        <div class="user-actions">
+            <!-- Perfil -->
+            <div id="userProfile" class="hidden user-profile-btn">
+                <div class="avatar" id="userAvatar">U</div>
+                <span id="userName">Usuario</span>
+                <button id="btnLogout" class="btn btn-outline btn-sm">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="main-content section-padding">
+        <header class="section-header">
+            <div class="header-content">
+                <h1 class="section-title">Mi Historial</h1>
+                <p class="section-subtitle">Continúa donde lo dejaste. Todo tu contenido en un solo lugar.</p>
+            </div>
+        </header>
+
+        <!-- Grid de Historial -->
+        <div class="grid-container" id="historyGrid">
+            <!-- Carga dinámica -->
+            <div class="skeleton-card"></div><div class="skeleton-card"></div>
+            <div class="skeleton-card"></div><div class="skeleton-card"></div>
+            <div class="skeleton-card"></div><div class="skeleton-card"></div>
+        </div>
+
+        <div id="emptyHistoryState" class="empty-state hidden">
+            <div class="empty-icon">📂</div>
+            <h2>Tu historial está vacío</h2>
+            <p>Empieza a ver algo hoy mismo.</p>
+            <a href="index.html" class="btn btn-primary">Explorar Contenido</a>
+        </div>
+    </main>
+
+    <!-- Overlay Modal Detalle + Reproductor -->
+    <div id="detailModal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" id="modalMainContent">
+            <div class="modal-viewport">
+                <div class="modal-backdrop" id="modalBackdrop"></div>
+                <div class="modal-vignette"></div>
+                <button class="close-modal" id="btnCloseModal">&times;</button>
+                <div class="modal-hero-info">
+                    <h2 id="modalTitle" class="modal-main-title">Título</h2>
+                    <div class="modal-meta-row">
+                        <span id="modalYear" class="meta-item"></span>
+                        <span class="meta-divider"></span>
+                        <span id="modalRuntime" class="meta-item"></span>
+                        <span class="meta-divider"></span>
+                        <span id="modalRating" class="meta-item rating-imdb"></span>
+                    </div>
+                    <div class="modal-primary-actions">
+                        <button class="btn btn-primary btn-lg" id="btnModalPlay">▶ Reproducir</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-details-grid">
+                <div class="details-main-col">
+                    <section class="details-section">
+                        <h3 class="section-label">Sinopsis</h3>
+                        <p id="modalOverview" class="overview-text"></p>
+                    </section>
+                    <section id="seriesInfo" class="series-episodes-section hidden">
+                        <div class="episodes-header">
+                            <h3 class="section-label">Episodios</h3>
+                            <div class="seasons-pills" id="seasonsPills"></div>
+                        </div>
+                        <div class="episodes-container" id="episodesGrid"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación Móvil Inferior -->
+    <nav class="mobile-nav">
+        <a href="index.html" class="mobile-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+            <span>Inicio</span>
+        </a>
+        <a href="historial.html" class="mobile-nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Historial</span>
+        </a>
+    </nav>
+
+    <div class="toast hidden" id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
