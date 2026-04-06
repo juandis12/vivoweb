@@ -47,18 +47,22 @@
     margin: 0; padding: 0; box-sizing: border-box;
 }
 
-html, body {
+html {
     scroll-behavior: smooth;
     overflow-x: hidden;
+    overflow-y: auto;
     width: 100%;
-    min-height: 100vh;
+    height: 100%;
 }
 
 body {
-    font-family: var(--font);
+    font-family: var(--font-premium);
     background-color: var(--bg-base);
     color: var(--text-primary);
     overflow-x: hidden;
+    overflow-y: visible;
+    width: 100%;
+    min-height: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -100,7 +104,7 @@ button { font-family: inherit; cursor: pointer; }
 .empty-state p { opacity: 0.6; margin-bottom: 30px; }
 
 /* Utility de Páginas Secundarias */
-.main-content { min-height: 100vh; padding-top: 100px; }
+.main-content { min-height: 100vh; padding-top: 100px; overflow: visible; }
 .section-padding { padding: 0 var(--side-padding) 60px; }
 .section-header { margin-bottom: 45px; }
 .section-title { 

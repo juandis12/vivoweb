@@ -474,9 +474,9 @@
             const now  = (nowOverride || globalServerNow).getTime(); 
             
             const diff = (now - last) / 1000;
-            // Un perfil está ocupado solo si el latido ocurrió en los últimos 15 segundos
-            // y no es un tiempo futuro (lo cual indicaría error de reloj del server)
-            return diff >= 0 && diff < 15; 
+            // Un perfil está ocupado si el latido ocurrió en los últimos 30 segundos
+            // Quitamos la restricción diff >= 0 para mayor tolerancia a microsincronización
+            return diff < 30; 
         }
 
         window.forceRelease = async (id) => {
@@ -687,9 +687,9 @@
             await loadProfilesFromDB();
         };
 
-        // Iniciar carga y refresco automático cada 15s
+        // Iniciar carga y refresco automático cada 10s
         loadProfilesFromDB();
-        setInterval(loadProfilesFromDB, 15000);
+        setInterval(loadProfilesFromDB, 10000);
     </script>
 </body>
 </html>

@@ -755,13 +755,36 @@ async function startHeartbeat() {
             await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
         } catch(e) { 
             console.warn('[VivoTV] Heartbeat error:', e); 
-            // Si el error es de red prolongado, podríamos cerrar sesión por seguridad
         }
     };
 
     sendPulse();
     heartbeatTimer = setInterval(sendPulse, 10000); // Latido cada 10s
-    console.log('[VivoTV] Sistema de concurrencia activo (Server-Side).');
+
+    // 2. Suscripción Realtime para Detección de Expulsión (Kick-out)
+    if (sessionChannel) supabase.removeChannel(sessionChannel);
+    
+    sessionChannel = supabase
+        .channel(`kickout-${currentProfile.id}`)
+        .on('postgres_changes', { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'vivotv_profiles', 
+            filter: `id=eq.${currentProfile.id}` 
+        }, payload => {
+            // Si el last_heartbeat se vuelve null, fue una liberación forzada
+            if (payload.new && payload.new.last_heartbeat === null) {
+                console.log('[VivoTV] Sesión liberada remotamente. Redirigiendo...');
+                showToast("⚠️ Tu sesión ha sido liberada desde otro dispositivo.", "info");
+                setTimeout(() => {
+                    sessionStorage.removeItem('vivotv_current_profile');
+                    window.location.href = 'profiles.html';
+                }, 2500);
+            }
+        })
+        .subscribe();
+
+    console.log('[VivoTV] Sistema de concurrencia y expulsión real-time activo.');
 }
 
 async function stopHeartbeat() {
