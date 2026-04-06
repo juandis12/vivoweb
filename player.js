@@ -472,15 +472,15 @@ export const PLAYER_LOGIC = {
 
     _startVideoTracking(video, seek) {
         // --- SALTO INTELIGENTE CON RETRASO (Fase 10X UX) ---
-        // Esperamos 6 segundos para permitir que el buffer se estabilice o pasen anuncios iniciales
+        // Ajustado a 10 segundos para sincronizar con la duración de los anuncios
         if (seek > 0) {
-            console.log(`[VivoTV] Programando salto de progreso (${seek}s) en 6 segundos...`);
+            console.log(`[VivoTV] Programando salto de progreso (${seek}s) en 10 segundos...`);
             setTimeout(() => {
                 if (video && !video.paused) {
                     video.currentTime = seek;
                     showToast("Reanudando desde donde te quedaste...", "info");
                 }
-            }, 6000);
+            }, 10000); // 10 segundos de espera
         }
 
         video.play().catch(() => {});
