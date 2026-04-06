@@ -675,21 +675,29 @@ nav a.active::after { width: 24px; }
 
 .carousel {
     display: flex; gap: 16px; overflow-x: auto; 
-    padding: 40px var(--side-padding) 140px; /* Padding extra para el scale y tooltip */
+    padding: 60px var(--side-padding) 140px; /* Incrementado para evitar cortes superiores */
     margin-bottom: -100px;
-    scroll-behavior: smooth; scrollbar-width: none; flex: 1;
+    scroll-behavior: smooth; 
+    scrollbar-width: none; 
+    flex: 1;
     overflow-y: visible;
+    scroll-snap-type: x mandatory; 
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+    user-select: none;
 }
+.carousel:active { cursor: grabbing; }
 .carousel::-webkit-scrollbar { display: none; }
 
 /* Tarjeta de Película Premium (Estilo Netflix Global) */
 .movie-card {
-    min-width: 180px; width: 180px; /* Tamaño base consistente */
+    min-width: 180px; width: 180px;
     aspect-ratio: 2/3;
     border-radius: var(--radius-md); overflow: visible;
     cursor: pointer; position: relative;
     transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
     flex-shrink: 0;
+    scroll-snap-align: start;
 }
 @media (min-width: 1024px) {
     .movie-card { min-width: 200px; width: 200px; }

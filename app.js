@@ -1086,7 +1086,45 @@ if (btnHeroInfo) btnHeroInfo.addEventListener('click', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => initAuth());
 
-// ---- CAROUSEL NAVIGATION ----
+// ---- SISTEMA DE SCROLL PREMIUM (Fase Auditoria Scroll) ----
+let isDragging = false;
+let startX, scrollLeft;
+
+document.addEventListener('mousedown', (e) => {
+    const carousel = e.target.closest('.carousel');
+    if (!carousel) return;
+    isDragging = true;
+    startX = e.pageX - carousel.offsetLeft;
+    scrollLeft = carousel.scrollLeft;
+    carousel.style.scrollSnapType = 'none';
+    carousel.style.scrollBehavior = 'auto';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const carousel = e.target.closest('.carousel');
+    if (!carousel) return;
+    e.preventDefault();
+    const x = e.pageX - carousel.offsetLeft;
+    const walk = (x - startX) * 2; 
+    carousel.scrollLeft = scrollLeft - walk;
+});
+
+const stopDragging = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    const carousel = e.target.closest('.carousel');
+    if (carousel) {
+        carousel.style.scrollSnapType = 'x mandatory';
+        carousel.style.scrollBehavior = 'smooth';
+        updateCarouselArrows(carousel);
+    }
+};
+
+document.addEventListener('mouseup', stopDragging);
+document.addEventListener('mouseleave', stopDragging);
+
+// Manejo de Flechas
 document.addEventListener('click', (e) => {
     const btn = e.target.closest('.carousel-arrow');
     if (!btn) return;
@@ -1097,7 +1135,31 @@ document.addEventListener('click', (e) => {
     const direction = btn.classList.contains('carousel-arrow-left') ? -1 : 1;
     const scrollAmount = carousel.clientWidth * 0.8;
     carousel.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+    
+    // Pequeño delay para actualizar tras el scroll smooth
+    setTimeout(() => updateCarouselArrows(carousel), 500);
 });
+
+// Función para ocultar/mostrar flechas según posición
+function updateCarouselArrows(carousel) {
+    const wrapper = carousel.closest('.carousel-wrapper');
+    if (!wrapper) return;
+    const leftBtn = wrapper.querySelector('.carousel-arrow-left');
+    const rightBtn = wrapper.querySelector('.carousel-arrow-right');
+    
+    if (leftBtn) leftBtn.style.opacity = carousel.scrollLeft <= 10 ? '0' : '1';
+    if (rightBtn) {
+        const isAtEnd = (carousel.scrollLeft + carousel.clientWidth) >= (carousel.scrollWidth - 10);
+        rightBtn.style.opacity = isAtEnd ? '0' : '1';
+    }
+}
+
+// Escuchar scroll para actualizar flechas (touch/mousewheel)
+document.addEventListener('scroll', (e) => {
+    if (e.target.classList?.contains('carousel')) {
+        updateCarouselArrows(e.target);
+    }
+}, true);
 
 // La inicialización de DOMContentLoaded ya maneja initAuth al inicio del script.
 // ================================================
