@@ -900,6 +900,25 @@ nav a.active::after { width: 24px; }
     box-shadow: 0 0 15px var(--primary-glow);
 }
 
+.card-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+    z-index: 15;
+}
+
+.card-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+    transition: width 0.3s ease;
+}
+
 /* ================================================
    10. MODAL DE DETALLE Y REPRODUCTOR (ESTILO NETFLIX)
  ================================================ */

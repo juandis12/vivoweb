@@ -556,9 +556,13 @@ export const PLAYER_LOGIC = {
 
     async detectGlobalSeriesProgress(tmdbId, supabaseClient) {
         if (!this.currentUserId) return;
+        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        if (!profile) return;
+
         const { data } = await supabaseClient.from('watch_history')
             .select('season_number, episode_number, progress_seconds')
             .eq('user_id', this.currentUserId)
+            .eq('profile_id', profile.id)
             .eq('tmdb_id', String(tmdbId))
             .eq('type', 'tv')
             .order('last_watched', { ascending: false })

@@ -82,13 +82,13 @@ function filterItemsByProfile(items) {
         const hasBanned = genreIds.some(id => BANNED_GENRES.includes(id));
         if (hasBanned) return false;
 
-        // REGLA 3: Permitir solo si es FAMILIAR o para NIÑOS
+        // REGLA 3: Permitir si es FAMILIAR, NIÑOS o ANIMACIÓN segura
         const isFamily = genreIds.some(id => MANDATORY_GENRES.includes(id));
         
-        // REGLA 4: Si es Animación (16), debe ser también Aventura o Comedia (evita el drama denso)
-        const isSafeAnimation = genreIds.includes(16) && genreIds.some(id => [12, 35, 10751].includes(id));
+        // REGLA 4: Para PG-13 permitimos Animación, Aventura, Acción suave y Comedia
+        const isSafeContent = genreIds.some(id => [16, 12, 35, 10759, 10765].includes(id));
 
-        return isFamily || isSafeAnimation;
+        return isFamily || isSafeContent;
     });
 }
 
@@ -1004,17 +1004,27 @@ async function loadRecentlyWatched() {
     const section = document.getElementById('recentSection');
     const carousel = document.getElementById('recentCarousel');
     if (!section || !carousel || !supabase) return;
+
+    if (!currentProfile) {
+        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+    }
+    if (!currentProfile) return;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    
     const { data: history } = await supabase.from('watch_history')
         .select('*')
         .eq('user_id', user.id)
         .eq('profile_id', currentProfile.id)
         .order('last_watched', { ascending: false })
         .limit(20);
+        
     if (!history?.length) { section.classList.add('hidden'); return; }
+    
     section.classList.remove('hidden');
     carousel.innerHTML = '';
+    
     const seen = new Set();
     const unique = history.filter(h => {
         const id = String(h.tmdb_id);
@@ -1022,12 +1032,36 @@ async function loadRecentlyWatched() {
         seen.add(id);
         return true;
     });
-    for (const item of unique) {
-        const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.type).catch(() => null);
-        if (!details || !details.poster_path) continue;
-        const card = CATALOG_UI.createMovieCard(details, item.type, true); // En recientes asumimos disponible
+
+    // 🚀 OPTIMIZACIÓN: Carga paralela de detalles
+    const detailsPromises = unique.map(item => 
+        TMDB_SERVICE.getDetails(item.tmdb_id, item.type)
+            .then(details => ({ details, historyItem: item }))
+            .catch(() => null)
+    );
+
+    const results = await Promise.all(detailsPromises);
+    
+    results.forEach(res => {
+        if (!res || !res.details || !res.details.poster_path) return;
+        
+        const { details, historyItem } = res;
+        
+        // Estimación de progreso si tenemos duración (runtime en min de TMDB)
+        let progressPercent = null;
+        if (historyItem.progress_seconds && details.runtime) {
+            const totalSecs = details.runtime * 60;
+            progressPercent = Math.min(100, Math.floor((historyItem.progress_seconds / totalSecs) * 100));
+        } else if (historyItem.progress_seconds > 0) {
+            // Fallback para series o si no hay runtime: si hay progreso guardado, mostramos algo mínimo (ej 10%) 
+            // o lo dejamos nulo si no podemos calcularlo exacto.
+            // Para series, guardamos progreso por episodio, así que sin la duración del ep es difícil.
+            // Por ahora, si es > 0, ponemos un placeholder de progreso si queremos, o lo omitimos.
+        }
+
+        const card = CATALOG_UI.createMovieCard(details, historyItem.type, true, null, progressPercent);
         carousel.appendChild(card);
-    }
+    });
 }
 
 window.addEventListener('update-my-list', loadMyList);
@@ -1066,3 +1100,13 @@ document.addEventListener('click', (e) => {
 });
 
 // La inicialización de DOMContentLoaded ya maneja initAuth al inicio del script.
+// ================================================
+// GLOBAL SYNC: REFRESH ON VISIBILITY
+// ================================================
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        console.log('[Global Sync] Pestaña visible, refrescando historial desde la nube...');
+        loadRecentlyWatched();
+        loadMyList();
+    }
+});

@@ -8,8 +8,8 @@ export const TMDB_SERVICE = {
 
     // Fix #8: Object.entries() en lugar de for...in (más robusto, evita props heredadas)
     async fetchFromTMDB(endpoint, params = {}) {
-        const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
-        const isKids = currentProfile?.isKids === true;
+        const currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        const isKids = currentProfile?.is_kids === true;
         
         let url;
         if (CONFIG.USE_PROXY) {
@@ -28,7 +28,7 @@ export const TMDB_SERVICE = {
         // Si el perfil es de NIÑOS, inyectamos parámetros de certificación G/PG
         if (isKids) {
             url.searchParams.append('certification_country', 'US');
-            url.searchParams.append('certification.lte', 'PG');
+            url.searchParams.append('certification.lte', 'PG-13');
             url.searchParams.append('include_adult', 'false');
             
             // Si es un endpoint de discovery, forzamos que no traiga nada R o PG-13
@@ -214,7 +214,7 @@ export const CATALOG_UI = {
         container.appendChild(fragment);
     },
 
-    createMovieCard(item, type, isAvailable = false, rank = null) {
+    createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {
         const card = document.createElement('div');
         card.className = `movie-card${isAvailable ? ' is-available' : ''}${rank ? ' ranked' : ''}`;
         card.dataset.tmdbId = item.id;
@@ -226,17 +226,29 @@ export const CATALOG_UI = {
 
         const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
 
+        // Lógica de "Visto" (> 95%)
+        const isWatched = progress && progress >= 95;
+
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
                 <img src="${CONFIG.TMDB_IMAGE_CARD}${item.poster_path}" alt="${title}" loading="lazy">
                 <div class="movie-card-title">${title}</div>
-                ${isAvailable ? `
+                
+                ${isWatched ? `
+                    <div class="watched-badge"><svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VISTO</div>
+                ` : (isAvailable ? `
                     <div class="available-badge">
                         <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
                         DISPONIBLE
                     </div>` : `
-                    <div class="coming-soon-badge">PRÓXIMAMENTE</div>`}
+                    <div class="coming-soon-badge">PRÓXIMAMENTE</div>`)}
+
+                ${progress && !isWatched ? `
+                    <div class="card-progress-bar">
+                        <div class="card-progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                ` : ''}
             </div>
             <div class="movie-tooltip">
                 <div class="movie-tooltip-actions">
