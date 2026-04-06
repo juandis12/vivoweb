@@ -226,8 +226,8 @@ export const CATALOG_UI = {
 
         const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
 
-        // Lógica de "Visto" (> 95%)
-        const isWatched = progress && progress >= 95;
+        // Lógica de "Visto" (> 90%) - Fase Precision
+        const isWatched = progress && progress >= 90;
 
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
@@ -236,7 +236,10 @@ export const CATALOG_UI = {
                 <div class="movie-card-title">${title}</div>
                 
                 ${isWatched ? `
-                    <div class="watched-badge"><svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VISTO</div>
+                    <div class="watched-badge watched-premium">
+                        <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                        VISTO
+                    </div>
                 ` : (isAvailable ? `
                     <div class="available-badge">
                         <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 

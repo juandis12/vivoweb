@@ -352,11 +352,11 @@ export const PLAYER_LOGIC = {
                         const prog = progressMap[ep.episode_number];
                         if (!prog) return '';
                         const totalSecs = (ep.runtime || 45) * 60;
-                        const isFullyWatched = prog.progress_seconds > (totalSecs * 0.95);
+                        const isFullyWatched = prog.progress_seconds > (totalSecs * 0.90); // Fase Precision: 90%
                         
                         if (isFullyWatched) {
-                            return `<div class="watched-badge"><svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VISTO</div>`;
-                        } else if (prog.progress_seconds > 60) {
+                            return `<div class="watched-badge watched-premium"><svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VISTO</div>`;
+                        } else if (prog.progress_seconds > 10) { // Mostrar barra si hay más de 10s
                             const pct = Math.min((prog.progress_seconds / totalSecs) * 100, 100);
                             return `<div class="ep-progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>`;
                         }
@@ -471,11 +471,21 @@ export const PLAYER_LOGIC = {
     },
 
     _startVideoTracking(video, seek) {
-        if (seek > 0) video.currentTime = seek;
+        // --- SALTO INTELIGENTE CON RETRASO (Fase 10X UX) ---
+        // Esperamos 6 segundos para permitir que el buffer se estabilice o pasen anuncios iniciales
+        if (seek > 0) {
+            console.log(`[VivoTV] Programando salto de progreso (${seek}s) en 6 segundos...`);
+            setTimeout(() => {
+                if (video && !video.paused) {
+                    video.currentTime = seek;
+                    showToast("Reanudando desde donde te quedaste...", "info");
+                }
+            }, 6000);
+        }
+
         video.play().catch(() => {});
         
         // --- PULSO INICIAL (Fase 6) ---
-        // Guardar progreso inmediatamente al iniciar para sincronización global instantánea
         this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(seek), _supabase);
         // Limpiamos listeners previos
         video.ontimeupdate = () => {

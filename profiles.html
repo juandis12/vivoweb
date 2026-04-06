@@ -481,9 +481,27 @@
 
         window.forceRelease = async (id) => {
             if (!confirm('¿Deseas liberar este perfil a la fuerza? Se cerrará la sesión en el otro dispositivo.')) return;
+            
+            // 1. Liberar en DB para persistencia
             const { error } = await supabase.rpc('vivotv_release_session', { pid: id });
+            
+            // 2. Enviar señal de expulsión inmediata por Broadcast (Fase 10X)
+            // Esto es mucho más rápido que esperar a que el dispositivo remoto lea la DB
+            const channel = supabase.channel(`kickout-${id}`);
+            channel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.send({
+                        type: 'broadcast',
+                        event: 'FORCE_EXIT',
+                        payload: { profileId: id }
+                    });
+                    // Limpiar canal después de enviar
+                    setTimeout(() => supabase.removeChannel(channel), 2000);
+                }
+            });
+
             if (!error) {
-                showToast('Perfil liberado con éxito', 'success');
+                showToast('Se ha enviado la señal de liberación inmediata.', 'success');
                 loadProfilesFromDB();
             }
         };

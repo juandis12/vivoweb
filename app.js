@@ -749,42 +749,44 @@ async function startHeartbeat() {
     if (!supabase || !currentProfile) return;
     if (heartbeatTimer) clearInterval(heartbeatTimer);
 
-    // 1. Pulso inicial inmediato mediante RPC (Servidor pone la hora)
     const sendPulse = async () => {
         try {
             await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
-        } catch(e) { 
-            console.warn('[VivoTV] Heartbeat error:', e); 
-        }
+        } catch(e) { console.warn('[VivoTV] Heartbeat error:', e); }
     };
 
     sendPulse();
     heartbeatTimer = setInterval(sendPulse, 10000); // Latido cada 10s
 
-    // 2. Suscripción Realtime para Detección de Expulsión (Kick-out)
+    // 2. Suscripción Realtime para Detección de Expulsión (Fase Broadcast 10X)
     if (sessionChannel) supabase.removeChannel(sessionChannel);
     
-    sessionChannel = supabase
-        .channel(`kickout-${currentProfile.id}`)
+    const handleKickout = () => {
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        console.log('[VivoTV] Sesión liberada remotamente. Redirigiendo...');
+        showToast("⚠️ Tu sesión ha sido liberada desde otro dispositivo.", "info");
+        setTimeout(() => {
+            sessionStorage.removeItem('vivotv_current_profile');
+            window.location.href = 'profiles.html';
+        }, 2000);
+    };
+
+    sessionChannel = supabase.channel(`kickout-${currentProfile.id}`)
         .on('postgres_changes', { 
             event: 'UPDATE', 
             schema: 'public', 
             table: 'vivotv_profiles', 
             filter: `id=eq.${currentProfile.id}` 
         }, payload => {
-            // Si el last_heartbeat se vuelve null, fue una liberación forzada
-            if (payload.new && payload.new.last_heartbeat === null) {
-                console.log('[VivoTV] Sesión liberada remotamente. Redirigiendo...');
-                showToast("⚠️ Tu sesión ha sido liberada desde otro dispositivo.", "info");
-                setTimeout(() => {
-                    sessionStorage.removeItem('vivotv_current_profile');
-                    window.location.href = 'profiles.html';
-                }, 2500);
-            }
+            if (payload.new && payload.new.last_heartbeat === null) handleKickout();
+        })
+        .on('broadcast', { event: 'FORCE_EXIT' }, payload => {
+            console.log('[BROADCAST] Señal de expulsión recibida.');
+            handleKickout();
         })
         .subscribe();
 
-    console.log('[VivoTV] Sistema de concurrencia y expulsión real-time activo.');
+    console.log('[VivoTV] Sistema de concurrencia y expulsión real-time activo (Broadcast Enabled).');
 }
 
 async function stopHeartbeat() {
@@ -1045,7 +1047,6 @@ async function loadRecentlyWatched() {
         
     if (!history?.length) { section.classList.add('hidden'); return; }
     
-    section.classList.remove('hidden');
     carousel.innerHTML = '';
     
     const seen = new Set();
@@ -1065,26 +1066,45 @@ async function loadRecentlyWatched() {
 
     const results = await Promise.all(detailsPromises);
     
+    // Detectar sección para filtrado (Fase 10X UX)
+    const path = window.location.pathname;
+    const isPeliculasPage = path.includes('peliculas.html');
+    const isSeriesPage = path.includes('series.html');
+    const isAnimePage = path.includes('anime.html');
+    
+    let renderedCount = 0;
+
     results.forEach(res => {
         if (!res || !res.details || !res.details.poster_path) return;
-        
         const { details, historyItem } = res;
         
-        // Estimación de progreso si tenemos duración (runtime en min de TMDB)
+        // Determinar si es Anime (ID 16 en TMDB)
+        const genreIds = details.genres ? details.genres.map(g => g.id) : (details.genre_ids || []);
+        const isItemAnime = genreIds.includes(16);
+
+        // Aplicar Filtros de Sección
+        if (isPeliculasPage && historyItem.type !== 'movie') return;
+        if (isSeriesPage && (historyItem.type !== 'tv' || isItemAnime)) return;
+        if (isAnimePage && (historyItem.type !== 'tv' || !isItemAnime)) return;
+        
+        // Estimación de progreso
         let progressPercent = null;
         if (historyItem.progress_seconds && details.runtime) {
             const totalSecs = details.runtime * 60;
             progressPercent = Math.min(100, Math.floor((historyItem.progress_seconds / totalSecs) * 100));
-        } else if (historyItem.progress_seconds > 0) {
-            // Fallback para series o si no hay runtime: si hay progreso guardado, mostramos algo mínimo (ej 10%) 
-            // o lo dejamos nulo si no podemos calcularlo exacto.
-            // Para series, guardamos progreso por episodio, así que sin la duración del ep es difícil.
-            // Por ahora, si es > 0, ponemos un placeholder de progreso si queremos, o lo omitimos.
         }
 
         const card = CATALOG_UI.createMovieCard(details, historyItem.type, true, null, progressPercent);
         carousel.appendChild(card);
+        renderedCount++;
     });
+
+    // Si después de filtrar no quedó nada, ocultar sección
+    if (renderedCount === 0) {
+        section.classList.add('hidden');
+    } else {
+        section.classList.remove('hidden');
+    }
 }
 
 window.addEventListener('update-my-list', loadMyList);
