@@ -305,16 +305,17 @@ if (searchInput) {
 async function fetchAvailableIds() {
     if (!supabase) return;
 
-    // --- OPTIMIZACIÓN: CACHÉ DE CATÁLOGO ---
-    const cached = sessionStorage.getItem('vivotv_catalog_ids');
-    if (cached) {
-        const decoded = JSON.parse(cached);
-        availableMovies = new Set(decoded.movies);
-        availableSeries = new Set(decoded.series);
-        availableIds = new Set(decoded.all);
-        console.log('[VivoTV] Catálogo cargado desde caché ultra-rápida.');
-        return;
-    }
+    // --- OPTIMIZACIÓN: CACHÉ DE CATÁLOGO (TEMPORALMENTE DESACTIVADO) ---
+    // Si la caché guardó un error previo (array vacío), esto fuerza a leer la BD real.
+    // const cached = sessionStorage.getItem('vivotv_catalog_ids');
+    // if (cached) {
+    //     const decoded = JSON.parse(cached);
+    //     availableMovies = new Set(decoded.movies);
+    //     availableSeries = new Set(decoded.series);
+    //     availableIds = new Set(decoded.all);
+    //     console.log('[VivoTV] Catálogo cargado desde caché ultra-rápida.');
+    //     return;
+    // }
 
     try {
         const fetchAllIds = async (tableName) => {
