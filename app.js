@@ -141,11 +141,89 @@ function initMobileNavIndicator() {
     }, 100);
 }
 
+function initMagicSlide() {
+    const nav = document.querySelector('.mobile-nav');
+    const indicator = document.getElementById('navIndicator');
+    if (!nav || !indicator) return;
+
+    let isDragging = false;
+    let targetLink = null;
+    let preloadedUrls = new Set();
+    const navRect = nav.getBoundingClientRect();
+    const items = Array.from(nav.querySelectorAll('.mobile-nav-item'));
+
+    // Deshabilitar navegación por clic normal si se está arrastrando
+    items.forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (isDragging) e.preventDefault();
+        });
+    });
+
+    nav.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        indicator.classList.add('dragging');
+        handleTouchMove(e); // Actualizar instantáneamente al toque
+    }, { passive: true });
+
+    nav.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+    nav.addEventListener('touchend', () => {
+        isDragging = false;
+        indicator.classList.remove('dragging');
+        
+        // Carga Zero-Latency: Si hay un objetivo válido y no estamos ya en él
+        if (targetLink && !targetLink.classList.contains('active')) {
+            // Dar un feedback visual ultra rápido antes de cambiar
+            targetLink.classList.add('active'); 
+            window.location.href = targetLink.href;
+        } else {
+            // Si soltó fuera o en el mismo, devolver a su lugar
+            initMobileNavIndicator();
+        }
+    });
+
+    function handleTouchMove(e) {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        
+        // Limitar el movimiento dentro de la barra
+        let x = touch.clientX - navRect.left;
+        x = Math.max(0, Math.min(x, navRect.width));
+
+        // Encontrar elemento bajo el dedo (aproximado por columna)
+        const colWidth = navRect.width / items.length;
+        const index = Math.floor(x / colWidth);
+        const closestItem = items[Math.min(index, items.length - 1)];
+
+        if (closestItem) {
+            targetLink = closestItem;
+            
+            // Imantar el centro del indicador al centro del icono
+            const activeRect = closestItem.getBoundingClientRect();
+            const offsetLeft = activeRect.left - navRect.left;
+            const indicatorWidth = 64; 
+            
+            indicator.style.left = `${offsetLeft + (activeRect.width - indicatorWidth) / 2}px`;
+
+            // Zero-Latency: Pre-cargar (Prefetching) la página objetivo en segundo plano
+            const url = closestItem.href;
+            if (url && !preloadedUrls.has(url) && !closestItem.classList.contains('active')) {
+                preloadedUrls.add(url);
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = url;
+                document.head.appendChild(link);
+            }
+        }
+    }
+}
+
 // Inicializar efectos al cargar
 document.addEventListener('DOMContentLoaded', () => {
     initNavbarScroll();
     initMagneticHover();
     initMobileNavIndicator();
+    initMagicSlide();
     if (typeof initAuth === 'function') initAuth();
 });
 
