@@ -37,6 +37,12 @@ const btnPass       = document.getElementById('btnTogglePass');
 const authTitle     = document.getElementById('authTitle');
 const authSubtitle  = document.getElementById('authSubtitle');
 
+// Referencias Modal Salida (Fase 3 Global)
+const exitModal        = document.getElementById('exitModal');
+const btnSwitchProfile = document.getElementById('btnSwitchProfile');
+const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
+const btnCancelExit    = document.getElementById('btnCancelExit');
+
 let isLoginMode = !window.location.pathname.includes('registro.html');
 let heroItems   = [];
 let availableMovies = new Set();
@@ -476,6 +482,48 @@ async function fetchAvailableIds() {
     }
 }
 
+async function initAuth() {
+    if (!supabase) return;
+
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+            
+            // Si estamos en la página de login/registro pero ya hay sesión, ir al dashboard
+            const isAuthPage = window.location.pathname.endsWith('index.html') || 
+                               window.location.pathname.endsWith('registro.html') ||
+                               window.location.pathname === '/' ||
+                               window.location.pathname.endsWith('vivoweb/');
+            
+            if (isAuthPage) {
+                toDashboard(session.user);
+            } else {
+                // Estamos en otra página (películas, etc.), solo asegurar que dashSection esté visible si es necesario
+                if (dashSection) dashSection.classList.remove('hidden');
+                if (authSection) authSection.classList.add('hidden');
+                
+                // Cargar perfil actual si no está
+                if (!currentProfile) {
+                    currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+                    if (!currentProfile && !window.location.pathname.includes('profiles.html')) {
+                        window.location.href = 'profiles.html';
+                    }
+                }
+                
+                if (currentProfile && userNameEl) userNameEl.textContent = currentProfile.name;
+            }
+        } else {
+            toAuth();
+        }
+    });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        toDashboard(user);
+    } else {
+        toAuth();
+    }
+}
+
 async function toDashboard(user) {
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
@@ -505,17 +553,17 @@ async function toDashboard(user) {
     if (userProfile) {
         userProfile.style.cursor = 'pointer';
         userProfile.onclick = () => {
-            window.location.href = 'profiles.html';
+            const modal = document.getElementById('exitModal');
+            if (modal) modal.classList.add('active');
         };
     }
 
     if (mainNav)     mainNav.classList.remove('hidden');
     if (mobileNav)   mobileNav.classList.remove('hidden');
-    if (searchBox)   searchBox.classList.remove('hidden');
     
-    // --- NUEVO: CORAZÓN DE SESIÓN (Margen 15s) ---
+    // --- NUEVO: CORAZÓN DE SESIÓN (Máx 2 Dispositivos - Fase 3) ---
     startHeartbeat();
-    subscribeToSessionChanges();
+    checkConcurrentSessions();
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
 
@@ -782,103 +830,89 @@ function startHeroRotation() {
     }, 8000);
 }
 function stopHeroRotation() { if (heroRotationTimer) { clearInterval(heroRotationTimer); heroRotationTimer = null; } }
+// ================================================
+// GESTIÓN DE EVENTOS: LOGIN / REGISTRO / PERFILES
+// ================================================
+function setupAuthListeners() {
+    const loginForm = document.getElementById('loginForm');
+    const toggleLink = document.getElementById('toggleAuthMode');
+    const btnPass = document.getElementById('btnTogglePass');
+    const passwordEl = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+    const emailEl = document.getElementById('email');
+    const usernameEl = document.getElementById('username');
 
-if (toggleLink) {
-    // Ya no prevenimos el default porque queremos que navegue a registro.html / index.html
-    // Pero actualizamos los textos iniciales según el modo
-    if (btnText) btnText.textContent = isLoginMode ? 'Iniciar Sesión' : 'Registrarme';
-    if (authTitle) authTitle.textContent = isLoginMode ? 'Bienvenido de vuelta' : 'Crea tu cuenta';
-    if (authSubtitle) authSubtitle.textContent = isLoginMode ? 'Inicia sesión para disfrutar...' : 'Crea tu cuenta gratis...';
-}
-
-if (loginForm) loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    if (authError) authError.classList.add('hidden');
-    try {
-        const email = emailEl.value.trim();
-        const password = passwordEl.value;
-        if (isLoginMode) {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-        } else {
-            const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
-            const { data, error } = await supabase.auth.signUp({ 
-                email, 
-                password,
-                options: { 
-                    data: { 
-                        username: username,
-                        name: username 
-                    } 
-                }
-            });
-            if (error) throw error;
+    if (loginForm) {
+        console.log('[VivoTV] Capturando listener de Login/Registro...');
+        loginForm.onsubmit = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             
-            // ÉXITO: UI de confirmación optimizada (Fase 10X)
-            const authCard = document.querySelector('.auth-card');
-            if (authCard) {
-                authCard.innerHTML = `
-                    <div class="registration-success-ui">
-                        <div class="success-icon">📩</div>
-                        <h3>¡Correo enviado!</h3>
-                        <p>Hemos enviado un enlace de confirmación a: <strong>${email}</strong></p>
-                        <p class="verification-hint">Por favor, revisa tu bandeja de entrada (y la carpeta de spam) para activar tu cuenta.</p>
-                        <button class="btn btn-primary btn-block" onclick="window.location.reload()">Volver al Inicio</button>
-                    </div>
-                `;
+            setLoading(true);
+            const authError = document.getElementById('authError');
+            if (authError) authError.classList.add('hidden');
+
+            try {
+                const email = emailEl?.value.trim();
+                const password = passwordEl?.value;
+                
+                if (!email || !password) {
+                    throw new Error('Por favor, completa todos los campos.');
+                }
+
+                if (isLoginMode) {
+                    console.log('[Auth] Intentando Login via Supabase...');
+                    const { error } = await supabase.auth.signInWithPassword({ email, password });
+                    if (error) throw error;
+                } else {
+                    console.log('[Auth] Intentando Registro via Supabase...');
+                    const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
+                    const { error } = await supabase.auth.signUp({ 
+                        email, 
+                        password,
+                        options: { data: { username: username, name: username } }
+                    });
+                    if (error) throw error;
+                    
+                    // ÉXITO REGISTRO: UI Minimalista
+                    const authCard = document.querySelector('.auth-card');
+                    if (authCard) {
+                        authCard.innerHTML = `
+                            <div class="registration-success-ui">
+                                <div class="success-icon">📩</div>
+                                <h3>¡Correo enviado!</h3>
+                                <p>Revisa tu bandeja de entrada en: <strong>${email}</strong></p>
+                                <button class="btn btn-primary btn-block" onclick="window.location.reload()">Regresar</button>
+                            </div>
+                        `;
+                    }
+                    showToast('📩 Revisa tu correo para activar la cuenta.', 'success');
+                }
+            } catch (err) {
+                console.error('[Auth Error]:', err.message);
+                const authError = document.getElementById('authError');
+                if (authError) {
+                    authError.textContent = mapError(err.message);
+                    authError.classList.remove('hidden');
+                }
+                showToast(mapError(err.message), 'error');
+            } finally {
+                setLoading(false);
             }
-            showToast('📩 Enlace de verificación enviado.', 'success');
-        }
-    } catch (err) {
-        if (authError) {
-            authError.textContent = mapError(err.message);
-            authError.classList.remove('hidden');
-        }
-    } finally { setLoading(false); }
-});
+        };
+    }
 
-// --- SISTEMA DE SALIDA HÍBRIDO (Fase Hybrid Flow) ---
-const exitModal = document.getElementById('exitModal');
-const btnSwitchProfile = document.getElementById('btnSwitchProfile');
-const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
-const btnCancelExit = document.getElementById('btnCancelExit');
-
-if (btnLogout) {
-    btnLogout.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (exitModal) {
-            exitModal.classList.add('active');
-            document.body.classList.add('no-scroll');
-        } else {
-            // Fallback si el modal no existe en la página
-            handleLogoutAction();
-        }
-    });
-}
-
-if (btnCancelExit) {
-    btnCancelExit.onclick = () => {
-        exitModal.classList.remove('active');
-        document.body.classList.remove('no-scroll');
-    };
-}
-
-if (btnSwitchProfile) {
-    btnSwitchProfile.onclick = async () => {
-        setLoadingLogout(true);
-        await stopHeartbeat();
-        sessionStorage.removeItem('vivotv_current_profile');
-        window.location.href = 'profiles.html';
-    };
-}
-
-if (btnLogoutConfirm) {
-    btnLogoutConfirm.onclick = async () => {
-        setLoadingLogout(true);
-        await handleLogoutAction();
-    };
+    if (btnPass && passwordEl) {
+        btnPass.onclick = () => {
+            const isPass = passwordEl.type === 'password';
+            passwordEl.type = isPass ? 'text' : 'password';
+            if (eyeIcon) {
+                eyeIcon.innerHTML = isPass 
+                    ? '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.01-.16c0-1.66-1.34-3-3-3l-.16.01z"/>'
+                    : '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+            }
+        };
+    }
 }
 
 async function handleLogoutAction() {
@@ -940,35 +974,65 @@ async function startHeartbeat() {
     sendPulse();
     heartbeatTimer = setInterval(sendPulse, 10000); // Latido cada 10s
 
-    // 2. Suscripción Realtime para Detección de Expulsión (Fase Broadcast 10X)
-    if (sessionChannel) supabase.removeChannel(sessionChannel);
-    
-    const handleKickout = () => {
-        if (heartbeatTimer) clearInterval(heartbeatTimer);
-        console.log('[VivoTV] Sesión liberada remotamente. Redirigiendo...');
-        showToast("⚠️ Tu sesión ha sido liberada desde otro dispositivo.", "info");
-        setTimeout(() => {
-            sessionStorage.removeItem('vivotv_current_profile');
-            window.location.href = 'profiles.html';
-        }, 2000);
-    };
+    // Suscripción Realtime para Detección de Expulsión (Fase Broadcast 10X)
+    subscribeToSessionChanges();
 
-    sessionChannel = supabase.channel(`kickout-${currentProfile.id}`)
-        .on('postgres_changes', { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'vivotv_profiles', 
-            filter: `id=eq.${currentProfile.id}` 
-        }, payload => {
-            if (payload.new && payload.new.last_heartbeat === null) handleKickout();
-        })
-        .on('broadcast', { event: 'FORCE_EXIT' }, payload => {
-            console.log('[BROADCAST] Señal de expulsión recibida.');
-            handleKickout();
-        })
-        .subscribe();
+    // Iniciar chequeo de concurrencia regular (cada 1 min)
+    setInterval(checkConcurrentSessions, 60000);
+}
 
-    console.log('[VivoTV] Sistema de concurrencia y expulsión real-time activo (Broadcast Enabled).');
+// ================================================
+// SEGURIDAD: CONTROL DE SESIONES CONCURRENTES (Fase 3)
+// ================================================
+async function checkConcurrentSessions() {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        let deviceId = localStorage.getItem('vivotv_device_id');
+        if (!deviceId) {
+            deviceId = crypto.randomUUID();
+            localStorage.setItem('vivotv_device_id', deviceId);
+        }
+
+        // Registrar sesión actual (Silencioso)
+        const { error: upsertError } = await supabase.from('active_sessions').upsert({
+            user_id: user.id,
+            device_id: deviceId,
+            last_seen: new Date().toISOString()
+        });
+
+        if (upsertError) {
+            if (upsertError.code === '42P01') {
+                console.warn('[VivoTV] Por favor, ejecuta el script SQL provisto en Supabase para habilitar el control de dispositivos.');
+            }
+            return; // No bloqueamos la app si falta la tabla
+        }
+
+        // Contar sesiones activas de los últimos 2 minutos
+        const twoMinAgo = new Date(Date.now() - 120000).toISOString();
+        const { data: sessions, error } = await supabase.from('active_sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .gt('last_seen', twoMinAgo)
+            .order('last_seen', { ascending: false });
+
+        if (error) return;
+
+        if (sessions && sessions.length > 2) {
+            const isAuthorized = sessions.slice(0, 2).some(s => s.device_id === deviceId);
+            if (!isAuthorized) {
+                showToast('Límite de 2 dispositivos alcanzado. Cerrando sesión.');
+                setTimeout(() => {
+                    supabase.auth.signOut();
+                    sessionStorage.clear();
+                    window.location.href = 'index.html';
+                }, 3000);
+            }
+        }
+    } catch (e) {
+        console.error('[Session Guard Error]:', e);
+    }
 }
 
 async function stopHeartbeat() {
@@ -981,7 +1045,6 @@ async function stopHeartbeat() {
     }
 
     if (currentProfile && supabase) {
-        // Marcamos como inactivo inmediatamente al salir (RPC)
         await supabase.rpc('vivotv_release_session', { pid: currentProfile.id });
     }
 }
@@ -1001,8 +1064,6 @@ function subscribeToSessionChanges() {
             filter: `id=eq.${currentProfile.id}`
         }, (payload) => {
             const { last_heartbeat } = payload.new;
-            
-            // Si last_heartbeat es NULL, significa que nos han expulsado (Released)
             if (last_heartbeat === null) {
                 console.warn('[VivoTV] Sesión finalizada remotamente.');
                 handleRemoteLogout();
@@ -1405,11 +1466,37 @@ document.addEventListener('mouseup', stopDragging);
 document.addEventListener('mouseleave', stopDragging);
 
 // --- INICIALIZACIÓN DE PÁGINA DE HISTORIAL (Fase Historial) ---
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname.includes('historial.html')) {
+// ================================================
+// SPA ENGINE: RE-INICIALIZACIÓN DE PÁGINA
+// ================================================
+function initAppForPage() {
+    const path = window.location.pathname;
+    console.log(`[SPA Engine] Inicializando página: ${path}`);
+    
+    // 1. Activar Listeners de Auth (Login/Registro)
+    setupAuthListeners();
+
+    // 2. Verificar sesión/dashboard
+    initAuth();
+
+    // 3. Cargar lógica específica
+    if (path.includes('historial.html')) {
         loadFullHistory();
     }
-});
+    
+    // Actualizar flechas de carruseles si existen
+    document.querySelectorAll('.carousel').forEach(updateCarouselArrows);
+}
+
+// Escuchar cambios de página vía SPA (desde layout.js)
+window.addEventListener('vivotv:page-changed', initAppForPage);
+
+// Inicialización robusta para Módulos ESM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAppForPage);
+} else {
+    initAppForPage();
+}
 
 // Manejo de Flechas
 document.addEventListener('click', (e) => {
@@ -1448,14 +1535,16 @@ document.addEventListener('scroll', (e) => {
     }
 }, true);
 
-// La inicialización de DOMContentLoaded ya maneja initAuth al inicio del script.
 // ================================================
 // GLOBAL SYNC: REFRESH ON VISIBILITY
 // ================================================
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-        console.log('[Global Sync] Pestaña visible, refrescando historial desde la nube...');
-        loadRecentlyWatched();
-        loadMyList();
+        const path = window.location.pathname;
+        if (!path.includes('registro.html') && !path.includes('login.html')) {
+            console.log('[Global Sync] Pestaña visible, refrescando estado...');
+            loadRecentlyWatched();
+            loadMyList();
+        }
     }
 });

@@ -1,13 +1,37 @@
 import { CONFIG } from './config.js';
+import { VivoCache } from './cache.js';
+
+// Helper para escapar HTML y prevenir XSS (Fase 3: Seguridad)
+function _escapeHTML(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 /**
- * Servicio TMDB v2.1 — Todas las llamadas a la API de TMDB centralizadas aquí.
+ * Servicio TMDB v3.1 — Todas las llamadas a la API con persistencia IndexedDB.
  */
 export const TMDB_SERVICE = {
-    _cache: new Map(), // Caché en memoria para evitar peticiones redundantes
+    _cache: new Map(), // Memoria volátil para acceso inmediato
 
-    // Fix #8: Object.entries() en lugar de for...in (más robusto, evita props heredadas)
     async fetchFromTMDB(endpoint, params = {}) {
+        const cacheKey = `vivotv_api_cache_${endpoint}_${JSON.stringify(params)}`;
+        
+        // 1. Verificar Cache de MEMORIA (Nivel 1)
+        if (this._cache.has(cacheKey)) return this._cache.get(cacheKey);
+
+        // 2. Verificar Cache PERSISTENTE (Nivel 2: IndexedDB)
+        const cached = await VivoCache.get(cacheKey);
+        if (cached) {
+            console.log(`[VivoCache] Hit: ${endpoint}`);
+            this._cache.set(cacheKey, cached);
+            return cached;
+        }
+
         const currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
         const isKids = currentProfile?.is_kids === true;
         
@@ -17,24 +41,16 @@ export const TMDB_SERVICE = {
             const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
             url.searchParams.append('path', cleanPath);
         } else {
-            if (!CONFIG.USE_PROXY) console.warn("⚠️ MODO DESARROLLADOR: Consumiendo TMDB vía Front-end (Live Server detectado). Esto no es seguro para Producción.");
-            const _k = atob(CONFIG._tk);
+            const _k = CONFIG._tk;
             url = new URL(`https://api.themoviedb.org/3${endpoint}`);
             url.searchParams.append('api_key', _k);
             url.searchParams.append('language', 'es-MX');
         }
 
-        // --- FILTRO DE RED: PARENTAL CONTROL (Fase 5) ---
-        // Si el perfil es de NIÑOS, inyectamos parámetros de certificación G/PG
         if (isKids) {
             url.searchParams.append('certification_country', 'US');
             url.searchParams.append('certification.lte', 'PG-13');
             url.searchParams.append('include_adult', 'false');
-            
-            // Si es un endpoint de discovery, forzamos que no traiga nada R o PG-13
-            if (endpoint.includes('/discover/') || endpoint.includes('/trending/')) {
-                // TMDB maneja estos parámetros para el Discovery API
-            }
         }
 
         Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, val));
@@ -42,7 +58,13 @@ export const TMDB_SERVICE = {
         try {
             const res = await fetch(url.toString());
             if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-            return await res.json();
+            const data = await res.json();
+            
+            // 3. Guardar en AMBOS niveles de cache
+            this._cache.set(cacheKey, data);
+            await VivoCache.set(cacheKey, data);
+            
+            return data;
         } catch (e) {
             console.error(`TMDB fetch error (${endpoint}):`, e);
             return { results: [] };
@@ -202,16 +224,26 @@ export const CATALOG_UI = {
             return;
         }
 
-        // --- OPTIMIZACIÓN: DOCUMENT FRAGMENT ---
-        const fragment = document.createDocumentFragment();
-        items.forEach((item, index) => {
-            if (!item.poster_path) return;
-            const type = typeOverride || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
-            const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
-            const card = this.createMovieCard(item, type, isAvail);
-            fragment.appendChild(card);
-        });
-        container.appendChild(fragment);
+        // --- MEJORA: INTERSECTION OBSERVER (Fase 3: Lazy-Row) ---
+        // Solo inyectamos el HTML cuando la fila es visible.
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const fragment = document.createDocumentFragment();
+                    items.forEach(item => {
+                        if (!item.poster_path) return;
+                        const type = typeOverride || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
+                        const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
+                        const card = this.createMovieCard(item, type, isAvail);
+                        fragment.appendChild(card);
+                    });
+                    container.appendChild(fragment);
+                    observer.unobserve(container);
+                }
+            });
+        }, { rootMargin: '400px' }); // Margen generoso para evitar saltos visuales
+
+        observer.observe(container);
     },
 
     createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {
