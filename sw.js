@@ -31,16 +31,40 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch (Cache First, then Network)
+// Fetch (Stale-While-Revalidate para UI, Cache First para Imágenes)
 self.addEventListener('fetch', (event) => {
-    // Evitar cache para las peticiones de API (TMDB/Supabase)
-    if (event.request.url.includes('api.themoviedb.org') || 
-        event.request.url.includes('supabase.co')) {
+    const url = new URL(event.request.url);
+
+    // 1. Excluir Auth de Supabase y peticiones POST
+    if (url.href.includes('supabase.co/auth') || event.request.method !== 'GET') {
         return;
     }
 
+    // 2. Estrategia para Imágenes (TMDB y Avatares)
+    if (url.href.includes('tmdb.org') || url.pathname.includes('/assets/')) {
+        event.respondWith(
+            caches.open('vivotv-images').then((cache) => {
+                return cache.match(event.request).then((response) => {
+                    return response || fetch(event.request).then((networkResponse) => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                });
+            })
+        );
+        return;
+    }
+
+    // 3. Estrategia Stale-While-Revalidate para el resto (App Shell)
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => response || fetch(event.request))
+        caches.match(event.request).then((cachedResponse) => {
+            const fetchPromise = fetch(event.request).then((networkResponse) => {
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(event.request, networkResponse.clone());
+                });
+                return networkResponse;
+            });
+            return cachedResponse || fetchPromise;
+        })
     );
 });

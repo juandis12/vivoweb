@@ -237,6 +237,7 @@
             .subtitle { font-size: 0.9rem; margin-bottom: 25px; }
             .actions-container { margin-top: 40px; flex-direction: column; gap: 12px; padding: 0 40px; }
             .btn-vtv { width: 100%; padding: 12px; font-size: 0.8rem; }
+            #btnLogoutGlobal { border-color: rgba(239, 68, 68, 0.5) !important; color: #ef4444 !important; }
         }
 
         /* PIN Pad Modal - iOS Glassmorphism Style 🎬 */
@@ -358,10 +359,115 @@
             gap: 5px;
         }
         .lock-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* --- ESTILOS SELECTOR DE AVATARES --- */
+        .avatar-modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(20px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 11000;
+            opacity: 0; pointer-events: none;
+            transition: 0.4s;
+        }
+        .avatar-modal.active { opacity: 1; pointer-events: auto; }
+        
+        .avatar-selector-content {
+            background: #0b122b;
+            padding: 40px;
+            border-radius: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .avatar-option {
+            cursor: pointer;
+            transition: 0.3s;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid transparent;
+            aspect-ratio: 1/1;
+        }
+        .avatar-option:hover { transform: scale(1.05); border-color: rgba(255,255,255,0.3); }
+        .avatar-option.selected { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
+        
+        .avatar-img-choice {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        
+        .profile-avatar img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+
+        /* --- ESTILOS ONBOARDING (Nuevos Usuarios) --- */
+        #firstProfileContainer {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 1s ease;
+            width: 100%;
+            max-width: 500px;
+        }
+        #firstProfileContainer.active { display: flex; }
+        
+        .setup-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 50px 40px;
+            border-radius: 40px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+        }
+
+        .setup-avatar {
+            width: 160px; height: 160px;
+            background: var(--color-1, linear-gradient(135deg, #2563eb, #1e40af));
+            border-radius: 30px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 5rem; font-weight: 800;
+            margin: 0 auto 30px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            border: 4px solid rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        
+        .setup-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 18px 25px;
+            border-radius: 16px;
+            color: #fff;
+            font-size: 1.4rem;
+            text-align: center;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            outline: none;
+            margin-bottom: 25px;
+        }
+        .setup-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #fff;
+        }
     </style>
 </head>
 <body class="selection-mode" id="bodyRoot">
-    <div class="profile-container">
+    <!-- Contenedor de Selección Normal (Antiguos) -->
+    <div class="profile-container" id="selectionContainer">
         <h1 id="mainTitle">¿Quién está viendo?</h1>
         <p class="subtitle" id="mainSubtitle">Selecciona un perfil para empezar a disfrutar.</p>
         
@@ -372,6 +478,27 @@
         <div class="actions-container">
             <button class="btn-vtv" id="btnAdmin">Administrar Perfiles</button>
             <button class="btn-vtv btn-primary-vtv hidden" id="btnFinish">Listo</button>
+            <button class="btn-vtv" id="btnLogoutGlobal" style="border-color: rgba(255,255,255,0.1); color: #94a3b8; font-size: 0.8rem;">Cerrar Sesión en esta cuenta</button>
+        </div>
+    </div>
+
+    <!-- Contenedor de Bienvenida (Nuevos) -->
+    <div id="firstProfileContainer">
+        <div class="setup-card">
+            <h1 style="font-size: 2.5rem; margin-bottom: 10px;">¡Bienvenido!</h1>
+            <p class="subtitle" style="margin-bottom: 40px;">¿Cómo quieres que te llamemos en VivoTV?</p>
+            
+            <div class="setup-avatar" id="setupAvatar">?</div>
+            
+            <input type="text" id="setupName" class="setup-input" placeholder="Escribe tu nombre" maxlength="15" autofocus>
+            
+            <button class="btn-vtv btn-primary-vtv" id="btnCreateFirst" style="width: 100%;">
+                Empezar a disfrutar
+            </button>
+            
+            <p style="margin-top: 25px; color: #64748b; font-size: 0.85rem; cursor: pointer;" onclick="logoutGlobal()">
+                Cerrar sesión en esta cuenta
+            </p>
         </div>
     </div>
 
@@ -403,6 +530,22 @@
         </div>
     </div>
 
+    <!-- Modal Selector de Avatares -->
+    <div id="avatarModal" class="avatar-modal">
+        <div class="avatar-selector-content">
+            <h2 style="font-size: 2rem; margin-bottom: 10px;">Elige tu avatar</h2>
+            <p style="color: #94a3b8; margin-bottom: 30px;">Selecciona el personaje que más te guste.</p>
+            
+            <div class="avatar-grid" id="avatarGrid">
+                <!-- Se llena dinámicamente -->
+            </div>
+            
+            <div style="margin-top: 40px; display: flex; gap: 15px;">
+                <button class="btn-vtv" id="btnCancelAvatar" style="flex: 1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { CONFIG } from './config.js';
         import { showToast } from './utils.js';
@@ -421,16 +564,41 @@
         ];
 
         const grid = document.getElementById('profilesGrid');
-        const btnAdmin = document.getElementById('btnAdmin');
-        const btnFinish = document.getElementById('btnFinish');
-        const bodyRoot = document.getElementById('bodyRoot');
-        const mainTitle = document.getElementById('mainTitle');
         const mainSubtitle = document.getElementById('mainSubtitle');
+        
+        const selectionContainer = document.getElementById('selectionContainer');
+        const firstProfileContainer = document.getElementById('firstProfileContainer');
+        const setupNameInput = document.getElementById('setupName');
+        const setupAvatar = document.getElementById('setupAvatar');
+        const btnCreateFirst = document.getElementById('btnCreateFirst');
+
+        const avatarModal = document.getElementById('avatarModal');
+        const avatarGrid = document.getElementById('avatarGrid');
+        const btnCancelAvatar = document.getElementById('btnCancelAvatar');
+
+        let currentEditingProfileId = null;
+
+        const AVATAR_LIST = [
+            { id: 'spiderman', name: 'Spider-man', theme: 'Marvel', url: 'assets/avatars/avatar_spiderman.png' },
+            { id: 'ironman', name: 'Iron Man', theme: 'Marvel', url: 'assets/avatars/avatar_ironman.png' },
+            { id: 'wanda', name: 'Wanda', theme: 'Marvel', url: 'assets/avatars/avatar_wanda.png' },
+            { id: 'scott', name: 'Scott McCall', theme: 'Teen Wolf', url: 'assets/avatars/avatar_scott.png' },
+            { id: 'damon', name: 'Damon', theme: 'TVD', url: 'assets/avatars/avatar_damon.png' },
+            { id: 'elena', name: 'Elena', theme: 'TVD', url: 'assets/avatars/avatar_elena.png' },
+            { id: 'tanjiro', name: 'Tanjiro', theme: 'Anime', url: 'assets/avatars/avatar_tanjiro.png' },
+            { id: 'woody', name: 'Woody', theme: 'Pixar', url: 'assets/avatars/avatar_woody.png' }
+        ];
 
         // --- CARGA DESDE DB (Fase 15: Server Synced) ---
         let globalServerNow = new Date();
 
         async function loadProfilesFromDB() {
+            if (window.location.protocol === 'file:') {
+                console.error('[Protección CORS] No puedes abrir la app directamente desde el archivo. Usa un servidor local (Live Server).');
+                showToast('⚠️ Error de seguridad: Usa Live Server para cargar los perfiles.', 'error', 8000);
+                return;
+            }
+
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
                 window.location.href = 'index.html';
@@ -445,7 +613,12 @@
                 
                 // Fallback a select normal si falla el RPC (aunque perderíamos precisión)
                 const { data: fallbackData } = await supabase.from('vivotv_profiles').select('*');
-                if (fallbackData) profiles = fallbackData;
+                if (fallbackData) {
+                    profiles = fallbackData;
+                    selectionContainer.style.display = 'block';
+                    firstProfileContainer.classList.remove('active');
+                    renderProfiles();
+                }
                 return;
             }
 
@@ -453,10 +626,17 @@
                 profiles = data;
                 if (data.length > 0) {
                     globalServerNow = new Date(data[0].server_now);
+                    // Mostrar selección de perfiles (Usuario Antiguo)
+                    selectionContainer.style.display = 'block';
+                    firstProfileContainer.classList.remove('active');
+                    renderProfiles();
+                } else {
+                    // Mostrar bienvenida (Usuario Nuevo)
+                    selectionContainer.style.display = 'none';
+                    firstProfileContainer.classList.add('active');
+                    setupNameInput.focus();
                 }
             }
-            
-            renderProfiles();
         }
 
         function renderProfiles() {
@@ -471,8 +651,8 @@
                 const item = document.createElement('div');
                 item.className = 'profile-item';
                 item.innerHTML = `
-                    <div class="profile-avatar ${p.color}">
-                        ${p.name[0]}
+                    <div class="profile-avatar ${p.avatar_url ? '' : p.color}" onclick="openAvatarPicker('${p.id}')">
+                        ${p.avatar_url ? `<img src="${p.avatar_url}" alt="${p.name}">` : p.name[0]}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
                         ${_isOccupied(p) ? `
                             <div class="occupied-badge">EN USO</div>
@@ -497,7 +677,11 @@
                 if (_isOccupied(p)) item.classList.add('occupied');
                 
                 item.onclick = (e) => {
-                    if (isEditing || e.target.closest('.edit-overlay') || e.target.closest('.profile-name-input')) return;
+                    if (isEditing) {
+                        if (e.target.closest('.profile-avatar')) openAvatarPicker(p.id);
+                        return;
+                    }
+                    if (e.target.closest('.edit-overlay') || e.target.closest('.profile-name-input')) return;
                     selectProfile(p);
                 };
                 grid.appendChild(item);
@@ -777,6 +961,7 @@
             bodyRoot.classList.remove('admin-mode');
             btnFinish.classList.add('hidden');
             btnAdmin.classList.remove('hidden');
+            document.getElementById('btnLogoutGlobal').classList.remove('hidden');
             mainTitle.textContent = '¿Quién está viendo?';
             mainSubtitle.textContent = 'Selecciona un perfil para empezar a disfrutar.';
             
@@ -784,9 +969,126 @@
             await loadProfilesFromDB();
         };
 
+        document.getElementById('btnLogoutGlobal').onclick = async () => {
+            if (confirm('¿Estás seguro de que deseas cerrar sesión en esta cuenta?')) {
+                sessionStorage.clear();
+                await supabase.auth.signOut();
+                window.location.href = 'index.html';
+            }
+        };
+
+        btnAdmin.addEventListener('click', () => {
+             document.getElementById('btnLogoutGlobal').classList.add('hidden');
+        });
+        
+        btnFinish.addEventListener('click', () => {
+             document.getElementById('btnLogoutGlobal').classList.remove('hidden');
+        });
+
+        // --- LÓGICA DE BIENVENIDA ---
+        setupNameInput.oninput = (e) => {
+            const val = e.target.value.trim();
+            setupAvatar.textContent = val ? val[0].toUpperCase() : "?";
+        };
+
+        btnCreateFirst.onclick = async () => {
+            const name = setupNameInput.value.trim();
+            if (!name) {
+                showToast("Por favor, ingresa un nombre", "warning");
+                return;
+            }
+            
+            btnCreateFirst.disabled = true;
+            btnCreateFirst.textContent = "Creando...";
+
+            const { data: { user } } = await supabase.auth.getUser();
+            const randomColor = `color-${Math.floor(Math.random() * 4) + 1}`;
+
+            const { data, error } = await supabase
+                .from('vivotv_profiles')
+                .insert([{
+                    user_id: user.id,
+                    name: name,
+                    color: randomColor,
+                    is_kids: false
+                }])
+                .select()
+                .single();
+
+            if (error) {
+                showToast("Error al crear perfil", "error");
+                btnCreateFirst.disabled = false;
+                btnCreateFirst.textContent = "Empezar a disfrutar";
+            } else {
+                // Seleccionar e ir al index
+                sessionStorage.setItem('vivotv_current_profile', JSON.stringify(data));
+                window.location.href = 'index.html';
+            }
+        };
+
+        window.logoutGlobal = async () => {
+            sessionStorage.clear();
+            await supabase.auth.signOut();
+            window.location.href = 'index.html';
+        };
+
+        // --- SISTEMA DE AVATARES ---
+        function openAvatarPicker(profileId) {
+            if (!isEditing) return;
+            currentEditingProfileId = profileId;
+            renderAvatarGrid();
+            avatarModal.classList.add('active');
+        }
+
+        function renderAvatarGrid() {
+            avatarGrid.innerHTML = '';
+            const p = profiles.find(x => x.id === currentEditingProfileId);
+            
+            AVATAR_LIST.forEach(av => {
+                const opt = document.createElement('div');
+                opt.className = `avatar-option ${p?.avatar_url === av.url ? 'selected' : ''}`;
+                opt.innerHTML = `<img src="${av.url}" class="avatar-img-choice" title="${av.name} (${av.theme})">`;
+                opt.onclick = () => selectAvatar(av.url);
+                avatarGrid.appendChild(opt);
+            });
+        }
+
+        async function selectAvatar(url) {
+            const id = currentEditingProfileId;
+            avatarModal.classList.remove('active');
+            
+            showToast("Guardando avatar...", "info");
+            
+            const { error } = await supabase
+                .from('vivotv_profiles')
+                .update({ avatar_url: url })
+                .eq('id', id);
+
+            if (error) {
+                console.error('[VivoTV] Supabase Error:', error);
+                
+                if (error.message && error.message.includes('column "avatar_url" of relation "vivotv_profiles" does not exist')) {
+                    showToast("❌ Error: Debes ejecutar el script SQL en Supabase para habilitar avatares.", "error", 8000);
+                } else {
+                    showToast("Error al guardar avatar: " + error.message, "error");
+                }
+            } else {
+                // Actualizar localmente solo si el server confirmó
+                const p = profiles.find(x => x.id === id);
+                if (p) p.avatar_url = url;
+                
+                showToast("Avatar actualizado con éxito", "success");
+                renderProfiles();
+            }
+        }
+
+        btnCancelAvatar.onclick = () => avatarModal.classList.remove('active');
+
         // Iniciar carga y refresco automático cada 10s
         loadProfilesFromDB();
-        setInterval(loadProfilesFromDB, 10000);
+        setInterval(() => {
+            if (profiles.length > 0) loadProfilesFromDB();
+        }, 10000);
     </script>
 </body>
 </html>

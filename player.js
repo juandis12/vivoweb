@@ -483,6 +483,7 @@ export const PLAYER_LOGIC = {
             }, 10000); // 10 segundos de espera
         }
 
+        this._createSmartControls();
         video.play().catch(() => {});
         
         // --- PULSO INICIAL (Fase 6) ---
@@ -527,6 +528,13 @@ export const PLAYER_LOGIC = {
                 } else if (remaining <= 5 || remaining > 125) {
                     this._hideNextEpisodeButton();
                 }
+            }
+
+            // Detección de Intro (Primeros 3 minutos)
+            if (cur > 10 && cur < 180) {
+                document.getElementById('btnSkipIntro')?.classList.add('active');
+            } else {
+                document.getElementById('btnSkipIntro')?.classList.remove('active');
             }
         };
     },
@@ -781,7 +789,48 @@ export const PLAYER_LOGIC = {
         document.body.classList.remove('no-scroll');
     },
 
-    _stopTrailer() {
+    _createSmartControls() {
+        const container = document.getElementById('playerContainer');
+        if (!container || document.getElementById('btnSkipIntro')) return;
+
+        // Botón Saltar Intro
+        const skipBtn = document.createElement('button');
+        skipBtn.id = 'btnSkipIntro';
+        skipBtn.className = 'skip-intro-btn';
+        skipBtn.innerHTML = `<span>Saltar Intro</span> <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`;
+        container.appendChild(skipBtn);
+
+        // Botón PiP
+        const pipBtn = document.createElement('div');
+        pipBtn.id = 'btnPiP';
+        pipBtn.className = 'pip-btn';
+        pipBtn.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff" title="Ventana flotante"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>`;
+        container.appendChild(pipBtn);
+
+        pipBtn.onclick = () => this.togglePiP();
+        skipBtn.onclick = () => {
+            const video = document.getElementById('videoPlayer');
+            if (video) video.currentTime += 85; // Salta aprox 1:25
+            skipBtn.classList.remove('active');
+            showToast("Intro saltada", "info");
+        };
+    },
+
+    async togglePiP() {
+        const video = document.getElementById('videoPlayer');
+        if (!video) return;
+        try {
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+            } else {
+                await video.requestPictureInPicture();
+            }
+        } catch (e) {
+            showToast("PiP no soportado en este navegador", "error");
+        }
+    },
+
+    _stopProgressTimer() {
         if (this.trailerTimer) clearTimeout(this.trailerTimer);
         const container = document.querySelector('.auto-trailer-container');
         const backdrop = document.getElementById('modalBackdrop');

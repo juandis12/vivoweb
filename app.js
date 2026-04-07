@@ -838,12 +838,69 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
     } finally { setLoading(false); }
 });
 
-if (btnLogout) btnLogout.addEventListener('click', async () => { 
+// --- SISTEMA DE SALIDA HÍBRIDO (Fase Hybrid Flow) ---
+const exitModal = document.getElementById('exitModal');
+const btnSwitchProfile = document.getElementById('btnSwitchProfile');
+const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
+const btnCancelExit = document.getElementById('btnCancelExit');
+
+if (btnLogout) {
+    btnLogout.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (exitModal) {
+            exitModal.classList.add('active');
+            document.body.classList.add('no-scroll');
+        } else {
+            // Fallback si el modal no existe en la página
+            handleLogoutAction();
+        }
+    });
+}
+
+if (btnCancelExit) {
+    btnCancelExit.onclick = () => {
+        exitModal.classList.remove('active');
+        document.body.classList.remove('no-scroll');
+    };
+}
+
+if (btnSwitchProfile) {
+    btnSwitchProfile.onclick = async () => {
+        setLoadingLogout(true);
+        await stopHeartbeat();
+        sessionStorage.removeItem('vivotv_current_profile');
+        window.location.href = 'profiles.html';
+    };
+}
+
+if (btnLogoutConfirm) {
+    btnLogoutConfirm.onclick = async () => {
+        setLoadingLogout(true);
+        await handleLogoutAction();
+    };
+}
+
+async function handleLogoutAction() {
     stopHeroRotation(); 
-    await stopHeartbeat(); // Detener latido y liberar perfil
+    await stopHeartbeat(); 
     sessionStorage.clear();
     await supabase.auth.signOut(); 
-    window.location.reload();
+    window.location.href = 'index.html';
+}
+
+function setLoadingLogout(loading) {
+    const btns = [btnSwitchProfile, btnLogoutConfirm, btnCancelExit];
+    btns.forEach(b => { if(b) b.disabled = loading; });
+    if (btnLogoutConfirm) btnLogoutConfirm.textContent = loading ? 'Cerrando...' : 'Cerrar sesión de la cuenta';
+}
+
+// Cerrar modal al hacer clic fuera
+window.addEventListener('click', (e) => {
+    if (e.target === exitModal) {
+        exitModal.classList.remove('active');
+        document.body.classList.remove('no-scroll');
+    }
 });
 if (btnPass) btnPass.addEventListener('click', () => { passwordEl.type = passwordEl.type === 'password' ? 'text' : 'password'; });
 

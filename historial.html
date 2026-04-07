@@ -127,6 +127,25 @@
         </a>
     </nav>
 
+    <!-- Modal de Salida (Híbrido) -->
+    <div id="exitModal" class="exit-modal-overlay">
+        <div class="exit-modal-content">
+            <h2 class="exit-modal-title">¿A dónde quieres ir?</h2>
+            <p class="exit-modal-text">Selecciona una opción para continuar.</p>
+            <div class="exit-modal-actions">
+                <button class="exit-modal-btn btn-change-profile" id="btnSwitchProfile">
+                    Elegir otro perfil
+                </button>
+                <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">
+                    Cerrar sesión de la cuenta
+                </button>
+                <button class="exit-modal-btn btn-cancel-exit" id="btnCancelExit">
+                    Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast hidden" id="toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
