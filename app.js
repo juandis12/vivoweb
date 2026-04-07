@@ -11,14 +11,9 @@ try {
     setSupabase(supabase);
 } catch(e) { console.warn('Supabase no disponible:', e); }
 
-// ---- DEBUG GLOBAL (SUPERVIVENCIA) ----
-let globalDebugBox = document.createElement('div');
-globalDebugBox.id = 'vivoGlobalDebug';
-globalDebugBox.style.cssText = 'position:fixed;top:10px;right:10px;background:rgba(255,0,0,0.8);color:#fff;padding:10px;font-family:monospace;font-size:12px;z-index:99999;max-width:400px;border:2px solid red;';
-document.body.appendChild(globalDebugBox);
-
+// ---- FUNCIONES DE DEBUG ----
 function fatalLog(msg) {
-    globalDebugBox.innerHTML += `<div>💥 ${msg}</div>`;
+    console.error(`💥 ${msg}`);
 }
 
 window.onerror = function(message, source, lineno, colno, error) {
@@ -29,7 +24,8 @@ window.addEventListener('unhandledrejection', function(event) {
     fatalLog(`Promise Rejection: ${event.reason}`);
 });
 
-fatalLog('App.js cargado correctamente.');
+// App cargada
+console.log('App.js cargado correctamente.');
 
 // ---- REFERENCIAS DOM ----
 const authSection   = document.getElementById('authSection');
@@ -464,23 +460,15 @@ async function toDashboard(user) {
     if (userProfile) {
         userProfile.style.cursor = 'pointer';
         userProfile.onclick = () => {
-            const modal = document.getElementById('exitModal');
-            if (modal) modal.classList.add('active');
+            toAuth(); // Redirigir directo a la selección de cuentas
         };
     }
 
     if (mainNav)     mainNav.classList.remove('hidden');
     if (mobileNav)   mobileNav.classList.remove('hidden');
     
-    // --- NUEVO: DEBUG VISUAL ---
-    let debugBox = document.getElementById('vivoDebugBox');
-    if (!debugBox) {
-        debugBox = document.createElement('div');
-        debugBox.id = 'vivoDebugBox';
-        debugBox.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.8);color:#0f0;padding:10px;font-family:monospace;font-size:12px;z-index:99999;max-width:300px;border:1px solid #0f0;';
-        document.body.appendChild(debugBox);
-    }
-    const logDebug = (msg) => { debugBox.innerHTML += `<div>> ${msg}</div>`; console.log(msg); };
+    // --- NUEVO: DEBUG VISUAL (Silenciado en consola) ---
+    const logDebug = (msg) => { console.log(`[Dashboard] ${msg}`); };
     
     logDebug('Iniciando Dashboard...');
     
