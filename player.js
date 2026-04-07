@@ -29,6 +29,13 @@ export const PLAYER_LOGIC = {
             iframe.src = '';
             iframe.style.opacity = '0';
         }
+        const container = document.querySelector('.auto-trailer-container');
+        const backdrop = document.getElementById('modalBackdrop');
+        if (backdrop) backdrop.classList.remove('fade-out');
+        if (container) {
+            container.classList.remove('visible');
+            setTimeout(() => container.remove(), 1000);
+        }
     },
 
     async _startAutoplayTrailer(tmdbId, type) {
@@ -424,7 +431,7 @@ export const PLAYER_LOGIC = {
         loader.classList.remove('hidden');
 
         // --- CONVERSOR INTELIGENTE DE URLS ---
-        const smartUrl = this._getSmartUrl(url);
+        const smartUrl = this._getSmartUrl(url, seekSeconds);
         const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
         
         // Listener para fin de video (Solo streams directos)
@@ -462,33 +469,42 @@ export const PLAYER_LOGIC = {
         }, 1000);
     },
 
-    _getSmartUrl(url) {
+    _getSmartUrl(url, seekSeconds = 0) {
         if (!url) return '';
         let cleanUrl = url.trim();
 
         // 1. YouTube
         if (cleanUrl.includes('youtube.com/watch?v=') || cleanUrl.includes('youtube.com/v/')) {
             const id = cleanUrl.split(/v\/|v=/)[1].split(/[?&]/)[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
         if (cleanUrl.includes('youtu.be/')) {
             const id = cleanUrl.split('youtu.be/')[1].split(/[?&]/)[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
         // 2. Vimeo (Fix para soportar subdominios y parámetros extra)
         if (cleanUrl.includes('vimeo.com/') && !cleanUrl.includes('player.vimeo.com')) {
             const parts = cleanUrl.split('vimeo.com/')[1].split(/[?&]/);
             const id = parts[0];
-            return `https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0&portrait=0`;
+            return `https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
         }
         // 3. Facebook
         if (cleanUrl.includes('facebook.com/') && !cleanUrl.includes('plugins/video.php')) {
-            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=0&width=1280`;
+            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=0&width=1280${seekSeconds > 0 ? '&t=' + seekSeconds : ''}`;
         }
+        
+        // 4. Intentar inyectar tiempo en reproductores genéricos
+        if (seekSeconds > 0 && !cleanUrl.includes('?t=') && !cleanUrl.includes('&t=') && !cleanUrl.includes('#t=')) {
+            // Utilizamos el hash estándar HTML5 Media Fragment
+            cleanUrl += `${cleanUrl.includes('#') ? '&' : '#'}t=${seekSeconds}`;
+        }
+        
         return cleanUrl;
     },
 
     _startVideoTracking(video, seek) {
+        let hasJumped = seek <= 0;
+
         // --- SALTO INTELIGENTE CON RETRASO (Fase 10X UX) ---
         // Ajustado a 10 segundos para sincronizar con la duración de los anuncios
         if (seek > 0) {
@@ -496,6 +512,7 @@ export const PLAYER_LOGIC = {
             setTimeout(() => {
                 if (video && !video.paused) {
                     video.currentTime = seek;
+                    hasJumped = true;
                     showToast("Reanudando desde donde te quedaste...", "info");
                 }
             }, 10000); // 10 segundos de espera
@@ -510,7 +527,7 @@ export const PLAYER_LOGIC = {
         // --- TRACKING ROBUSTO POR INTERVALOS (Fase Precision) ---
         this._stopProgressTimer();
         this.progressTimer = setInterval(() => {
-            if (video && !video.paused) {
+            if (video && !video.paused && hasJumped) {
                 const cur = Math.floor(video.currentTime);
                 this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
             }
@@ -518,6 +535,7 @@ export const PLAYER_LOGIC = {
 
         // Guardado al pausar
         video.onpause = () => {
+            if (!hasJumped) return;
             const cur = Math.floor(video.currentTime);
             this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
         };
@@ -848,16 +866,7 @@ export const PLAYER_LOGIC = {
         }
     },
 
-    _stopProgressTimer() {
-        if (this.trailerTimer) clearTimeout(this.trailerTimer);
-        const container = document.querySelector('.auto-trailer-container');
-        const backdrop = document.getElementById('modalBackdrop');
-        if (backdrop) backdrop.classList.remove('fade-out');
-        if (container) {
-            container.classList.remove('visible');
-            setTimeout(() => container.remove(), 1000); // Darle tiempo a la transición CSS
-        }
-    },
+
 
     async _startAutoplayTrailer(id, type) {
         try {
