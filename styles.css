@@ -1991,3 +1991,16 @@ nav a.active::after { width: 24px; }
 .toast-success { border-color: rgba(34, 197, 94, 0.3) !important; }
 .toast-error { border-color: rgba(239, 68, 68, 0.3) !important; }
 .toast-warning { border-color: rgba(234, 179, 8, 0.3) !important; }
+
+/* --- REGISTRATION SUCCESS UI (Fase 10X) --- */
+.registration-success-ui { padding: 30px 10px; text-align: center; animation: fadeIn 0.5s ease; }
+.success-icon { font-size: 4rem; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(37, 99, 235, 0.4)); }
+.registration-success-ui h3 { font-size: 1.8rem; margin-bottom: 15px; color: #fff; }
+.registration-success-ui p { color: #94a3b8; line-height: 1.6; margin-bottom: 15px; }
+.verification-hint { font-size: 0.85rem; background: rgba(37, 99, 235, 0.1); padding: 10px; border-radius: 8px; border-left: 3px solid #2563eb; }
+
+/* --- ADD PROFILE ITEM (Profiles Page) --- */
+.add-avatar { background: transparent !important; border: 2px dashed rgba(255, 255, 255, 0.3) !important; box-shadow: none !important; display: flex !important; align-items: center; justify-content: center; }
+.add-avatar:hover { border-color: #fff !important; background: rgba(255, 255, 255, 0.05) !important; transform: scale(1.05); }
+.add-icon { font-size: 4rem; color: rgba(255, 255, 255, 0.4); font-weight: 300; }
+.add-profile-item:hover .add-icon { color: #fff; }

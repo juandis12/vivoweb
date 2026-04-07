@@ -222,8 +222,13 @@ function initMagicSlide() {
 document.addEventListener('DOMContentLoaded', () => {
     initNavbarScroll();
     initMagneticHover();
-    initMobileNavIndicator();
-    initMagicSlide();
+    
+    // Solo inicializar navegación móvil si hay un perfil activo
+    if (mobileNav && currentProfile) {
+        initMobileNavIndicator();
+        initMagicSlide();
+    }
+    
     if (typeof initAuth === 'function') initAuth();
 });
 
@@ -756,7 +761,10 @@ function toAuth() {
     if (dashSection) dashSection.classList.add('hidden');
     if (userProfile) userProfile.classList.add('hidden');
     if (mainNav)     mainNav.classList.add('hidden');
-    if (mobileNav)   mobileNav.classList.add('hidden');
+    if (mobileNav) {
+        mobileNav.classList.add('hidden');
+        mobileNav.style.display = 'none'; // Forzar ocultación absoluta
+    }
     if (searchBox)   searchBox.classList.add('hidden');
     if (loginForm)   loginForm.reset();
     if (authError)   authError.classList.add('hidden');
@@ -807,11 +815,20 @@ if (loginForm) loginForm.addEventListener('submit', async (e) => {
             });
             if (error) throw error;
             
-            // ÉXITO: Notificación y redirección suave
-            showToast('📩 ¡Correo de confirmación enviado! Revisa tu bandeja de entrada.', 'success');
-            setTimeout(() => {
-                window.location.href = 'index.html'; // O tu URL de login
-            }, 3000);
+            // ÉXITO: UI de confirmación optimizada (Fase 10X)
+            const authCard = document.querySelector('.auth-card');
+            if (authCard) {
+                authCard.innerHTML = `
+                    <div class="registration-success-ui">
+                        <div class="success-icon">📩</div>
+                        <h3>¡Correo enviado!</h3>
+                        <p>Hemos enviado un enlace de confirmación a: <strong>${email}</strong></p>
+                        <p class="verification-hint">Por favor, revisa tu bandeja de entrada (y la carpeta de spam) para activar tu cuenta.</p>
+                        <button class="btn btn-primary btn-block" onclick="window.location.reload()">Volver al Inicio</button>
+                    </div>
+                `;
+            }
+            showToast('📩 Enlace de verificación enviado.', 'success');
         }
     } catch (err) {
         if (authError) {

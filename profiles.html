@@ -449,9 +449,11 @@
                 return;
             }
 
-            if (data && data.length > 0) {
+            if (data) {
                 profiles = data;
-                globalServerNow = new Date(data[0].server_now); // Usar tiempo de servidor
+                if (data.length > 0) {
+                    globalServerNow = new Date(data[0].server_now);
+                }
             }
             
             renderProfiles();
@@ -459,6 +461,12 @@
 
         function renderProfiles() {
             grid.innerHTML = '';
+            
+            if (profiles.length === 0 && !isEditing) {
+                mainTitle.textContent = "¡Bienvenido a VivoTV!";
+                mainSubtitle.textContent = "Crea tu primer perfil para empezar a disfrutar.";
+            }
+
             profiles.forEach(p => {
                 const item = document.createElement('div');
                 item.className = 'profile-item';
@@ -494,7 +502,48 @@
                 };
                 grid.appendChild(item);
             });
+
+            // --- BOTÓN AGREGAR PERFIL (Solo si < 4 y en modo admin o vacío) ---
+            if (profiles.length < 4 && (isEditing || profiles.length === 0)) {
+                const addBtn = document.createElement('div');
+                addBtn.className = 'profile-item add-profile-item';
+                addBtn.innerHTML = `
+                    <div class="profile-avatar add-avatar">
+                        <span class="add-icon">+</span>
+                    </div>
+                    <div class="profile-name-input" style="pointer-events: none;">Agregar Perfil</div>
+                `;
+                addBtn.onclick = addNewProfile;
+                grid.appendChild(addBtn);
+            }
         }
+
+        window.addNewProfile = async () => {
+            const name = prompt("Nombre del nuevo perfil (máx 15 caracteres):");
+            if (!name || name.trim() === "") return;
+            
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const randomColor = `color-${Math.floor(Math.random() * 4) + 1}`;
+            
+            const { error } = await supabase
+                .from('vivotv_profiles')
+                .insert([{
+                    user_id: user.id,
+                    name: name.trim(),
+                    color: randomColor,
+                    is_kids: false
+                }]);
+
+            if (error) {
+                console.error(error);
+                showToast("Error al crear el perfil", "error");
+            } else {
+                showToast("Perfil creado con éxito", "success");
+                loadProfilesFromDB();
+            }
+        };
 
         function _isOccupied(p, nowOverride = null) {
             if (!p.last_heartbeat) return false;
