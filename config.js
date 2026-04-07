@@ -12,8 +12,7 @@ export const CONFIG = {
 
     // OFUSCACIÓN DE LLAVE (XOR Shield - Fase 3 Corregida)
     get _tk() {
-        const _s = [110, 109, 108, 111, 110, 101, 111, 98, 101, 122, 108, 111, 110, 101, 108, 122, 100, 111, 101, 111, 103, 111, 110, 122, 101, 108, 122, 103, 110, 122, 108, 103];
-        return _s.map(c => String.fromCharCode(c ^ 0x61)).join('').toLowerCase();
+        return '743275e25bcea0a320b87d2af271a136';
     },
 
     // Detección automática de entorno: Proxy en Prod, Directo en Local (Live Server)

@@ -19,6 +19,24 @@ export const PLAYER_LOGIC = {
     trailerTimer: null,
     marathonTimer: null,
 
+    _stopTrailer() {
+        if (this.trailerTimer) {
+            clearTimeout(this.trailerTimer);
+            this.trailerTimer = null;
+        }
+        const iframe = document.getElementById('trailerIframe');
+        if (iframe) {
+            iframe.src = '';
+            iframe.style.opacity = '0';
+        }
+    },
+
+    async _startAutoplayTrailer(tmdbId, type) {
+        // En un escenario real, buscaríamos la clave de Youtube del Tráiler en TMDB
+        // Por ahora, solo evitamos el crash silenciosamente.
+        console.log(`[VivoTV] Reproduciría Trailer de ${tmdbId} aquí.`);
+    },
+
     async openDetail(tmdbId, type = 'movie', supabaseClient, availableIds = new Set()) {
         this._stopTrailer(); // Detener tráiler previo si existe
         this.availableIds = availableIds; // Guardar para uso en similares

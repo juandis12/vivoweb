@@ -11,6 +11,26 @@ try {
     setSupabase(supabase);
 } catch(e) { console.warn('Supabase no disponible:', e); }
 
+// ---- DEBUG GLOBAL (SUPERVIVENCIA) ----
+let globalDebugBox = document.createElement('div');
+globalDebugBox.id = 'vivoGlobalDebug';
+globalDebugBox.style.cssText = 'position:fixed;top:10px;right:10px;background:rgba(255,0,0,0.8);color:#fff;padding:10px;font-family:monospace;font-size:12px;z-index:99999;max-width:400px;border:2px solid red;';
+document.body.appendChild(globalDebugBox);
+
+function fatalLog(msg) {
+    globalDebugBox.innerHTML += `<div>💥 ${msg}</div>`;
+}
+
+window.onerror = function(message, source, lineno, colno, error) {
+    fatalLog(`${message} at ${lineno}:${colno}`);
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+    fatalLog(`Promise Rejection: ${event.reason}`);
+});
+
+fatalLog('App.js cargado correctamente.');
+
 // ---- REFERENCIAS DOM ----
 const authSection   = document.getElementById('authSection');
 const dashSection   = document.getElementById('dashboardSection');
@@ -383,7 +403,7 @@ async function initAuth() {
                                window.location.pathname.endsWith('vivoweb/');
             
             if (isAuthPage) {
-                toDashboard(session.user);
+                if (!isDashboardInit) toDashboard(session.user);
             } else {
                 // Estamos en otra página (películas, etc.), solo asegurar que dashSection esté visible si es necesario
                 if (dashSection) dashSection.classList.remove('hidden');
@@ -406,13 +426,16 @@ async function initAuth() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-        toDashboard(user);
+        if (!isDashboardInit) toDashboard(user);
     } else {
         toAuth();
     }
 }
 
+let isDashboardInit = false;
 async function toDashboard(user) {
+    if (isDashboardInit) return; // EVITAR BUCLE INFINITO
+    isDashboardInit = true;
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
@@ -449,6 +472,18 @@ async function toDashboard(user) {
     if (mainNav)     mainNav.classList.remove('hidden');
     if (mobileNav)   mobileNav.classList.remove('hidden');
     
+    // --- NUEVO: DEBUG VISUAL ---
+    let debugBox = document.getElementById('vivoDebugBox');
+    if (!debugBox) {
+        debugBox = document.createElement('div');
+        debugBox.id = 'vivoDebugBox';
+        debugBox.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.8);color:#0f0;padding:10px;font-family:monospace;font-size:12px;z-index:99999;max-width:300px;border:1px solid #0f0;';
+        document.body.appendChild(debugBox);
+    }
+    const logDebug = (msg) => { debugBox.innerHTML += `<div>> ${msg}</div>`; console.log(msg); };
+    
+    logDebug('Iniciando Dashboard...');
+    
     // --- NUEVO: CORAZÓN DE SESIÓN (Máx 2 Dispositivos - Fase 3) ---
     startHeartbeat();
     checkConcurrentSessions();
@@ -467,8 +502,10 @@ async function toDashboard(user) {
     });
 
     try {
+        logDebug('Cargando IDs desde BD...');
         // 2. Cargar disponibilidad de base de datos
         await fetchAvailableIds();
+        logDebug(`IDs cargados en DB: ${availableIds.size}`);
         
         // 3. Inicializar Páginas Específicas
         if (document.getElementById('favoritesGrid')) {
@@ -513,9 +550,12 @@ async function toDashboard(user) {
             const el = document.getElementById(containerId);
             if (!el) return;
             const data = await fetchFn();
+            const tmdbCount = data.results ? data.results.length : 0;
             // Restauramos el filtro estricto por base de datos
             let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+            let preProfileCount = filtered.length;
             filtered = filterItemsByProfile(filtered); // Aplicar filtro global
+            logDebug(`Fila [${type}]: TMDB=${tmdbCount}, DB Match=${preProfileCount}, PostFiltrado=${filtered.length}`);
             CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
             
             const section = el.closest('.catalog-row');
@@ -538,6 +578,7 @@ async function toDashboard(user) {
                     const data = await TMDB_SERVICE.getTrending();
                     let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
                     filtered = filterItemsByProfile(filtered); // Aplicar filtro global
+                    logDebug(`Hero TMDB: TMDB=${data.results.length}, Match=${filtered.length}`);
                     CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds);
                 })(),
                 renderRow('popularMoviesCarousel', () => TMDB_SERVICE.getPopularMovies(), 'movie'),
@@ -606,10 +647,10 @@ async function loadGridData(type, page, append = false) {
         const isAnimePage  = document.body.classList.contains('page-anime');
 
         if (isMoviesPage || isSeriesPage || isAnimePage) {
-            console.log(`[VivoTV] Cargando rejilla filtrada (${type}). IDs totales:`, 
-                type === 'tv' ? availableSeries.size : availableMovies.size);
+            const targetType = isMoviesPage ? 'movie' : 'tv';
+            console.log(`[VivoTV] Cargando rejilla filtrada (${targetType}).`);
             
-            const targetSet = type === 'tv' ? availableSeries : availableMovies;
+            const targetSet = isMoviesPage ? availableMovies : availableSeries;
             const allIds = Array.from(targetSet);
             
             const perPage = 28;
@@ -621,13 +662,16 @@ async function loadGridData(type, page, append = false) {
 
             if (pageIds.length) {
                 const detailsArray = [];
-                const chunkSize = 10;
+                const chunkSize = 6; // Menos por chunk para no golpear rate limit de TMDB
                 for (let i = 0; i < pageIds.length; i += chunkSize) {
                     const chunk = pageIds.slice(i, i + chunkSize);
                     const chunkRes = await Promise.all(
-                        chunk.map(id => TMDB_SERVICE.getDetails(id, type).catch(() => null))
+                        chunk.map(id => TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv').catch(() => null))
                     );
                     detailsArray.push(...chunkRes);
+                    if (i + chunkSize < pageIds.length) {
+                        await new Promise(r => setTimeout(r, 250)); // Respiración API
+                    }
                 }
 
                 if (loader) loader.classList.add('hidden');
@@ -1361,13 +1405,19 @@ document.addEventListener('mouseleave', stopDragging);
 // ================================================
 function initAppForPage() {
     const path = window.location.pathname;
-    console.log(`[SPA Engine] Inicializando página: ${path}`);
+    fatalLog(`[SPA Engine] Inicializando página: ${path}`);
     
-    // 1. Activar Listeners de Auth (Login/Registro)
-    setupAuthListeners();
+    try {
+        // 1. Activar Listeners de Auth (Login/Registro)
+        setupAuthListeners();
+        fatalLog('Auth listeners activados.');
+    } catch(e) { fatalLog('Error en auth listeners: ' + e.message); }
 
-    // 2. Verificar sesión/dashboard
-    initAuth();
+    try {
+        // 2. Verificar sesión/dashboard
+        initAuth();
+        fatalLog('initAuth ejecutado exitosamente.');
+    } catch(e) { fatalLog('Error crítico en initAuth: ' + e.message); }
 
     // 3. Cargar lógica específica
     if (path.includes('historial.html')) {

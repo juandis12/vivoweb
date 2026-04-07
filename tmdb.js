@@ -19,7 +19,7 @@ export const TMDB_SERVICE = {
     _cache: new Map(), // Memoria volátil para acceso inmediato
 
     async fetchFromTMDB(endpoint, params = {}) {
-        const cacheKey = `vivotv_api_cache_${endpoint}_${JSON.stringify(params)}`;
+        const cacheKey = `vivotv_api_cache_v2_${endpoint}_${JSON.stringify(params)}`;
         
         // 1. Verificar Cache de MEMORIA (Nivel 1)
         if (this._cache.has(cacheKey)) return this._cache.get(cacheKey);
@@ -112,17 +112,6 @@ export const TMDB_SERVICE = {
 /**
  * Motor de Renderizado de la UI del Catálogo
  */
-
-function _escapeHTML(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
 export const CATALOG_UI = {
 
     renderHero(movie, heroItems = []) {
