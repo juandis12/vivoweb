@@ -317,60 +317,55 @@ if (searchInput) {
 // La lógica de Auth y Recuperación ahora está unificada abajo.
 
 
-// NUEVO: Obtener IDs disponibles en Supabase con Caché de Sesión
+// NUEVO: Obtener IDs disponibles optimizados (Solo usa RPC de backend)
 async function fetchAvailableIds() {
     if (!supabase) return;
 
-    // --- OPTIMIZACIÓN: CACHÉ DE CATÁLOGO (TEMPORALMENTE DESACTIVADO) ---
-    // Si la caché guardó un error previo (array vacío), esto fuerza a leer la BD real.
-    // const cached = sessionStorage.getItem('vivotv_catalog_ids');
-    // if (cached) {
-    //     const decoded = JSON.parse(cached);
-    //     availableMovies = new Set(decoded.movies);
-    //     availableSeries = new Set(decoded.series);
-    //     availableIds = new Set(decoded.all);
-    //     console.log('[VivoTV] Catálogo cargado desde caché ultra-rápida.');
-    //     return;
-    // }
+    // Retomamos el uso de SessionStorage para evitar consultas repetitivas de red
+    const cached = sessionStorage.getItem('vivotv_catalog_ids');
+    if (cached) {
+        try {
+            const decoded = JSON.parse(cached);
+            if (decoded && decoded.all && decoded.all.length > 0) {
+                availableMovies = new Set(decoded.movies);
+                availableSeries = new Set(decoded.series);
+                availableIds = new Set(decoded.all);
+                console.log('[VivoTV] Catálogo cargado desde caché ultra-rápida.');
+                return;
+            }
+        } catch(e) { console.warn('Cache invalido:', e); }
+    }
 
     try {
-        const fetchAllIds = async (tableName) => {
-            let all = [], start = 0;
-            while (true) {
-                const { data, error } = await supabase.from(tableName)
-                    .select('tmdb_id')
-                    .range(start, start + 999);
-                if (error) { console.error(`[VivoTV] Error ${tableName}:`, error); break; }
-                if (data) all.push(...data);
-                if (!data || data.length < 1000) break;
-                start += 1000;
-            }
-            return { data: all };
-        };
-
-        const [movies, series] = await Promise.all([
-            fetchAllIds('video_sources'),
-            fetchAllIds('series_episodes')
-        ]);
+        // Reducimos cientos de lecturas a UNA sola petición rápida con RPC
+        // Requiere tener la función creada en el editor SQL de Supabase.
+        const { data, error } = await supabase.rpc('get_catalog_ids');
         
         availableMovies = new Set();
         availableSeries = new Set();
         availableIds = new Set();
 
-        if (movies.data) {
-            movies.data.forEach(m => {
-                const id = m.tmdb_id.toString();
-                availableMovies.add(id);
-                availableIds.add(id);
-            });
+        if (error) { 
+            console.error('[VivoTV] Error RPC get_catalog_ids, verifica base de datos:', error); 
+            return;
         }
-        if (series.data) {
-            series.data.forEach(s => {
-                const id = s.tmdb_id.toString();
-                availableSeries.add(id);
-                availableIds.add(id);
-            });
-        }
+
+        const moviesArr = data?.movies || [];
+        const seriesArr = data?.series || [];
+
+        moviesArr.forEach(id => {
+            if (!id) return;
+            const strId = id.toString();
+            availableMovies.add(strId);
+            availableIds.add(strId);
+        });
+
+        seriesArr.forEach(id => {
+            if (!id) return;
+            const strId = id.toString();
+            availableSeries.add(strId);
+            availableIds.add(strId);
+        });
 
         // Guardar en sesión
         sessionStorage.setItem('vivotv_catalog_ids', JSON.stringify({
@@ -379,7 +374,7 @@ async function fetchAvailableIds() {
             all: Array.from(availableIds)
         }));
 
-        console.log('[VivoTV] Catálogo en tiempo real sincronizado y guardado en sesión.');
+        console.log(`[VivoTV] Catálogo sincronizado desde Edge RPC: ${availableIds.size} títulos.`);
     } catch (e) { 
         console.error('Error fetching available IDs:', e);
         showToast('Error cargando biblioteca. Revisa tu conexión.');

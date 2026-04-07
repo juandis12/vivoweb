@@ -453,12 +453,11 @@ export const PLAYER_LOGIC = {
                 video.classList.add('hidden');
                 iframe.classList.remove('hidden');
                 
-                // --- AJUSTE DE BYPASS PREMIUM ---
+                // --- AJUSTE DE SEGURIDAD (FASE 3) ---
+                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
                 if (isFacebook) {
-                    iframe.removeAttribute('sandbox');
                     iframe.setAttribute('referrerpolicy', 'no-referrer');
                 } else {
-                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
                     iframe.removeAttribute('referrerpolicy');
                 }
                 
@@ -504,6 +503,7 @@ export const PLAYER_LOGIC = {
 
     _startVideoTracking(video, seek) {
         let hasJumped = seek <= 0;
+        let lastSavedTime = -1;
 
         // --- SALTO INTELIGENTE CON RETRASO (Fase 10X UX) ---
         // Ajustado a 10 segundos para sincronizar con la duración de los anuncios
@@ -524,27 +524,35 @@ export const PLAYER_LOGIC = {
         // --- PULSO INICIAL (Fase 6) ---
         this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(seek), _supabase);
         
-        // --- TRACKING ROBUSTO POR INTERVALOS (Fase Precision) ---
         this._stopProgressTimer();
-        this.progressTimer = setInterval(() => {
-            if (video && !video.paused && hasJumped) {
-                const cur = Math.floor(video.currentTime);
-                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
-            }
-        }, 15000);
 
-        // Guardado al pausar
-        video.onpause = () => {
-            if (!hasJumped) return;
-            const cur = Math.floor(video.currentTime);
-            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+        // DEBOUNCED SAVE (Telemetría eficiente)
+        const doSave = () => {
+            if (video && hasJumped) {
+                const cur = Math.floor(video.currentTime);
+                if (cur !== lastSavedTime && cur > 0) {
+                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+                    lastSavedTime = cur;
+                }
+            }
         };
+
+        // Backup de salvado cada 60s (reduciendo un 75% las peticiones a Supabase)
+        this.progressTimer = setInterval(() => { if (!video.paused) doSave(); }, 60000);
+
+        // Visibility & Unload Tracking (Asegura guardar telemetría si cierran ventana o minimizan)
+        this._currentVisHandler = () => { if (document.hidden) doSave(); };
+        this._currentBeforeUnloadHandler = () => { doSave(); };
+        document.addEventListener('visibilitychange', this._currentVisHandler);
+        window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
+
+        // Guardado al pausar (Event Driven)
+        video.onpause = () => { doSave(); };
 
         // Guardado al terminar + Siguiente Episodio
         video.onended = () => {
+            doSave();
             this._stopProgressTimer();
-            const total = Math.floor(video.duration);
-            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, total, _supabase);
 
             if (this.currentType === 'tv') {
                 const nextEp = this._getNextEpisode();
@@ -582,15 +590,40 @@ export const PLAYER_LOGIC = {
         this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, seekSeconds, _supabase);
 
         let elapsed = seekSeconds;
+        let lastSavedElapsed = -1;
+
+        const doSaveIframe = () => {
+            if (elapsed !== lastSavedElapsed) {
+                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, elapsed, _supabase);
+                lastSavedElapsed = elapsed;
+            }
+        };
+
+        // Tick local interno simulando el video, se envía a Supabase solo cada 60s
+        let ticks = 0;
         this.progressTimer = setInterval(() => {
             elapsed += 15;
-            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, elapsed, _supabase);
+            ticks++;
+            if (ticks % 4 === 0) doSaveIframe(); // cada 60s envía
         }, 15000);
+
+        this._currentVisHandler = () => { if (document.hidden) doSaveIframe(); };
+        this._currentBeforeUnloadHandler = () => { doSaveIframe(); };
+        document.addEventListener('visibilitychange', this._currentVisHandler);
+        window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
     },
 
     _stopProgressTimer() {
         if (this.progressTimer) clearInterval(this.progressTimer);
         this.progressTimer = null;
+        if (this._currentVisHandler) {
+            document.removeEventListener('visibilitychange', this._currentVisHandler);
+            this._currentVisHandler = null;
+        }
+        if (this._currentBeforeUnloadHandler) {
+            window.removeEventListener('beforeunload', this._currentBeforeUnloadHandler);
+            this._currentBeforeUnloadHandler = null;
+        }
     },
 
     async _saveProgress(tmdbId, type, season, episode, seconds, supabaseClient) {
