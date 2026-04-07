@@ -298,120 +298,8 @@ if (searchInput) {
         }
     });
 }
-// ================================================
-// SUPABASE AUTH
-// ================================================
-async function initAuth() {
-    if (!supabase) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    // Si estamos en una página que requiere login y no hay sesión, redirigir
-    const protectedPages = ['milista.html'];
-    const isProtected = protectedPages.some(p => window.location.pathname.includes(p));
+// La lógica de Auth y Recuperación ahora está unificada abajo.
 
-    if (session) {
-        // --- SESIÓN DE PERFIL (Fase 8) ---
-        const currentProfile = sessionStorage.getItem('vivotv_current_profile');
-        
-        const isRecovery = window.location.hash.toLowerCase().includes('type=recovery');
-        const loginPages = ['login_screen.html', 'registro.html', 'profiles.html'];
-        const isOnAuthPage = loginPages.some(p => window.location.pathname.includes(p));
-
-        if (!currentProfile && !window.location.pathname.includes('profiles.html') && !isRecovery) {
-            window.location.href = 'profiles.html';
-            return;
-        }
-
-        if (isOnAuthPage && currentProfile) {
-            window.location.href = 'index.html';
-            return;
-        }
-        
-        await toDashboard(session.user);
-    } else {
-        if (isProtected) {
-            window.location.href = 'index.html';
-            return;
-        }
-        toAuth();
-    }
-
-    // --- DETECCIÓN DE ERRORES EN URL (Fase 9) ---
-    const hash = window.location.hash;
-    if (hash.includes('error_code=otp_expired')) {
-        showToast("⚠️ El enlace de recuperación ha caducado. Por favor, solicita uno nuevo.");
-        window.history.replaceState(null, null, window.location.pathname); // Limpiar hash
-    } else if (hash.includes('error_description')) {
-        showToast("⚠️ Error en el enlace de recuperación. Inténtalo de nuevo.");
-        window.history.replaceState(null, null, window.location.pathname);
-    }
-
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN')  await toDashboard(session.user);
-        if (event === 'SIGNED_OUT') toAuth();
-        
-        // --- RECUPERACIÓN DE CONTRASEÑA (Fase 9) ---
-        if (event === 'PASSWORD_RECOVERY') {
-            console.log('[SUPABASE] Modo Recuperación detectado.');
-            const modal = document.getElementById('resetPasswordModal');
-            if (modal) modal.classList.remove('hidden');
-        }
-    });
-
-    // Lógica para el botón de "Olvidé mi contraseña"
-    const btnForgot = document.getElementById('forgotPassword');
-    if (btnForgot) {
-        btnForgot.onclick = async (e) => {
-            e.preventDefault();
-            const email = prompt("Introduce tu correo electrónico para enviarte un enlace de recuperación:");
-            if (!email) return;
-
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + window.location.pathname,
-            });
-
-            if (error) {
-                showToast(`Error: ${error.message}`);
-            } else {
-                showToast("¡Email enviado! Revisa tu bandeja de entrada.");
-            }
-        };
-    }
-
-    // Lógica para guardar la nueva contraseña
-    const btnSaveNew = document.getElementById('btnSaveNewPassword');
-    const resetModal = document.getElementById('resetPasswordModal');
-    if (btnSaveNew && resetModal) {
-        btnSaveNew.onclick = async () => {
-            const pass1 = document.getElementById('newPassword').value;
-            const pass2 = document.getElementById('confirmNewPassword').value;
-
-            if (pass1.length < 6) {
-                showToast("La contraseña debe tener al menos 6 caracteres.");
-                return;
-            }
-            if (pass1 !== pass2) {
-                showToast("Las contraseñas no coinciden.");
-                return;
-            }
-
-            const { error } = await supabase.auth.updateUser({ password: pass1 });
-            if (error) {
-                showToast(`Error al actualizar: ${error.message}`);
-            } else {
-                showToast("¡Contraseña actualizada con éxito!");
-                resetModal.classList.add('hidden');
-                // Opcional: Cerrar sesión para que vuelvan a entrar
-                await supabase.auth.signOut();
-            }
-        };
-
-        const btnCancelReset = document.getElementById('btnCancelReset');
-        if (btnCancelReset) {
-            btnCancelReset.onclick = () => resetModal.classList.add('hidden');
-        }
-    }
-}
 
 // NUEVO: Obtener IDs disponibles en Supabase con Caché de Sesión
 async function fetchAvailableIds() {
@@ -433,8 +321,7 @@ async function fetchAvailableIds() {
             let all = [], start = 0;
             while (true) {
                 const { data, error } = await supabase.from(tableName)
-                    .select('tmdb_id, created_at')
-                    .order('created_at', { ascending: false })
+                    .select('tmdb_id')
                     .range(start, start + 999);
                 if (error) { console.error(`[VivoTV] Error ${tableName}:`, error); break; }
                 if (data) all.push(...data);
@@ -567,33 +454,34 @@ async function toDashboard(user) {
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
 
-    // 1. Cargar disponibilidad (CON CACHÉ)
-    await fetchAvailableIds();
-
-    // 2. Inicializar Páginas Específicas
-    if (document.getElementById('favoritesGrid')) {
-        loadMyList();
-    }
-    if (document.getElementById('searchResultsGrid')) {
-        initSearchPage();
-    }
-
-    // 3. Detectar tipo de página para rows
-    const isMoviesPage = document.body.classList.contains('page-movies');
-    const isSeriesPage = document.body.classList.contains('page-series');
-    const isAnimePage  = document.body.classList.contains('page-anime');
-    const pageType     = (isSeriesPage || isAnimePage) ? 'tv' : (isMoviesPage ? 'movie' : 'all');
+    // --- REESTRUCTURACIÓN: Respuesta Visual Inmediata ---
+    // 1. Mostrar skeletons inmediatamente antes de consultar la red
+    const carouselIds = [
+        'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
+        'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
+        'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel'
+    ];
+    carouselIds.forEach(id => {
+        if (document.getElementById(id)) CATALOG_UI.showSkeletons(id);
+    });
 
     try {
-        // 3. Mostrar skeletons
-        const carouselIds = [
-            'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
-            'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
-            'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel'
-        ];
-        carouselIds.forEach(id => {
-            if (document.getElementById(id)) CATALOG_UI.showSkeletons(id);
-        });
+        // 2. Cargar disponibilidad de base de datos
+        await fetchAvailableIds();
+        
+        // 3. Inicializar Páginas Específicas
+        if (document.getElementById('favoritesGrid')) {
+            loadMyList();
+        }
+        if (document.getElementById('searchResultsGrid')) {
+            initSearchPage();
+        }
+
+        // 4. Detectar tipo de página para rows
+        const isMoviesPage = document.body.classList.contains('page-movies');
+        const isSeriesPage = document.body.classList.contains('page-series');
+        const isAnimePage  = document.body.classList.contains('page-anime');
+        const pageType     = (isSeriesPage || isAnimePage) ? 'tv' : (isMoviesPage ? 'movie' : 'all');
 
         // 4. Cargar Hero
         let heroData;
@@ -607,7 +495,7 @@ async function toDashboard(user) {
             heroData = await TMDB_SERVICE.getTrending();
         }
 
-        // Filtrar Hero solo disponibles Y según perfil
+        // Filtrar Hero solo para items disponibles en la base de datos
         let availableHeroItems = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString()));
         heroItems = filterItemsByProfile(availableHeroItems).slice(0, 8);
         
@@ -624,6 +512,7 @@ async function toDashboard(user) {
             const el = document.getElementById(containerId);
             if (!el) return;
             const data = await fetchFn();
+            // Restauramos el filtro estricto por base de datos
             let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
             filtered = filterItemsByProfile(filtered); // Aplicar filtro global
             CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
@@ -796,7 +685,7 @@ async function loadGridData(type, page, append = false) {
 }
 
 function toAuth() {
-    sessionStorage.clear(); // Destruir catálogos cacheados al salir
+    // Ya no hacemos sessionStorage.clear() aquí para evitar borrar el perfil al cargar.
     
     const isAuthPage = window.location.pathname.endsWith('index.html') || 
                        window.location.pathname.endsWith('registro.html') ||
