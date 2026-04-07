@@ -439,7 +439,7 @@ export const PLAYER_LOGIC = {
                 
                 iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen');
                 iframe.src = smartUrl;
-                this._startIframeTracking();
+                this._startIframeTracking(seekSeconds);
             }
         }, 1000);
     },
@@ -487,19 +487,42 @@ export const PLAYER_LOGIC = {
         
         // --- PULSO INICIAL (Fase 6) ---
         this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(seek), _supabase);
-        // Limpiamos listeners previos
+        
+        // --- TRACKING ROBUSTO POR INTERVALOS (Fase Precision) ---
+        this._stopProgressTimer();
+        this.progressTimer = setInterval(() => {
+            if (video && !video.paused) {
+                const cur = Math.floor(video.currentTime);
+                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+            }
+        }, 15000);
+
+        // Guardado al pausar
+        video.onpause = () => {
+            const cur = Math.floor(video.currentTime);
+            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+        };
+
+        // Guardado al terminar + Siguiente Episodio
+        video.onended = () => {
+            this._stopProgressTimer();
+            const total = Math.floor(video.duration);
+            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, total, _supabase);
+
+            if (this.currentType === 'tv') {
+                const nextEp = this._getNextEpisode();
+                if (nextEp) this._showMarathonCountdown(nextEp, _supabase);
+            }
+        };
+
         video.ontimeupdate = () => {
             const cur = Math.floor(video.currentTime);
             const total = Math.floor(video.duration);
 
-            if (cur > 0 && cur % 15 === 0) { // Guardamos cada 15 segundos
-                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
-            }
-
             // Detección de "Siguiente Episodio" (2 minutos antes de terminar)
-            if (this.currentType === 'tv' && total > 300) { // Solo si dura más de 5min
+            if (this.currentType === 'tv' && total > 300) {
                 const remaining = total - cur;
-                if (remaining <= 120 && remaining > 5) { // Entre 2min y 5 seg antes del fin
+                if (remaining <= 120 && remaining > 5) {
                     this._showNextEpisodeButton();
                 } else if (remaining <= 5 || remaining > 125) {
                     this._hideNextEpisodeButton();
@@ -508,13 +531,13 @@ export const PLAYER_LOGIC = {
         };
     },
 
-    _startIframeTracking() {
+    _startIframeTracking(seekSeconds = 0) {
         this._stopProgressTimer();
         
         // --- PULSO INICIAL (Fase 6) ---
-        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, 0, _supabase);
+        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, seekSeconds, _supabase);
 
-        let elapsed = 0;
+        let elapsed = seekSeconds;
         this.progressTimer = setInterval(() => {
             elapsed += 15;
             this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, elapsed, _supabase);

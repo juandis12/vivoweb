@@ -116,12 +116,42 @@ function initNavbarScroll() {
     });
 }
 
+// ================================================
+// UI: NAVEGACIÓN MÓVIL (LÍQUIDO IPHONE)
+// ================================================
+function initMobileNavIndicator() {
+    const nav = document.querySelector('.mobile-nav');
+    const indicator = document.getElementById('navIndicator');
+    const activeItem = document.querySelector('.mobile-nav-item.active');
+
+    if (!nav || !indicator || !activeItem) return;
+
+    // Pequeño delay para asegurar que el layout esté listo (especialmente en móviles)
+    setTimeout(() => {
+        const navRect = nav.getBoundingClientRect();
+        const activeRect = activeItem.getBoundingClientRect();
+
+        const offsetLeft = activeRect.left - navRect.left;
+        const itemWidth = activeRect.width;
+        const indicatorWidth = 64; // Coincide con el CSS (.mobile-nav-indicator width)
+
+        // Posicionamiento centrado bajo el icono
+        indicator.style.left = `${offsetLeft + (itemWidth - indicatorWidth) / 2}px`;
+        indicator.style.opacity = "1";
+    }, 100);
+}
+
 // Inicializar efectos al cargar
 document.addEventListener('DOMContentLoaded', () => {
     initNavbarScroll();
     initMagneticHover();
-    initAuth();
+    initMobileNavIndicator();
+    if (typeof initAuth === 'function') initAuth();
 });
+
+// Actualizar posición si cambia el tamaño de pantalla
+window.addEventListener('resize', initMobileNavIndicator);
+window.addEventListener('orientationchange', () => setTimeout(initMobileNavIndicator, 200));
 
 // NUEVO: Toggle de búsqueda para móviles/táctil
 if (searchBox) {
