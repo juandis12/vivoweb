@@ -337,35 +337,45 @@ async function fetchAvailableIds() {
     }
 
     try {
-        // Reducimos cientos de lecturas a UNA sola petición rápida con RPC
-        // Requiere tener la función creada en el editor SQL de Supabase.
-        const { data, error } = await supabase.rpc('get_catalog_ids');
+        // --- Fase de Adaptación: Carga Dual (Perfect Sync) ---
+        // Intentamos obtener IDs de video_sources (Fuentes reales) y de content (Referencia)
+        const [{ data: sources, error: errorS }, { data: contents, error: errorC }] = await Promise.all([
+            supabase.from('video_sources').select('tmdb_id, type'),
+            supabase.from('content').select('tmdb_id, content_type')
+        ]);
         
         availableMovies = new Set();
         availableSeries = new Set();
         availableIds = new Set();
 
-        if (error) { 
-            console.error('[VivoTV] Error RPC get_catalog_ids, verifica base de datos:', error); 
+        if (errorS && errorC) { 
+            console.error('[VivoTV] ❌ Error crítico cargando catálogo:', errorS.message || errorC.message);
             return;
         }
 
-        const moviesArr = data?.movies || [];
-        const seriesArr = data?.series || [];
+        // 1. Procesar video_sources (Prioridad)
+        if (sources) {
+            sources.forEach(item => {
+                if (!item.tmdb_id) return;
+                const strId = item.tmdb_id.toString();
+                availableIds.add(strId);
+                if (item.type === 'movie') availableMovies.add(strId);
+                else if (item.type === 'tv' || item.type === 'series') availableSeries.add(strId);
+            });
+        }
 
-        moviesArr.forEach(id => {
-            if (!id) return;
-            const strId = id.toString();
-            availableMovies.add(strId);
-            availableIds.add(strId);
-        });
+        // 2. Procesar content (Complemento)
+        if (contents) {
+            contents.forEach(item => {
+                if (!item.tmdb_id) return;
+                const strId = item.tmdb_id.toString();
+                availableIds.add(strId);
+                if (item.content_type === 'movie') availableMovies.add(strId);
+                else if (item.content_type === 'series' || item.content_type === 'tv') availableSeries.add(strId);
+            });
+        }
 
-        seriesArr.forEach(id => {
-            if (!id) return;
-            const strId = id.toString();
-            availableSeries.add(strId);
-            availableIds.add(strId);
-        });
+        console.log(`[VivoTV] 📊 Catálogo sincronizado: ${availableIds.size} títulos (Movies: ${availableMovies.size}, TV: ${availableSeries.size})`);
 
         // Guardar en sesión
         sessionStorage.setItem('vivotv_catalog_ids', JSON.stringify({
@@ -912,12 +922,15 @@ async function checkConcurrentSessions() {
             localStorage.setItem('vivotv_device_id', deviceId);
         }
 
-        // Registrar sesión actual (Silencioso)
-        const { error: upsertError } = await supabase.from('active_sessions').upsert({
-            user_id: user.id,
-            device_id: deviceId,
-            last_seen: new Date().toISOString()
-        });
+        // Registrar sesión actual (Silencioso) - Fase Fix: onConflict para evitar 409
+        const { error: upsertError } = await supabase.from('active_sessions').upsert(
+            {
+                user_id: user.id,
+                device_id: deviceId,
+                last_seen: new Date().toISOString() // Esquema usa last_seen
+            },
+            { onConflict: 'user_id, device_id' }
+        );
 
         if (upsertError) {
             if (upsertError.code === '42P01') {

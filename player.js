@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { TMDB_SERVICE } from './tmdb.js';
+import { TMDB_SERVICE, CATALOG_UI } from './tmdb.js';
 import { showToast } from './utils.js';
 
 let _supabase = null;
@@ -248,7 +248,8 @@ export const PLAYER_LOGIC = {
     },
 
     async _loadMovieSource(tmdbId, supabaseClient) {
-        const { data, error } = await supabaseClient.from('video_sources').select('stream_url').eq('tmdb_id', String(tmdbId)).maybeSingle();
+        // En el esquema, tmdb_id es BigInt, lo pasamos como Number para compatibilidad
+        const { data, error } = await supabaseClient.from('video_sources').select('stream_url').eq('tmdb_id', Number(tmdbId)).maybeSingle();
         if (error || !data?.stream_url) {
             showToast('Fuente no disponible.');
         } else {
@@ -637,7 +638,7 @@ export const PLAYER_LOGIC = {
         await supabaseClient.from('watch_history').upsert({
             user_id: user.id,
             profile_id: profile.id, // Fase 3
-            tmdb_id: String(tmdbId),
+            tmdb_id: Number(tmdbId), // Esquema: integer
             type,
             season_number: season || 0,
             episode_number: episode || 0,
@@ -726,7 +727,7 @@ export const PLAYER_LOGIC = {
     async toggleFavorite(supabase) {
         const btn = document.getElementById('btnAddToMyList');
         const isAdded = btn.classList.contains('added-to-list');
-        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
         if (!profile) return;
 
         if (isAdded) {
@@ -738,7 +739,8 @@ export const PLAYER_LOGIC = {
             await supabase.from('user_favorites').insert({ 
                 user_id: this.currentUserId, 
                 profile_id: profile.id, // Fase 3
-                tmdb_id: Number(this.currentTmdbId) 
+                tmdb_id: Number(this.currentTmdbId),
+                type: this.currentType // movie o tv
             });
         }
         this.checkIfFavorite(supabase);
