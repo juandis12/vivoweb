@@ -1,10 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap');
-
 :root {
     /* Paleta Abyssal Navy & Vivid Primary (Stitch Sync) 🎬 */
     --bg-base: #0b122b; /* Abyssal Navy */
@@ -2027,4 +2022,3 @@ nav a.active::after { width: 24px; }
 .add-avatar:hover { border-color: #fff !important; background: rgba(255, 255, 255, 0.05) !important; transform: scale(1.05); }
 .add-icon { font-size: 4rem; color: rgba(255, 255, 255, 0.4); font-weight: 300; }
 .add-profile-item:hover .add-icon { color: #fff; }
-

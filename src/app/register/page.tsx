@@ -1,129 +1,124 @@
 'use client';
 
-import { createClient } from '@/utils/supabase/client';
 import { useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { User, Mail, Lock, UserPlus, CheckCircle } from 'lucide-react';
+import MeshBackground from '@/components/MeshBackground';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [username, setUsername] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const supabase = createClient();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name }
-      }
+        data: {
+          display_name: username,
+        },
+      },
     });
 
     if (signUpError) {
       setError(signUpError.message);
       setLoading(false);
     } else {
-      setSuccess(true);
-      setLoading(false);
-      setTimeout(() => router.push('/login'), 3000);
+      router.push('/profiles');
     }
   };
 
-  if (success) return (
-     <main className="min-h-screen flex items-center justify-center bg-base px-6">
-        <div className="text-center space-y-6 animate-fade">
-           <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto border-4 border-primary shadow-[0_0_50px_var(--primary-glow)]">
-              <CheckCircle className="w-12 h-12 text-primary" />
-           </div>
-           <h2 className="text-4xl font-black uppercase tracking-tighter">┬íCuenta Creada!</h2>
-           <p className="text-white/40 font-medium">Revisa tu correo para verificar tu cuenta. Redirigiendo...</p>
-        </div>
-     </main>
-  );
-
   return (
-    <main className="min-h-screen flex items-center justify-center bg-base px-6 relative overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 blur-[150px] rounded-full -z-10" />
-
-      <div className="w-full max-w-lg animate-fade">
-        <div className="text-center mb-12">
-           <h1 className="text-5xl font-black tracking-tighter uppercase mb-2 italic">VIVOTV</h1>
-           <p className="text-white/40 font-medium">Crea tu cuenta gratuita y empieza a disfrutar hoy mismo.</p>
+    <main className="auth-container relative min-h-screen flex items-center justify-center">
+      <MeshBackground />
+      
+      <div className="auth-card glass-panel w-full max-w-[440px] p-12 rounded-[40px] relative z-10 text-center">
+        <div className="auth-logo mb-8">
+          <Link href="/" className="text-3xl font-black italic tracking-tighter">
+            VIVO<span>TV</span>
+          </Link>
         </div>
+        
+        <h2 className="text-3xl font-black mb-2 uppercase italic">Crea tu cuenta gratuita</h2>
+        <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mb-8">Únete a la mejor experiencia de streaming premium</p>
 
-        <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 bg-white/5 border border-white/10 p-8 md:p-12 rounded-[2rem] glass shadow-2xl relative shadow-primary/5">
-          <div className="md:col-span-2 space-y-2">
-             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4">Nombre Completo</label>
-             <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="text" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Tu Nombre"
-                  className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-primary/50 focus:bg-black/60 transition-all font-medium"
-                  required
-                />
-             </div>
+        <form onSubmit={handleRegister} className="text-left space-y-6">
+          <div className="input-group">
+            <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-2">Nombre de Usuario</label>
+            <input 
+              type="text" 
+              required 
+              placeholder="Tu nombre artístico"
+              className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-[var(--primary)] transition-all"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
           </div>
 
-          <div className="md:col-span-2 space-y-2">
-             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4">Email</label>
-             <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ejemplo@correo.com"
-                  className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-primary/50 focus:bg-black/60 transition-all font-medium"
-                  required
-                />
-             </div>
+          <div className="input-group">
+            <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-2">Correo Electrónico</label>
+            <input 
+              type="email" 
+              required 
+              placeholder="tu@correo.com"
+              className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-[var(--primary)] transition-all"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
 
-          <div className="md:col-span-2 space-y-2">
-             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-4">Clave Segura</label>
-             <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 8 caracteres"
-                  className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-primary/50 focus:bg-black/60 transition-all font-medium"
-                  required
-                />
-             </div>
+          <div className="input-group">
+            <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-2">Contraseña</label>
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                required 
+                placeholder="••••••••"
+                className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-[var(--primary)] transition-all"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button 
+                type="button" 
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
-          {error && <p className="md:col-span-2 text-red-400 text-sm font-bold text-center bg-red-400/5 py-4 rounded-xl border border-red-400/10 mb-4">{error}</p>}
+          {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
 
           <button 
             type="submit" 
             disabled={loading}
-            className="md:col-span-2 w-full bg-white text-base py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-white/90 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-3 mt-4"
+            className="btn btn-primary w-full py-4 text-lg"
           >
-            {loading ? <div className="w-6 h-6 border-2 border-base border-t-transparent rounded-full animate-spin" /> : <>Registrarme <UserPlus className="w-5 h-5" /></>}
+            {loading ? <Loader2 className="animate-spin" /> : 'REGISTRARME'}
           </button>
-
-          <p className="md:col-span-2 text-center text-white/20 text-xs font-bold uppercase tracking-widest pt-6 border-t border-white/5">
-             Al unirte aceptas los <span className="underline cursor-pointer">T├⌐rminos de Servicio</span>
-          </p>
         </form>
 
-        <p className="mt-8 text-center text-white/40 font-medium">
-          ┬┐Ya eres miembro? <Link href="/login" className="text-white hover:text-primary font-black uppercase tracking-tighter ml-2 underline transition-colors">Entra aqu├¡</Link>
+        <div className="my-8 flex items-center gap-4 text-white/10">
+          <div className="h-px bg-current flex-1" />
+          <span className="text-[10px] font-black uppercase tracking-widest">o continúa con</span>
+          <div className="h-px bg-current flex-1" />
+        </div>
+
+        <p className="text-white/40 text-sm font-bold">
+          ¿Ya tienes cuenta? <Link href="/login" className="text-white hover:underline ml-1">Inicia sesión</Link>
         </p>
       </div>
     </main>

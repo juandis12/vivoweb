@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Navigation from '@/components/Navigation';
+import MobileNav from '@/components/MobileNav';
+import SplashScreen from '@/components/SplashScreen';
 
 export const metadata: Metadata = {
-  title: 'VivoWeb - Streaming Next.js',
-  description: 'Catálogo de Películas y Series de alta velocidad.',
+  title: 'VIVOTV | Streaming Premium',
+  description: 'Siente la velocidad del mejor contenido en alta definición.',
 };
 
 export default function RootLayout({
@@ -14,9 +16,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="antialiased min-h-screen pb-24">
+      <body className="antialiased min-h-screen">
+        <SplashScreen />
         <Navigation />
         {children}
+        <MobileNav />
       </body>
     </html>
   );

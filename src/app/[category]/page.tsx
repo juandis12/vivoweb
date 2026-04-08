@@ -1,12 +1,10 @@
 import { createClient } from '@/utils/supabase/server';
-import { fetchTMDB, TMDB_IMAGE_CARD } from '@/lib/tmdb';
+import { fetchTMDB, TMDB_IMAGE_CARD, getPopular } from '@/lib/tmdb';
 import MediaLibrary from '@/components/MediaLibrary';
 import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
+import { Film, Tv, Zap, Star, Play, PlayCircle, Award, Calendar, Clock } from 'lucide-react';
 
 export const revalidate = 3600;
-
-const VALID_CATEGORIES = ['peliculas', 'series', 'anime'];
 
 interface MediaItem {
   id: string;
@@ -17,87 +15,116 @@ interface MediaItem {
   type: 'movie' | 'series' | 'anime';
 }
 
-export default async function CategoryPage({
-  params,
-}: {
-  params: Promise<{ category: string }>;
-}) {
+interface TMDBResult {
+  id: number;
+  title?: string;
+  name?: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date?: string;
+  first_air_date?: string;
+}
+
+export default async function CategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
-  if (!VALID_CATEGORIES.includes(category)) return notFound();
-
   const supabase = await createClient();
+
+  const isMovie = category === 'peliculas';
+  const isAnime = category === 'anime';
+  const table = isMovie ? 'video_sources' : 'series_episodes';
   
-  let rawItems: any[] = [];
+  const { data: dbData } = await supabase.from(table).select('tmdb_id, stream_url');
+  const availableIds = new Set(dbData?.map((i: any) => i.tmdb_id.toString()) || []);
+  const sourceMap = new Map((dbData || []).map((i: any) => [i.tmdb_id.toString(), i.stream_url]));
 
-  // FILTRADO MULTITABLA
-  if (category === 'peliculas') {
-    const { data } = await supabase.from('video_sources').select('*').limit(100);
-    rawItems = data || [];
-  } else {
-    // Para Series y Anime buscamos en 'series_episodes'
-    // Usamos una consulta que agrupa por tmdb_id para no repetir el show
-    const { data } = await supabase
-      .from('series_episodes')
-      .select('*')
-      .limit(500); // Tomamos un lote grande para filtrar inteligentemente
+  const tmdbType = isMovie ? 'movie' : 'tv';
+  const tmdbData: TMDBResult[] = await getPopular(tmdbType);
 
-    // Agrupamos manualmente para quedarnos con un registro por serie
-    const seen = new Set();
-    rawItems = (data || []).filter(item => {
-      if (seen.has(item.tmdb_id)) return false;
-      seen.add(item.tmdb_id);
-      return true;
-    }).slice(0, 50);
+  let filtered = tmdbData
+    .filter((item: TMDBResult) => availableIds.has(item.id.toString()))
+    .map((item: TMDBResult) => ({
+      id: item.id.toString(),
+      tmdb_id: item.id.toString(),
+      title: item.title || item.name || 'Sin T├¡tulo',
+      source_url: sourceMap.get(item.id.toString()) || '',
+      poster_path: item.poster_path ? `${TMDB_IMAGE_CARD}${item.poster_path}` : null,
+      type: (isAnime ? 'anime' : isMovie ? 'movie' : 'series') as any
+    }));
+
+  if (isAnime) {
+    const detailedAnime = await Promise.all(filtered.slice(0, 15).map(async (item) => {
+        const details = await fetchTMDB(`/tv/${item.tmdb_id}`);
+        const isAnimeGenre = details?.genres?.some((g: any) => g.id === 16);
+        const isJapanese = details?.origin_country?.includes('JP');
+        return (isAnimeGenre || isJapanese) ? item : null;
+    }));
+    filtered = (detailedAnime.filter((i) => i !== null) as MediaItem[]);
   }
 
-  const catalog: MediaItem[] = (await Promise.all(
-    rawItems.map(async (item: any) => {
-      try {
-        const typeStr = category === 'peliculas' ? 'movie' : 'tv';
-        const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
-        if (!tmdbData) return null;
-
-        const isAnimation = tmdbData.genres?.some((g: any) => g.id === 16);
-        const isJapan = tmdbData.origin_country?.includes('JP');
-        const isAnime = isAnimation && isJapan;
-
-        // FILTRO ESTRICTO:
-        if (category === 'anime' && !isAnime) return null;
-        if (category === 'series' && isAnime) return null;
-
-        return {
-          id: item.id.toString(),
-          tmdb_id: item.tmdb_id.toString(),
-          title: tmdbData.title || tmdbData.name || `ID: ${item.tmdb_id}`,
-          source_url: item.stream_url || '',
-          poster_path: tmdbData.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null,
-          type: category as any
-        } as MediaItem;
-      } catch (e) {
-        return null;
-      }
-    })
-  )).filter((i): i is MediaItem => i !== null);
-
-  const titles: Record<string, string> = {
-    'peliculas': 'Lo mejor del Cine',
-    'series': 'Series de Estreno',
-    'anime': 'Mundo Anime'
+  const iconMap: Record<string, any> = {
+    peliculas: <Film className="w-12 h-12" />,
+    series: <Tv className="w-12 h-12" />,
+    anime: <Zap className="w-12 h-12" />
   };
 
-  return (
-    <main className="pt-32 px-6 pb-24 max-w-7xl mx-auto">
-      <h1 className="text-5xl font-black tracking-tighter mb-12 uppercase border-l-4 border-primary pl-6">
-        {titles[category]}
-      </h1>
+  const heroItem = filtered[0];
 
-      <Suspense fallback={<div className="h-64 flex items-center justify-center animate-pulse"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"/></div>}>
-        {catalog.length > 0 ? (
-          <MediaLibrary catalog={catalog} />
-        ) : (
-          <div className="py-20 text-center opacity-30 italic">No hay contenido disponible en esta categor├¡a.</div>
+  return (
+    <main className="min-h-screen pb-24">
+      
+      {/* 🎬 CATEGORY HERO SEM├üNTICO */}
+      <section className="hero-banner" style={{ height: '70vh' }}>
+        {heroItem?.poster_path && (
+          <>
+             <img 
+               src={heroItem.poster_path.replace('w342', 'original')} 
+               alt="Hero Backdrop" 
+               className="absolute inset-0 w-full h-full object-cover -z-20 opacity-30"
+             />
+             <div className="hero-overlay" />
+          </>
         )}
-      </Suspense>
+
+        <div className="hero-content">
+           <div className="flex items-center gap-4 text-[var(--primary)] mb-4">
+              <div className="p-3 bg-[var(--primary)]/10 rounded-2xl border border-[var(--primary)]/20 shadow-2xl">
+                 {iconMap[category]}
+              </div>
+              <div>
+                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Explorar Cat├ílogo</p>
+                 <h1 className="hero-title" style={{ fontSize: '4rem' }}>{category}</h1>
+              </div>
+           </div>
+
+           <div className="flex flex-wrap items-center gap-8 text-sm font-bold text-white/40 uppercase tracking-widest mb-8">
+              <div className="flex items-center gap-2 text-[#46d369]">
+                 <Star className="w-5 h-5 fill-current" />
+                 <span>98% Match</span>
+              </div>
+              <div className="flex items-center gap-2">
+                 <Calendar className="w-5 h-5" />
+                 <span>2025</span>
+              </div>
+              <div className="px-2 py-0.5 border border-white/20 rounded text-[9px]">PREMIUM HD</div>
+           </div>
+        </div>
+      </section>
+
+      {/* 📋 GRID CON CLASES GLOBALES */}
+      <div className="px-[var(--side-padding)] relative z-20 -mt-20">
+         <h2 className="section-title">Novedades en {category}</h2>
+         
+         <Suspense fallback={<div className="grid grid-cols-6 gap-6">{Array(12).fill(0).map((_, i) => <div key={i} className="aspect-[2/3] bg-white/5 animate-pulse rounded-2xl" />)}</div>}>
+           <MediaLibrary catalog={filtered} />
+         </Suspense>
+
+         {filtered.length === 0 && (
+           <div className="text-center py-32 bg-white/5 rounded-[3rem] border border-white/5">
+              <h3 className="text-3xl font-black text-white/10 uppercase tracking-tighter italic">No hay contenido disponible</h3>
+              <p className="text-white/20 font-bold uppercase tracking-widest mt-2">Pr├│ximamente en VivoTV</p>
+           </div>
+         )}
+      </div>
     </main>
   );
 }

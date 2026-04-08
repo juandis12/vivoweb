@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VivoTV - Explora nuestro catálogo completo de películas premium.">
+    <title>Películas - VivoTV</title>
+    
+    <!-- PWA & Mobile Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VivoTV">
+    <link rel="apple-touch-icon" href="pwa-icon-512.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b122b">
+    
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@700;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- VivoWeb Layout Engine (Fase 10X) -->
+    <script type="module">
+        import { LAYOUT } from './layout.js';
+        LAYOUT.init();
+    </script>
+</head>
+<body class="page-movies">
+    <!-- Componentes UI inyectados dinámicamente -->
+
+    <!-- Contenido de Películas -->
+    <main id="dashboardSection" class="dashboard-container">
+        <!-- Mesh Gradient Estilo Cinematic -->
+        <div class="mesh-gradient catalog-bg">
+            <div class="mesh-circle circle-1"></div>
+            <div class="mesh-circle circle-2"></div>
+            <div class="mesh-circle circle-3"></div>
+        </div>
+        <!-- Hero Banner Dinámico -->
+        <section class="hero-banner" id="heroBanner">
+            <div class="hero-overlay"></div>
+            <div class="hero-genre-badge" id="heroGenre"></div>
+            <div class="hero-content">
+                <div class="hero-badge">CINE PREMIUM</div>
+                <h1 id="heroTitle">Películas Premium</h1>
+                <div class="hero-meta-row">
+                    <span id="heroYear" class="meta-item">2024</span>
+                    <span class="meta-divider"></span>
+                    <span id="heroDuration" class="meta-item">130 min</span>
+                    <span class="meta-divider"></span>
+                    <span id="heroRating" class="meta-item rating-accent">★ 8.5</span>
+                </div>
+                <p id="heroOverview" class="hero-overview">Explora lo mejor del cine en VivoTV.</p>
+                <div class="hero-indicators" id="heroIndicators"></div>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary" id="btnHeroPlay">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        Reproducir
+                    </button>
+                    <button class="btn btn-secondary" id="btnHeroInfo">Información</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="catalogs-wrapper">
+            <!-- Vistos Recientemente (Películas) -->
+            <section class="catalog-row hidden" id="recentSection" data-section="recent">
+                <div class="row-header">
+                    <h3 class="row-title"><span class="row-accent">⏱</span> Continuar Viendo</h3>
+                    <a href="historial.html" class="btn-ver-mas">Ver historial <span>›</span></a>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="recentCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Populares -->
+            <section class="catalog-row" id="popularSection">
+                <div class="row-header">
+                    <h3 class="row-title">🎬 Películas Populares</h3>
+                    <button class="btn-ver-mas">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="popularCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Mejor Valoradas -->
+            <section class="catalog-row" id="topRatedSection">
+                <div class="row-header">
+                    <h3 class="row-title">⭐ Mejor Valoradas</h3>
+                    <button class="btn-ver-mas">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="topRatedCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Géneros -->
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">💥 Acción y Pura Adrenalina</h3>
+                    <button class="btn-ver-mas">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre1Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">😂 Para Morirse de Risa</h3>
+                    <button class="btn-ver-mas">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre2Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">💖 Historias de Amor</h3>
+                    <button class="btn-ver-mas">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre3Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <section class="catalog-row">
+                <div class="row-header">
+                    <h3 class="row-title">👻 Noches de Terror</h3>
+                    <button class="btn-ver-mas">Ver más <span>›</span></button>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="genre4Carousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- SECCIÓN: TODAS LAS PELÍCULAS (GRILLA) -->
+        <section class="movies-grid-container" style="margin-top: 80px; padding: 0 var(--side-padding);">
+            <header class="grid-header" style="margin-bottom: 30px;">
+                <h2 class="grid-title" style="font-size: 2rem;">📂 Todas las Películas</h2>
+                <p class="text-muted">Explora nuestro catálogo completo disponible en tu biblioteca.</p>
+            </header>
+            
+            <div id="gridContainer" class="movies-grid"></div>
+            <div id="gridLoader" class="grid-loader hidden">
+                <div class="loader"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px; margin-bottom: 80px;">
+                <button id="btnLoadMore" class="btn btn-outline">Cargar más películas</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Overlay Modal Detalle + Reproductor (Stitch Style) -->
+    <div id="detailModal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel" id="modalMainContent">
+            <!-- Backdrop dinámico con gradiente cinético -->
+            <div class="modal-viewport">
+                <div class="modal-backdrop" id="modalBackdrop"></div>
+                <div class="modal-vignette"></div>
+                <button class="close-modal" id="btnCloseModal" aria-label="Cerrar">&times;</button>
+                
+                <div class="modal-hero-info">
+                    <div id="trendingBadge" class="trending-badge hidden">#1 TRENDING</div>
+                    <h2 id="modalTitle" class="modal-main-title">Título</h2>
+                    <div class="modal-meta-row">
+                        <span id="modalYear" class="meta-item"></span>
+                        <span class="meta-divider"></span>
+                        <span id="modalRuntime" class="meta-item"></span>
+                        <span class="meta-divider"></span>
+                        <span id="modalRating" class="meta-item rating-imdb"></span>
+                        <span class="meta-divider"></span>
+                        <span class="meta-item badge-4k">4K ULTRA HD</span>
+                    </div>
+                    <div class="modal-primary-actions">
+                        <button class="btn btn-primary btn-lg" id="btnModalPlay">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            Reproducir ahora
+                        </button>
+                        <button class="btn btn-secondary btn-circle" id="btnAddToMyList" title="Añadir a mi lista">
+                            <svg id="favIconSvg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de información detallada -->
+            <div class="modal-details-grid">
+                <div class="details-main-col">
+                    <section class="details-section">
+                        <h3 class="section-label">Sinopsis</h3>
+                        <p id="modalOverview" class="overview-text"></p>
+                    </section>
+
+                    <section class="details-section" id="castSection">
+                        <h3 class="section-label">Reparto Principal</h3>
+                        <div class="cast-row" id="modalCast">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </section>
+                </div>
+
+                <aside class="details-side-col">
+                    <div class="info-block">
+                        <span class="info-label">Director</span>
+                        <span id="infoDirector" class="info-value">-</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">Estreno</span>
+                        <span id="infoRelease" class="info-value">-</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">Estado</span>
+                        <span id="infoStatus" class="info-value">-</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">Audio</span>
+                        <span id="infoAudio" class="info-value">Español Latino, Inglés</span>
+                    </div>
+                    
+                    <button class="btn btn-share">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                        Compartir este título
+                    </button>
+                    
+                    <p id="sourceError" class="error-msg hidden" style="margin-top: 20px;">Este título no tiene enlace de video disponible.</p>
+                </aside>
+            </div>
+            
+            <!-- REPRODUCTOR INTEGRADO -->
+            <div id="playerContainer" class="fullscreen-player hidden">
+                <button class="btn-exit-fullscreen" id="btnExitPlayer">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+                <div class="video-loading" id="playerLoader">
+                    <div class="loader-wave">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <p>Preparando contenido en 4K Ultra HD...</p>
+                </div>
+                <video id="videoPlayer" class="hidden" controls crossorigin="anonymous" playsinline></video>
+                <iframe id="videoIframe" class="hidden" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Modal de Salida (Híbrido) -->
+    <div id="exitModal" class="exit-modal-overlay">
+        <div class="exit-modal-content">
+            <h2 class="exit-modal-title">¿A dónde quieres ir?</h2>
+            <p class="exit-modal-text">Selecciona una opción para continuar.</p>
+            <div class="exit-modal-actions">
+                <button class="exit-modal-btn btn-change-profile" id="btnSwitchProfile">
+                    Elegir otro perfil
+                </button>
+                <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">
+                    Cerrar sesión de la cuenta
+                </button>
+                <button class="exit-modal-btn btn-cancel-exit" id="btnCancelExit">
+                    Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast hidden" id="toast"></div>
+
+    <!-- Navegación Móvil Inferior -->
+    <nav class="mobile-nav">
+        <div class="mobile-nav-indicator" id="navIndicator"></div>
+        <a href="index.html" class="mobile-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </a>
+        <a href="peliculas.html" class="mobile-nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+        </a>
+        <a href="series.html" class="mobile-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+        </a>
+        <a href="anime.html" class="mobile-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+        </a>
+        <a href="milista.html" class="mobile-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        </a>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script type="module" src="./app.js"></script>
+    <!-- Script PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered', reg))
+                    .catch(err => console.log('SW Error', err));
+            });
+        }
+    </script>
+</body>
+</html>

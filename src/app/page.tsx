@@ -1,8 +1,9 @@
 import { createClient } from '@/utils/supabase/server';
 import { fetchTMDB, TMDB_IMAGE_CARD, getPopular, getTopRated } from '@/lib/tmdb';
 import MediaLibrary from '@/components/MediaLibrary';
+import MeshBackground from '@/components/MeshBackground';
 import { Suspense } from 'react';
-import { Play, Star, TrendingUp, Info } from 'lucide-react';
+import { Play, Info, Award, Clock, Star, TrendingUp } from 'lucide-react';
 
 export const revalidate = 3600;
 
@@ -19,35 +20,26 @@ interface MediaItem {
 export default async function HomePage() {
   const supabase = await createClient();
   
-  // 1. Obtenci├│n de disponibilida (Multitabla)
+  // Fetch available content from our database
   const [moviesRes, seriesRes] = await Promise.all([
     supabase.from('video_sources').select('tmdb_id, stream_url'),
     supabase.from('series_episodes').select('tmdb_id, stream_url')
   ]);
   
-  const availableIds = new Set([
-      ...(moviesRes.data?.map(i => i.tmdb_id.toString()) || []),
-      ...(seriesRes.data?.map(i => i.tmdb_id.toString()) || [])
-  ]);
+  const availableData = [...(moviesRes.data || []), ...(seriesRes.data || [])];
+  const availableIds = new Set<string>(availableData?.map((item: any) => item.tmdb_id.toString()) || []);
+  const sourceMap = new Map<string, string>((availableData || []).map((item: any) => [item.tmdb_id.toString(), item.stream_url]));
 
-  const sourceMap = new Map([
-      ...(moviesRes.data?.map(i => [i.tmdb_id.toString(), i.stream_url]) || []),
-      ...(seriesRes.data?.map(i => [i.tmdb_id.toString(), i.stream_url]) || [])
-  ]);
-
-  // 2. Historial de visualizaci├│n
   const { data: rawHistory } = await supabase
     .from('watch_history')
     .select('*')
     .order('last_watched', { ascending: false })
     .limit(10);
 
-  // 3. Obtener Secciones de TMDB Filtradas
-  const [popMovies, popTV, topMovies, topTV] = await Promise.all([
+  const [popMovies, popTV, topMovies] = await Promise.all([
     getPopular('movie'),
     getPopular('tv'),
-    getTopRated('movie'),
-    getTopRated('tv')
+    getTopRated('movie')
   ]);
 
   const mapToMediaItem = (item: any, type: 'movie' | 'series'): MediaItem => ({
@@ -62,91 +54,114 @@ export default async function HomePage() {
   const filterAvailable = (items: any[], type: 'movie' | 'series') => 
     items.filter(item => availableIds.has(item.id.toString())).map(i => mapToMediaItem(i, type));
 
-  const historyItems: MediaItem[] = await Promise.all((rawHistory || []).map(async (h: any) => {
+  const historyItemsList = await Promise.all((rawHistory || []).map(async (h: any) => {
     try {
       const typeStr = h.type === 'movie' ? 'movie' : 'tv';
       const tmdb = await fetchTMDB(`/${typeStr}/${h.tmdb_id}`);
+      if (!tmdb) return null;
       return {
         ...mapToMediaItem({ ...tmdb, id: h.tmdb_id }, h.type === 'movie' ? 'movie' : 'series'),
         label: `Visto ${Math.floor(h.progress_seconds / 60)} min`
       };
     } catch(e) { return null; }
-  })).then(items => items.filter((i): i is MediaItem => i !== null));
+  }));
 
+  const historyItems = (historyItemsList.filter((i) => i !== null) as any) as MediaItem[];
   const popularMovies = filterAvailable(popMovies, 'movie');
   const popularSeries = filterAvailable(popTV, 'series');
   const topRatedMovies = filterAvailable(topMovies, 'movie');
+  
+  const heroItem = popularMovies[0];
 
   return (
-    <main className="md:pl-20 min-h-screen pb-24 transition-all duration-500">
+    <main className="dashboard-container">
+      <MeshBackground />
       
-      {/* 🎬 HERO SECTION (Cinematic Apple TV Style) */}
-      <section className="relative w-full h-[85vh] flex items-end px-6 md:px-16 pb-20">
-        <div className="absolute inset-0 bg-gradient-to-t from-base via-base/40 to-transparent z-[1]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-base/80 via-transparent to-transparent z-[1]" />
-        
-        {popularMovies[0]?.poster_path && (
-          <img 
-            src={popularMovies[0].poster_path.replace('w342', 'original')} 
-            alt="Hero Backdrop" 
-            className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105 blur-[2px] md:blur-none"
-          />
+      {/* 🎬 MAIN HERO BANNER */}
+      <section className="hero-banner">
+        {heroItem?.poster_path && (
+          <>
+             <img 
+               src={heroItem.poster_path.replace('w342', 'original')} 
+               alt="Hero Backdrop" 
+               className="absolute inset-0 w-full h-full object-cover -z-20 opacity-40 transition-transform duration-[10s] hover:scale-110"
+             />
+             <div className="hero-overlay" />
+          </>
         )}
 
-        <div className="relative z-[10] max-w-4xl space-y-6 animate-fade">
-           <div className="flex items-center gap-2 mb-2">
-              <span className="bg-primary px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase shadow-lg shadow-primary/20">Exclusivo</span>
-              <span className="text-white/40 text-[10px] font-black tracking-widest uppercase">Disponible ahora</span>
+        <div className="hero-content">
+           <div className="flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full w-fit border border-white/10 mb-4 scale-in">
+              <TrendingUp className="w-4 h-4 text-[var(--primary)]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/70">#1 Tendencia Global</span>
            </div>
-           <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] text-white drop-shadow-2xl translate-x-[-4px]">
-             {popularMovies[0]?.title}
-           </h1>
-           <p className="text-xl md:text-2xl text-white/60 max-w-2xl line-clamp-2 md:line-clamp-3 font-medium leading-relaxed">
-             Vive la experiencia cinematogr├ífica definitiva con VivoTV. Calidad 4K HDR sin interrupciones directamente en tu pantalla.
+
+           <h1 className="hero-title">{heroItem?.title || 'VivoTV Premium'}</h1>
+
+           <div className="flex flex-wrap items-center gap-8 text-sm font-bold text-white/40 uppercase tracking-widest mb-6">
+              <div className="flex items-center gap-2 text-[#46d369]">
+                 <Star className="w-5 h-5 fill-current" />
+                 <span>98% Match</span>
+              </div>
+              <span className="meta-divider h-1 w-1 bg-white/20 rounded-full" />
+              <span>2024</span>
+              <span className="px-2 py-0.5 border border-white/20 rounded text-[9px]">4K ULTRA HD</span>
+           </div>
+
+           <p className="text-xl text-white/60 max-w-2xl leading-relaxed mb-8 font-bold">
+             Experimenta la mayor velocidad de carga y la mejor calidad de imagen en la plataforma líder de streaming premium.
            </p>
            
-           <div className="flex flex-wrap gap-4 pt-4">
-              <button className="px-8 py-4 bg-white text-base font-black rounded-2xl flex items-center gap-3 hover:bg-white/90 transition-all hover:scale-105 active:scale-95 shadow-xl">
-                 <Play className="w-6 h-6 fill-base" /> Reproducir ahora
+           <div className="flex items-center gap-5">
+              <button className="btn btn-primary text-xl">
+                 <Play className="w-6 h-6 fill-current" /> VER AHORA
               </button>
-              <button className="px-8 py-4 glass text-white font-black rounded-2xl flex items-center gap-3 hover:bg-white/10 transition-all hover:scale-105 active:scale-95">
-                 <Info className="w-6 h-6" /> M├ís informaci├│n
+              <button className="btn btn-secondary">
+                 <Info className="w-6 h-6" /> MÁS INFO
               </button>
            </div>
         </div>
       </section>
 
-      {/* 📋 SECCIONES DIN├üMICAS */}
-      <div className="px-6 md:px-16 -mt-32 relative z-20 space-y-24">
-        
+      {/* DYNAMIC CATEGORIES */}
+      <div className="catalogs-wrapper px-[var(--side-padding)] -mt-32 relative z-20 space-y-24 pb-24">
         {historyItems.length > 0 && (
-          <HomeRow title="Continuar Viendo" items={historyItems} icon={<Play className="w-8 h-8 text-primary" />} />
+          <section>
+            <div className="row-header mb-8">
+               <h3 className="section-title"><Clock className="inline mr-3 w-8 h-8 text-[var(--primary)]" /> Continuar Viendo</h3>
+            </div>
+            <MediaLibrary catalog={historyItems} />
+          </section>
         )}
 
-        <HomeRow title="Lo m├ís visto hoy" items={popularMovies.slice(1)} icon={<TrendingUp className="w-8 h-8 text-green-400" />} />
-        
-        <HomeRow title="Originales de VivoTV" items={popularSeries} icon={<Play className="w-8 h-8 text-primary" fill="currentColor" />} />
+        <section>
+          <div className="row-header mb-8">
+             <h3 className="section-title"><Award className="inline mr-3 w-8 h-8 text-yellow-500" /> Tendencias de Hoy</h3>
+          </div>
+          <Suspense fallback={<div className="h-64 bg-white/5 animate-pulse rounded-3xl" />}>
+            <MediaLibrary catalog={popularMovies.slice(1)} />
+          </Suspense>
+        </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-           <HomeRow title="Cine Premium" items={topRatedMovies.slice(0, 6)} icon={<Star className="w-8 h-8 text-yellow-500" />} />
-           <HomeRow title="Series Imperdibles" items={popTV.filter(i => availableIds.has(i.id.toString())).slice(0, 6).map(i => mapToMediaItem(i, 'series'))} icon={<Star className="w-8 h-8 text-blue-500" />} />
-        </div>
+        <section>
+          <div className="row-header mb-8">
+             <h3 className="section-title"><Play className="inline mr-3 w-8 h-8 text-[var(--primary)]" /> Series Originales</h3>
+          </div>
+          <Suspense fallback={<div className="h-64 bg-white/5 animate-pulse rounded-3xl" />}>
+            <MediaLibrary catalog={(popularSeries as any) as MediaItem[]} />
+          </Suspense>
+        </section>
+
+        <section>
+          <div className="row-header mb-8">
+             <h3 className="section-title"><Star className="inline mr-3 w-8 h-8 text-yellow-500" /> Los Favoritos de la Crítica</h3>
+          </div>
+          <Suspense fallback={<div className="h-64 bg-white/5 animate-pulse rounded-3xl" />}>
+            <MediaLibrary catalog={topRatedMovies} />
+          </Suspense>
+        </section>
       </div>
+
     </main>
-  );
-}
-
-function HomeRow({ title, items, icon }: { title: string; items: MediaItem[]; icon?: React.ReactNode }) {
-  if (items.length === 0) return null;
-  return (
-    <section className="space-y-8 animate-fade">
-      <div className="flex items-center gap-4 border-l-8 border-primary pl-6">
-        <div className="p-3 glass rounded-2xl shadow-xl">{icon}</div>
-        <h2 className="text-3xl md:text-5xl font-black tracking-tighter uppercase leading-none">{title}</h2>
-      </div>
-      <Suspense fallback={<div className="h-64 bg-surface animate-pulse rounded-3xl" />}>
-        <MediaLibrary catalog={items} />
-      </Suspense>
-    </section>
   );
 }

@@ -1,62 +1,91 @@
-import { createClient } from '@/utils/supabase/server';
+'use client';
+
+import { createClient } from '@/utils/supabase/client';
+import { useEffect, useState } from 'react';
 import { fetchTMDB, TMDB_IMAGE_CARD } from '@/lib/tmdb';
 import MediaLibrary from '@/components/MediaLibrary';
-import { Suspense } from 'react';
-import { Heart } from 'lucide-react';
+import MeshBackground from '@/components/MeshBackground';
+import { Bookmark, Search } from 'lucide-react';
+import Link from 'next/link';
 
-interface MediaItem {
-  id: string;
-  tmdb_id: string;
-  title: string;
-  source_url: string;
-  poster_path: string | null;
-  type: 'movie' | 'series' | 'anime';
-}
+export default function MiListaPage() {
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
-export default async function MiListaPage() {
-  const supabase = await createClient();
-  
-  // USANDO ESQUEMA REAL: user_favorites
-  const { data: favs, error } = await supabase
-    .from('user_favorites')
-    .select('*')
-    .order('created_at', { ascending: false });
+  useEffect(() => {
+    async function loadFavorites() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  let catalog: MediaItem[] = [];
+      const { data: favs } = await supabase
+        .from('user_favorites')
+        .select('*')
+        .eq('user_id', user.id);
 
-  if (favs && favs.length > 0) {
-    catalog = await Promise.all(
-      favs.map(async (item: any) => {
-        const typeStr = item.type === 'movie' ? 'movie' : 'tv';
-        const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
-        
-        return {
-          id: item.id.toString(),
-          tmdb_id: item.tmdb_id.toString(),
-          title: tmdbData?.title || tmdbData?.name || `Favorito ${item.tmdb_id}`,
-          source_url: '', 
-          poster_path: tmdbData?.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null,
-          type: (item.type === 'movie' ? 'movie' : 'series') as any
-        } as MediaItem;
-      })
-    );
-  }
+      if (favs && favs.length > 0) {
+        const enriched = await Promise.all(favs.map(async (f) => {
+          try {
+            const typeStr = f.type === 'movie' ? 'movie' : 'tv';
+            const tmdb = await fetchTMDB(`/${typeStr}/${f.tmdb_id}`);
+            
+            // Need to get stream URL too
+            let streamUrl = '';
+            if (f.type === 'movie') {
+               const { data: res } = await supabase.from('video_sources').select('stream_url').eq('tmdb_id', f.tmdb_id).single();
+               streamUrl = res?.stream_url || '';
+            } else {
+               const { data: res } = await supabase.from('series_episodes').select('stream_url').eq('tmdb_id', f.tmdb_id).limit(1).single();
+               streamUrl = res?.stream_url || '';
+            }
+
+            return {
+              tmdb_id: f.tmdb_id.toString(),
+              title: tmdb?.title || tmdb?.name || 'Cargando...',
+              source_url: streamUrl,
+              poster_path: tmdb?.poster_path ? `${TMDB_IMAGE_CARD}${tmdb.poster_path}` : null,
+              type: f.type
+            };
+          } catch (e) {
+            return null;
+          }
+        }));
+        setFavorites(enriched.filter(i => i !== null));
+      }
+      setLoading(false);
+    }
+    loadFavorites();
+  }, [supabase]);
+
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-[#0b122b]">
+       <div className="w-16 h-16 border-8 border-[var(--primary)] border-t-transparent rounded-full animate-spin shadow-2xl" />
+    </div>
+  );
 
   return (
-    <main className="pt-32 px-6 pb-24 max-w-7xl mx-auto">
-      <h1 className="text-5xl font-black tracking-tighter mb-12 uppercase flex items-center gap-3">
-        <Heart className="w-10 h-10 text-primary fill-primary" /> Mi Lista
-      </h1>
+    <main className="page-container relative overflow-hidden">
+      <MeshBackground />
+      
+      <header className="section-header">
+         <h1 className="section-title">Mi Lista Personalizada</h1>
+         <p className="text-white/40 font-bold uppercase tracking-widest text-sm">Tus favoritos en un solo lugar premium.</p>
+      </header>
 
-      <Suspense fallback={<div className="h-64 flex items-center justify-center animate-pulse"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"/></div>}>
-        {catalog.length > 0 ? (
-          <MediaLibrary catalog={catalog} />
+      <div className="mt-12">
+        {favorites.length > 0 ? (
+          <MediaLibrary catalog={favorites} />
         ) : (
-          <div className="py-20 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-             <p className="text-white/30">Tu lista está vacía. ¡Añade algo que te guste!</p>
+          <div className="empty-state py-32 flex flex-col items-center gap-6">
+            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center text-5xl">📂</div>
+            <h2 className="text-2xl font-black uppercase">Tu lista está vacía</h2>
+            <p className="text-white/40 max-w-sm text-center">Añade contenido usando el botón de favoritos en los detalles de cualquier título.</p>
+            <Link href="/" className="btn btn-primary">
+               EXPLORAR CONTENIDO
+            </Link>
           </div>
         )}
-      </Suspense>
+      </div>
     </main>
   );
 }

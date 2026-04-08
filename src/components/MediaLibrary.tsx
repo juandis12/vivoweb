@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import PlayerModal from '@/components/PlayerModal';
-import { Play, Heart, Check } from 'lucide-react';
+import { Play, Star, Plus, Info } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 type MediaItem = {
@@ -38,7 +38,7 @@ export default function MediaLibrary({ catalog }: { catalog: MediaItem[] }) {
     e.stopPropagation();
     const isFav = favorites[item.tmdb_id];
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return alert('Debes iniciar sesi├│n para guardar favoritos');
+    if (!user) return;
 
     if (isFav) {
       await supabase.from('user_favorites').delete().eq('user_id', user.id).eq('tmdb_id', item.tmdb_id);
@@ -54,61 +54,68 @@ export default function MediaLibrary({ catalog }: { catalog: MediaItem[] }) {
   };
 
   return (
-    <section className="animate-fade">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+    <section>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-6 gap-y-12">
         {catalog.map((item, idx) => (
-          <div 
-            key={`${item.tmdb_id}-${idx}`}
-            onClick={() => setActiveVideo(item)}
-            className="group relative cursor-pointer"
-          >
-            {/* Tarjeta de Dise├▒o Premium */}
-            <div className="aspect-[2/3] w-full rounded-2xl overflow-hidden glass border-white/5 glow-hover shadow-2xl relative">
-              
-              {/* Imagen de Fondo */}
+          <div key={`${item.tmdb_id}-${idx}`} className="movie-card">
+            
+            {/* BASE CARD (POSTER) */}
+            <div 
+              onClick={() => setActiveVideo(item)}
+              className="relative aspect-[2/3] bg-[var(--surface-container)] rounded-xl overflow-hidden shadow-2xl cursor-pointer border border-white/5"
+            >
               {item.poster_path ? (
-                <img 
-                  src={item.poster_path} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
+                <img src={item.poster_path} alt={item.title} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-surface to-base flex items-center justify-center p-6 text-center">
-                   <h3 className="text-sm font-black uppercase tracking-widest text-white/20 select-none">{item.title}</h3>
+                <div className="w-full h-full flex items-center justify-center p-6 text-center text-xs font-black uppercase text-white/20">
+                  {item.title}
                 </div>
               )}
-
-              {/* Overlay con Gradiente (Sutil) */}
-              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-              {/* Bot├│n Play Central */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-50 group-hover:scale-100">
-                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-[0_0_30px_var(--primary-glow)]">
-                    <Play className="w-8 h-8 text-white fill-white ml-1" />
-                 </div>
-              </div>
-
-              {/* Badges de Categor├¡a */}
-              <div className="absolute top-3 left-3 flex flex-col gap-2">
-                 <div className="px-2 py-1 glass rounded-lg text-[10px] font-black uppercase tracking-tighter text-white/50 border border-white/10">
-                   {item.type === 'movie' ? 'HD' : item.type === 'anime' ? 'ANIM' : '4K'}
-                 </div>
-              </div>
-
-              {/* Bot├│n de Favorito Flotante */}
-              <button 
-                onClick={(e) => toggleFavorite(e, item)}
-                className={`absolute top-3 right-3 p-2 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-300 ${favorites[item.tmdb_id] ? 'bg-primary border-primary shadow-lg scale-110' : 'bg-black/40 text-white/60 hover:text-white hover:bg-black/60'}`}
-              >
-                {favorites[item.tmdb_id] ? <Check className="w-4 h-4 text-white" /> : <Heart className="w-4 h-4" />}
-              </button>
+              
+              {/* QUALITY BADGE */}
+              <div className="absolute top-2 left-2 bg-yellow-500 text-black font-black text-[9px] px-1.5 py-0.5 rounded">HD</div>
+              
+              {/* PROGRESS BAR */}
+              {item.label && (
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
+                  <div className="h-full bg-[var(--primary)] shadow-[0_0_10px_var(--primary-glow)]" style={{ width: '45%' }} />
+                </div>
+              )}
             </div>
 
-            {/* Info inferior (Solo t├¡tulo) */}
-            <div className="mt-4 px-1">
-              <h3 className="text-sm font-bold text-white/80 truncate group-hover:text-primary transition-colors">{item.title}</h3>
-              {item.label && <p className="text-[10px] text-primary font-black uppercase tracking-wide mt-0.5">{item.label}</p>}
+            {/* EXPANDABLE TOOLTIP SEM├üNTICO */}
+            <div className="movie-tooltip">
+               <div className="flex items-center justify-between mb-4">
+                  <div className="flex gap-2">
+                     <button className="w-9 h-9 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
+                        <Play className="w-4 h-4 fill-current ml-1" />
+                     </button>
+                     <button 
+                       onClick={(e) => toggleFavorite(e, item)}
+                       className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all ${favorites[item.tmdb_id] ? 'bg-[var(--primary)] border-[var(--primary)] text-white' : 'bg-white/5 border-white/20 text-white hover:border-white'}`}
+                     >
+                        {favorites[item.tmdb_id] ? <Star className="w-4 h-4 fill-current" /> : <Plus className="w-4 h-4" />}
+                     </button>
+                  </div>
+                  <button className="w-9 h-9 bg-white/5 border border-white/20 text-white rounded-full flex items-center justify-center hover:border-white">
+                     <Info className="w-4 h-4" />
+                  </button>
+               </div>
+
+               <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                     <span className="text-[#46d369] font-black text-xs">98% Match</span>
+                     <span className="border border-white/40 text-[10px] text-white/60 px-1 rounded uppercase">Digital 4K</span>
+                  </div>
+                  <h4 className="text-sm font-black text-white truncate">{item.title}</h4>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                     <span>{item.type || 'Contenido'}</span>
+                     <span className="w-1 h-1 bg-white/20 rounded-full" />
+                     <span className="text-[var(--primary)]">{item.label || 'Estreno'}</span>
+                  </div>
+               </div>
             </div>
+
           </div>
         ))}
       </div>
