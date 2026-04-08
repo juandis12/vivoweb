@@ -84,10 +84,10 @@ async function toDashboard(user, profileIfKnown) {
     isDashboardInit = true; // Solo marcamos como init si tenemos perfil
 
     // Sync UI with Profile
-    if (userNameEl) userNameEl.textContent = currentProfile.name;
+    if (userNameEl) userNameEl.textContent = profile.name;
     if (userAvatar) {
-        userAvatar.textContent = currentProfile.name[0];
-        userAvatar.className = `avatar ${currentProfile.color}`;
+        userAvatar.textContent = profile.name[0];
+        userAvatar.className = `avatar ${profile.color}`;
     }
 
     if (mainNav) mainNav.classList.remove('hidden');
@@ -272,6 +272,7 @@ function setupAuthListeners() {
     if (!loginForm) return;
 
     loginForm.onsubmit = async (e) => {
+        console.log('[VivoTV] Login form submitted');
         e.preventDefault();
         const email = getEl('email')?.value.trim();
         const password = getEl('password')?.value;

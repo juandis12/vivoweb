@@ -53,7 +53,7 @@
             <h2 id="authTitle">Bienvenido de vuelta</h2>
             <p id="authSubtitle">Inicia sesión para disfrutar de tu contenido premium</p>
 
-            <form id="loginForm" novalidate>
+            <form id="loginForm" onsubmit="event.preventDefault();" novalidate>
                 <div class="input-group">
                     <label for="email">Correo Electrónico</label>
                     <input type="email" id="email" required placeholder="correo@ejemplo.com" autocomplete="email">
@@ -170,14 +170,14 @@
                 </div>
             </section>
 
-            <!-- Recomendados para ti (Fase Personalización) -->
-            <section class="catalog-row hidden" id="recommendedSection" data-section="recommended">
+            <!-- Recomendados (Fase Personalización) -->
+            <section class="catalog-row hidden" id="personalizedSection" data-section="recommended">
                 <div class="row-header">
                     <h3 class="row-title"><span class="row-accent">✨</span> Recomendados para ti</h3>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="recommendedCarousel"></div>
+                    <div class="carousel" id="personalizedCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
             </section>
