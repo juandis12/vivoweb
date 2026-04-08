@@ -26,11 +26,16 @@ interface MediaItem {
 export default async function HomePage() {
   const supabase = await createClient();
   
-  // 1. Obtener la malla completa para distribuir
-  const { data: rawData, error } = await supabase.rpc('get_catalog_ids');
+  // CONSULTA DIRECTA (M├ís robusta que RPC si no est├í configurado)
+  const { data: rawData, error: supabaseError } = await supabase
+    .from('peliculas')
+    .select('id, tmdb_id, title, source_url, embed_url, type')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
   const rawCatalog = rawData as CatalogItem[] | null;
   
-  if (error) console.error('Error fetching catalog:', error);
+  if (supabaseError) console.error('Error fetching catalog:', supabaseError);
 
   const processCatalog = async (items: CatalogItem[]) => {
     return await Promise.all(
@@ -38,13 +43,17 @@ export default async function HomePage() {
         let poster = null;
         let finalTitle = item.title || `Contenido ${item.tmdb_id}`;
 
-        if (item.tmdb_id && item.tmdb_id !== "null") {
-          const typeStr = item.type === 'movie' ? 'movie' : 'tv';
-          const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
-          if (tmdbData) {
-            poster = tmdbData.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null;
-            finalTitle = tmdbData.title || tmdbData.name || finalTitle;
+        try {
+          if (item.tmdb_id && item.tmdb_id !== "null") {
+            const typeStr = (item.type === 'movie' || !item.type) ? 'movie' : 'tv';
+            const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
+            if (tmdbData) {
+              poster = tmdbData.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null;
+              finalTitle = tmdbData.title || tmdbData.name || finalTitle;
+            }
           }
+        } catch (tmdbErr) {
+          console.error("TMDB error for ID", item.tmdb_id, tmdbErr);
         }
 
         return {
@@ -61,7 +70,7 @@ export default async function HomePage() {
 
   const recentItems = rawCatalog ? await processCatalog(rawCatalog.slice(0, 12)) : [];
   const movies = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'movie').slice(0, 6)) : [];
-  const series = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'series').slice(0, 6)) : [];
+  const series = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'series' || i.type === 'tv').slice(0, 6)) : [];
 
   return (
     <main className="pt-24 px-6 pb-24 max-w-7xl mx-auto space-y-16">
@@ -102,9 +111,12 @@ export default async function HomePage() {
         <HomeSection title="Series Tendencia" items={series} />
       </div>
 
-      {!rawCatalog && (
-        <div className="p-6 rounded-xl border border-red-500/20 bg-red-500/10 text-red-200">
-          Error: No se pudo conectar con la base de datos de Supabase.
+      {(supabaseError || !rawCatalog || rawCatalog.length === 0) && (
+        <div className="p-12 text-center rounded-3xl border border-dashed border-white/10 bg-white/5">
+          <h3 className="text-xl font-bold mb-2">Configuración Inicial en proceso</h3>
+          <p className="text-white/40 max-w-md mx-auto">
+            {supabaseError ? `Error: ${supabaseError.message}` : 'Aún no hemos encontrado contenido en la tabla "peliculas". Verifica tu base de datos Supabase.'}
+          </p>
         </div>
       )}
     </main>
@@ -112,6 +124,7 @@ export default async function HomePage() {
 }
 
 function HomeSection({ title, items }: { title: string; items: MediaItem[] }) {
+  if (items.length === 0) return null;
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between border-l-4 border-primary pl-4">

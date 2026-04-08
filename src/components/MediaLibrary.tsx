@@ -26,11 +26,18 @@ export default function MediaLibrary({ catalog }: { catalog: MediaItem[] }) {
     const isFav = favorites[item.tmdb_id];
     
     if (isFav) {
-      // Remover (Simulado o RPC)
-      setFavorites(prev => ({ ...prev, [item.tmdb_id]: false }));
+      // Remover de user_favorites
+      const { error } = await supabase
+        .from('user_favorites')
+        .delete()
+        .eq('tmdb_id', item.tmdb_id);
+        
+      if (!error) {
+        setFavorites(prev => ({ ...prev, [item.tmdb_id]: false }));
+      }
     } else {
-      // Guardar en Supabase
-      const { error } = await supabase.from('favoritos').insert({
+      // Guardar en user_favorites
+      const { error } = await supabase.from('user_favorites').insert({
         tmdb_id: item.tmdb_id,
         type: item.type,
         source_url: item.source_url
@@ -38,6 +45,8 @@ export default function MediaLibrary({ catalog }: { catalog: MediaItem[] }) {
       
       if (!error) {
         setFavorites(prev => ({ ...prev, [item.tmdb_id]: true }));
+      } else {
+        console.error("Error saving favorite:", error.message);
       }
     }
   };
@@ -90,7 +99,6 @@ export default function MediaLibrary({ catalog }: { catalog: MediaItem[] }) {
               </div>
             </div>
 
-            {/* Info debajo (Opcional, estilo Netflix) */}
             <div className="px-1">
               <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">{item.title}</h3>
               {item.label && (

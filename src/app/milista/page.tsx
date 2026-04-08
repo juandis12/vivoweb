@@ -16,8 +16,9 @@ interface MediaItem {
 export default async function MiListaPage() {
   const supabase = await createClient();
   
+  // USANDO NOMBRE REAL DE TABLA: user_favorites
   const { data: rawFavorites, error } = await supabase
-    .from('favoritos')
+    .from('user_favorites')
     .select('*')
     .order('created_at', { ascending: false });
 
@@ -26,7 +27,7 @@ export default async function MiListaPage() {
   if (rawFavorites && rawFavorites.length > 0) {
     catalog = await Promise.all(
       rawFavorites.map(async (item: any) => {
-        const typeStr = item.type === 'movie' ? 'movie' : 'tv';
+        const typeStr = (item.type === 'movie' || !item.type) ? 'movie' : 'tv';
         const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
         
         return {
@@ -61,7 +62,6 @@ export default async function MiListaPage() {
           </div>
         )}
       </Suspense>
-      {error && <p className="text-red-500 mt-4">{error.message}</p>}
     </main>
   );
 }

@@ -8,6 +8,15 @@ export const revalidate = 3600;
 
 const VALID_CATEGORIES = ['peliculas', 'series', 'anime'];
 
+interface MediaItem {
+  id: string;
+  tmdb_id: string;
+  title: string;
+  source_url: string;
+  poster_path: string | null;
+  type: 'movie' | 'series' | 'anime';
+}
+
 export default async function CategoryPage({
   params,
 }: {
@@ -19,7 +28,6 @@ export default async function CategoryPage({
     return notFound();
   }
 
-  // Mapeo del slug al tipo en la base de datos
   const typeMap: Record<string, string> = {
     'peliculas': 'movie',
     'series': 'series',
@@ -29,32 +37,37 @@ export default async function CategoryPage({
   const dbType = typeMap[category];
   const supabase = await createClient();
   
-  // Obtener el cat├ílogo filtrado por tipo
-  const { data: rawCatalog, error } = await supabase.rpc('get_catalog_ids');
+  // CONSULTA DIRECTA (M├ís confiable)
+  const { data: rawCatalog, error } = await supabase
+    .from('peliculas')
+    .select('*')
+    .eq('type', dbType)
+    .limit(50);
   
   if (error) {
-    return <div className="pt-32 px-6">Error al cargar datos.</div>;
+    return (
+      <div className="pt-32 px-6">
+        <h2 className="text-xl font-bold text-red-400">Error de conexión</h2>
+        <p className="text-white/40">{error.message}</p>
+      </div>
+    );
   }
 
-  // Filtrar en el servidor por el tipo correspondiente
-  const filteredCatalog = (rawCatalog || [])
-    .filter((item: any) => item.type === dbType)
-    .slice(0, 50);
-
-  // Enriquecer con TMDB
-  const catalog = await Promise.all(
-    filteredCatalog.map(async (item: any) => {
+  const catalog: MediaItem[] = await Promise.all(
+    (rawCatalog || []).map(async (item: any) => {
       let poster = null;
       let finalTitle = item.title || `Contenido ${item.tmdb_id}`;
 
-      if (item.tmdb_id && item.tmdb_id !== "null") {
-        const typeStr = item.type === 'movie' ? 'movie' : 'tv';
-        const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
-        if (tmdbData) {
-          poster = tmdbData.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null;
-          finalTitle = tmdbData.title || tmdbData.name || finalTitle;
+      try {
+        if (item.tmdb_id && item.tmdb_id !== "null") {
+          const typeStr = (item.type === 'movie' || !item.type) ? 'movie' : 'tv';
+          const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
+          if (tmdbData) {
+            poster = tmdbData.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null;
+            finalTitle = tmdbData.title || tmdbData.name || finalTitle;
+          }
         }
-      }
+      } catch (e) {}
 
       return {
         id: item.id || Math.random().toString(),
@@ -63,7 +76,7 @@ export default async function CategoryPage({
         source_url: item.source_url || item.embed_url || '',
         poster_path: poster,
         type: item.type || 'movie'
-      };
+      } as MediaItem;
     })
   );
 
@@ -85,7 +98,13 @@ export default async function CategoryPage({
       </div>
 
       <Suspense fallback={<div className="h-64 flex items-center justify-center animate-pulse"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"/></div>}>
-        <MediaLibrary catalog={catalog} />
+        {catalog.length > 0 ? (
+          <MediaLibrary catalog={catalog} />
+        ) : (
+          <div className="py-20 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+             <p className="text-white/30">No se encontraron contenidos de tipo "{dbType}" en la tabla "peliculas".</p>
+          </div>
+        )}
       </Suspense>
     </main>
   );

@@ -17,8 +17,9 @@ interface MediaItem {
 export default async function HistorialPage() {
   const supabase = await createClient();
   
+  // USANDO NOMBRE REAL DE TABLA: watch_history
   const { data: rawHistory, error } = await supabase
-    .from('telemetria')
+    .from('watch_history')
     .select('*')
     .order('updated_at', { ascending: false })
     .limit(40);
@@ -28,7 +29,7 @@ export default async function HistorialPage() {
   if (rawHistory && rawHistory.length > 0) {
     catalog = await Promise.all(
       rawHistory.map(async (item: any) => {
-        const typeStr = item.type === 'movie' ? 'movie' : 'tv';
+        const typeStr = (item.type === 'movie' || !item.type) ? 'movie' : 'tv';
         const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
         
         const minutes = Math.floor(item.last_position / 60);
