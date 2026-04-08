@@ -3,22 +3,42 @@ import { fetchTMDB, TMDB_IMAGE_CARD } from '@/lib/tmdb';
 import MediaLibrary from '@/components/MediaLibrary';
 import { Suspense } from 'react';
 
-// Next.js: Regenera esta página en el servidor cada hora para nuevos estrenos
+// Interfaces de Tipo para evitar errores de compilación
+interface CatalogItem {
+  id?: string;
+  tmdb_id: string;
+  title?: string;
+  source_url?: string;
+  embed_url?: string;
+  type?: 'movie' | 'series' | 'anime';
+}
+
+interface MediaItem {
+  id: string;
+  tmdb_id: string;
+  title: string;
+  source_url: string;
+  poster_path: string | null;
+  type: 'movie' | 'series' | 'anime';
+}
+
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // 1. Obtener la malla de URLs y TMDB_IDs desde Supabase
-  const { data: rawCatalog, error } = await supabase.rpc('get_catalog_ids');
+  const { data: rawData, error: supabaseError } = await supabase.rpc('get_catalog_ids');
+  const rawCatalog = rawData as CatalogItem[] | null;
   
-  let catalog = [];
+  if (supabaseError) console.error('Error fetching catalog:', supabaseError);
+  
+  let catalog: MediaItem[] = [];
 
   // 2. Transmutación en el Servidor (Fusión Supabase + TMDB)
   if (rawCatalog && Array.isArray(rawCatalog) && rawCatalog.length > 0) {
-    // Procesamiento en Paralelo (Alta Velocidad)
     const expandedData = await Promise.all(
-      rawCatalog.slice(0, 30).map(async (item: any) => {
+      rawCatalog.slice(0, 30).map(async (item) => {
         let poster = null;
         let finalTitle = item.title || `Contenido ${item.tmdb_id}`;
 
@@ -32,13 +52,13 @@ export default async function HomePage() {
         }
 
         return {
-          id: item.id || '',
-          tmdb_id: item.tmdb_id || '',
+          id: item.id || Math.random().toString(),
+          tmdb_id: item.tmdb_id || '0',
           title: finalTitle,
           source_url: item.source_url || item.embed_url || '',
           poster_path: poster,
           type: item.type || 'movie'
-        };
+        } as MediaItem;
       })
     );
     catalog = expandedData;
@@ -54,15 +74,15 @@ export default async function HomePage() {
             Estreno Next.js
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 text-white drop-shadow-lg">
-            {catalog[0]?.title || 'CATÁLOGO VIVO'}
+            {catalog.length > 0 ? catalog[0].title : 'CATÁLOGO VIVO'}
           </h1>
           <p className="text-white/60 text-lg md:text-xl line-clamp-2 md:line-clamp-3 select-none">
-            El sistema ha sido purgado. Tu backend Superabase y tu arquitectura Server-Side Rendering (SSR) están 100% operativos. Haz clic en cualquier portada de abajo para encender el reproductor protegido.
+            El sistema ha sido purgado. Tu backend Supabase y tu arquitectura Server-Side Rendering (SSR) están 100% operativos. Haz clic en cualquier portada de abajo para encender el reproductor protegido.
           </p>
         </div>
         
         {/* Póster de Fondo Difuminado */}
-        {catalog[0]?.poster_path && (
+        {catalog.length > 0 && catalog[0].poster_path && (
            <img 
               src={catalog[0].poster_path} 
               alt="Hero bg" 
@@ -76,9 +96,11 @@ export default async function HomePage() {
         <p className="text-white/50 text-sm">Películas y series extraídas directamente desde tu DB.</p>
       </div>
 
-      {error && (
-        <div className="p-6 rounded-xl border border-red-500/20 bg-red-500/10 text-red-200">
-          Error Supabase: {error.message} - ¿Configuraste el `.env.local`?
+      {(supabaseError || !rawCatalog) && (
+        <div className="p-6 rounded-xl border border-red-500/20 bg-red-500/10 text-red-200 mb-8">
+          {supabaseError ? `Error Supabase: ${supabaseError.message}` : 'No se encontraron datos en el catálogo.'} 
+          <br />
+          <span className="text-xs opacity-50">Verifica tus variables de entorno y que la función RPC get_catalog_ids exista.</span>
         </div>
       )}
 

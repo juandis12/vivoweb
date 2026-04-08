@@ -25,13 +25,17 @@ export default function PlayerModal({
     let localElapsed = 0;
     let lastSavedElapsed = -1;
 
-    const doSaveIframe = () => {
+    const doSaveIframe = async () => {
       if (localElapsed !== lastSavedElapsed && localElapsed > 0) {
-        // Enviar a Base de datos sin bloquear
-        supabase.rpc('update_user_progress', {
+        // Enviar a Base de datos de forma segura
+        const { error: rpcError } = await supabase.rpc('update_user_progress', {
           p_tmdb_id: tmdbId,
           p_seconds: localElapsed
-        }).catch(err => console.error('Error telemetry:', err));
+        });
+        
+        if (rpcError) {
+          console.error('Error telemetry:', rpcError);
+        }
         
         lastSavedElapsed = localElapsed;
       }
