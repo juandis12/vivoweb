@@ -1,93 +1,72 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { X, Maximize, Minimize } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
-export default function PlayerModal({ 
-  sourceUrl, 
-  tmdbId, 
-  onClose 
-}: { 
-  sourceUrl: string | null; 
+interface PlayerModalProps {
+  sourceUrl: string;
   tmdbId: string;
-  onClose: () => void 
-}) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  onClose: () => void;
+}
+
+export default function PlayerModal({ sourceUrl, tmdbId, onClose }: PlayerModalProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
-  const [elapsed, setElapsed] = useState(0);
+  const startTime = useRef(Date.now());
 
-  // EFECTO: Lógica de Telemetría Robusta (Fase 4 - Prevención de Fugas de Memoria)
+  // Sistema de telemetr├¡a (Progreso)
   useEffect(() => {
-    if (!sourceUrl) return;
+    const timer = setInterval(async () => {
+      const elapsedSeconds = Math.floor((Date.now() - startTime.current) / 1000);
+      
+      // Llamada al RPC 'update_user_progress' que ahora apunta a columns reales
+      await supabase.rpc('update_user_progress', {
+        p_tmdb_id: parseInt(tmdbId),
+        p_seconds: elapsedSeconds
+      });
+    }, 60000); // Guardar cada minuto
 
-    let intervalId: NodeJS.Timeout;
-    let ticks = 0;
-    let localElapsed = 0;
-    let lastSavedElapsed = -1;
+    return () => clearInterval(timer);
+  }, [tmdbId]);
 
-    const doSaveIframe = async () => {
-      if (localElapsed !== lastSavedElapsed && localElapsed > 0) {
-        // Enviar a Base de datos de forma segura
-        const { error: rpcError } = await supabase.rpc('update_user_progress', {
-          p_tmdb_id: tmdbId,
-          p_seconds: localElapsed
-        });
-        
-        if (rpcError) {
-          console.error('Error telemetry:', rpcError);
-        }
-        
-        lastSavedElapsed = localElapsed;
-      }
-    };
-
-    // Tracker que corre cada 15 segundos pero solo guarda cada 60s
-    intervalId = setInterval(() => {
-      localElapsed += 15;
-      ticks++;
-      if (ticks % 4 === 0) {
-        doSaveIframe(); // Debounced save
-      }
-    }, 15000);
-
-    // Visibility Checker: Si cambia pestaña, guardamos progreso.
-    const handleVis = () => {
-      if (document.hidden) doSaveIframe();
-    };
-    
-    document.addEventListener('visibilitychange', handleVis);
-    window.addEventListener('beforeunload', doSaveIframe);
-
-    return () => {
-      // CLEANUP ESTRICTO: Sin memory leaks
-      clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVis);
-      window.removeEventListener('beforeunload', doSaveIframe);
-      doSaveIframe(); // Guardado final al cerrar modal
-    };
-  }, [sourceUrl, tmdbId]);
-
-  if (!sourceUrl) return null;
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center backdrop-blur-sm">
-      {/* Botón Salir Superior */}
-      <button 
-        onClick={onClose}
-        className="absolute top-6 right-6 z-50 text-white/50 hover:text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all"
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in duration-500">
+      <div 
+        ref={containerRef}
+        className="relative w-full h-full md:w-[90vw] md:h-[80vh] bg-black rounded-none md:rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(37,99,235,0.4)] border border-white/10"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-6 h-6 stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+        {/* Cabecera del Player */}
+        <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-50 bg-gradient-to-b from-black/80 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+          <h2 className="text-white font-black uppercase tracking-widest text-sm">Reproduciendo ahora</h2>
+          <div className="flex gap-4">
+            <button onClick={toggleFullscreen} className="text-white/70 hover:text-white transition-colors">
+              {isFullscreen ? <Minimize className="w-6 h-6" /> : <Maximize className="w-6 h-6" />}
+            </button>
+            <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
 
-      {/* Frame Seguro Sandbox */}
-      <div className="w-full max-w-6xl aspect-video rounded-xl overflow-hidden shadow-[0_0_80px_rgba(37,99,235,0.2)] bg-black relative border border-white/10">
-        <iframe 
-          ref={iframeRef}
+        {/* Iframe Protegido */}
+        <iframe
           src={sourceUrl}
-          className="w-full h-full border-none"
-          allow="autoplay; fullscreen; encrypted-media"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
-          referrerPolicy="no-referrer"
+          className="w-full h-full border-0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"
         />
       </div>
     </div>
