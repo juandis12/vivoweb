@@ -4,9 +4,19 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error(
+      "ERROR CR├ìTICO: Las variables de entorno de Supabase no est├ín configuradas. " +
+      "Verifica NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en Vercel o .env.local"
+    );
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -18,7 +28,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch (error) {
-            // El `setAll` se omitirá desde Server Components, es normal.
+            // El `setAll` se omitir├í desde Server Components, es normal.
           }
         },
       },

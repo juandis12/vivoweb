@@ -5,40 +5,138 @@ import { Suspense } from 'react';
 
 export const revalidate = 3600;
 
+interface CatalogItem {
+  id?: string;
+  tmdb_id: string;
+  title?: string;
+  source_url?: string;
+  embed_url?: string;
+  type?: 'movie' | 'series' | 'anime';
+}
+
+interface MediaItem {
+  id: string;
+  tmdb_id: string;
+  title: string;
+  source_url: string;
+  poster_path: string | null;
+  type: 'movie' | 'series' | 'anime';
+}
+
 export default async function HomePage() {
   const supabase = await createClient();
   
-  // 1. Intentar obtener el catálogo (Peliculas es el nombre más probable)
+  // CONSULTA DIRECTA (El v├¡a m├ís segura)
   const { data: rawData, error: supabaseError } = await supabase
     .from('peliculas')
     .select('*')
-    .limit(10);
+    .order('created_at', { ascending: false })
+    .limit(100);
 
-  // DEBUG: Si falla, intentar ver si la tabla se llama 'catalog'
-  let finalData = rawData;
-  let finalError = supabaseError;
+  const rawCatalog = rawData as CatalogItem[] | null;
+  
+  if (supabaseError) console.error('Error fetching catalog:', supabaseError);
 
-  if (supabaseError) {
-    const { data: altData, error: altError } = await supabase.from('catalog').select('*').limit(10);
-    if (!altError) {
-      finalData = altData;
-      finalError = null;
-    }
-  }
+  const processCatalog = async (items: CatalogItem[]) => {
+    return await Promise.all(
+      items.map(async (item) => {
+        let poster = null;
+        let finalTitle = item.title || `Contenido ${item.tmdb_id}`;
+
+        try {
+          if (item.tmdb_id && item.tmdb_id !== "null") {
+            const typeStr = (item.type === 'movie' || !item.type) ? 'movie' : 'tv';
+            const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
+            if (tmdbData) {
+              poster = tmdbData.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null;
+              finalTitle = tmdbData.title || tmdbData.name || finalTitle;
+            }
+          }
+        } catch (tmdbErr) {
+          console.error("TMDB error:", tmdbErr);
+        }
+
+        return {
+          id: item.id || Math.random().toString(),
+          tmdb_id: item.tmdb_id || '0',
+          title: finalTitle,
+          source_url: item.source_url || item.embed_url || '',
+          poster_path: poster,
+          type: item.type || 'movie'
+        } as MediaItem;
+      })
+    );
+  };
+
+  const recentItems = rawCatalog ? await processCatalog(rawCatalog.slice(0, 12)) : [];
+  const movies = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'movie').slice(0, 6)) : [];
+  const series = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'series' || i.type === 'tv').slice(0, 6)) : [];
 
   return (
     <main className="pt-24 px-6 pb-24 max-w-7xl mx-auto space-y-16">
-      <section className="p-8 rounded-3xl bg-red-500/10 border border-red-500/20">
-        <h2 className="text-2xl font-bold text-red-400 mb-4">Error de Conexión Detectado</h2>
-        <p className="text-white/60 mb-2">Mensaje técnico de Supabase:</p>
-        <code className="block p-4 bg-black/40 rounded-lg text-xs text-red-300 whitespace-pre-wrap">
-          {finalError ? JSON.stringify(finalError, null, 2) : 'No se recibió error, pero la tabla está vacía.'}
-        </code>
-        <div className="mt-6 flex gap-4">
-           <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white text-black text-sm font-bold rounded">Reintentar</button>
-           <p className="text-xs text-white/20 italic">Asegúrate de que la tabla "peliculas" o "catalog" exista en Supabase.</p>
+      
+      {/* Hero Portada Principal */}
+      <section className="w-full aspect-[4/3] md:aspect-[21/9] bg-surface-container rounded-3xl border border-white/5 flex items-end relative overflow-hidden shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-t from-base via-base/80 to-transparent z-10" />
+        <div className="z-20 p-8 md:p-14 w-full md:w-2/3">
+          <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-black tracking-widest uppercase border border-white/10 inline-block mb-4 text-primary w-max">
+            VivoWeb Premium
+          </div>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 text-white drop-shadow-lg leading-none">
+            {recentItems[0]?.title || 'CATÁLOGO VIVO'}
+          </h1>
+          <p className="text-white/60 text-lg md:text-xl line-clamp-2 md:line-clamp-3 select-none mb-6">
+            Disfruta de la mejor experiencia de streaming con la base de datos más completa y actualizada.
+          </p>
+          <div className="flex gap-4">
+             <button className="px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-primary hover:text-white transition-all transform hover:scale-105">Reproducir</button>
+             <button className="px-8 py-3 bg-white/10 text-white font-bold rounded-lg hover:bg-white/20 transition-all backdrop-blur-md">Más información</button>
+          </div>
         </div>
+        
+        {recentItems[0]?.poster_path && (
+           <img 
+              src={recentItems[0].poster_path} 
+              alt="Hero bg" 
+              className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-screen scale-105" 
+           />
+        )}
       </section>
+
+      {/* Secciones del Home */}
+      <HomeSection title="Agregados Recientemente" items={recentItems} />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <HomeSection title="Cine Premium" items={movies} />
+        <HomeSection title="Series Tendencia" items={series} />
+      </div>
+
+      {(supabaseError || !rawCatalog || rawCatalog.length === 0) && (
+        <div className="p-12 text-center rounded-3xl border border-dashed border-white/10 bg-white/5">
+          <h3 className="text-xl font-bold mb-2">Conexión establecida</h3>
+          <p className="text-white/40 max-w-sm mx-auto italic">
+            {supabaseError 
+              ? `Error de acceso: ${supabaseError.message}` 
+              : 'La tabla "peliculas" está conectada pero vacía. ¡Empieza a agregar contenidos!'
+            }
+          </p>
+        </div>
+      )}
     </main>
+  );
+}
+
+function HomeSection({ title, items }: { title: string; items: MediaItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center justify-between border-l-4 border-primary pl-4">
+        <h2 className="text-2xl font-black tracking-tighter uppercase">{title}</h2>
+        <span className="text-primary text-xs font-bold hover:underline cursor-pointer">Ver todo</span>
+      </div>
+      <Suspense fallback={<div className="h-40 bg-surface animate-pulse rounded-xl" />}>
+        <MediaLibrary catalog={items} />
+      </Suspense>
+    </section>
   );
 }
