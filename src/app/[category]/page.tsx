@@ -27,21 +27,33 @@ export default async function CategoryPage({
 
   const supabase = await createClient();
   
-  // 1. Obtener contenidos de la tabla 'video_sources' seg├║n el tipo base
-  const dbType = category === 'peliculas' ? 'movie' : 'series';
-  const { data: rawItems } = await supabase
-    .from('video_sources')
-    .select('*')
-    .eq('type', dbType)
-    .limit(100);
+  let rawItems: any[] = [];
 
-  if (!rawItems) return <div className="pt-32 text-center opacity-30">No se encontraron contenidos.</div>;
+  // FILTRADO MULTITABLA
+  if (category === 'peliculas') {
+    const { data } = await supabase.from('video_sources').select('*').limit(100);
+    rawItems = data || [];
+  } else {
+    // Para Series y Anime buscamos en 'series_episodes'
+    // Usamos una consulta que agrupa por tmdb_id para no repetir el show
+    const { data } = await supabase
+      .from('series_episodes')
+      .select('*')
+      .limit(500); // Tomamos un lote grande para filtrar inteligentemente
 
-  // 2. Procesamiento con Filtro de Metadatos de TMDB
+    // Agrupamos manualmente para quedarnos con un registro por serie
+    const seen = new Set();
+    rawItems = (data || []).filter(item => {
+      if (seen.has(item.tmdb_id)) return false;
+      seen.add(item.tmdb_id);
+      return true;
+    }).slice(0, 50);
+  }
+
   const catalog: MediaItem[] = (await Promise.all(
     rawItems.map(async (item: any) => {
       try {
-        const typeStr = item.type === 'movie' ? 'movie' : 'tv';
+        const typeStr = category === 'peliculas' ? 'movie' : 'tv';
         const tmdbData = await fetchTMDB(`/${typeStr}/${item.tmdb_id}`);
         if (!tmdbData) return null;
 
@@ -69,28 +81,21 @@ export default async function CategoryPage({
 
   const titles: Record<string, string> = {
     'peliculas': 'Lo mejor del Cine',
-    'series': 'Series Imprescindibles',
+    'series': 'Series de Estreno',
     'anime': 'Mundo Anime'
   };
 
   return (
     <main className="pt-32 px-6 pb-24 max-w-7xl mx-auto">
-      <div className="mb-12 border-l-4 border-primary pl-6">
-        <h1 className="text-5xl font-black tracking-tighter mb-2 uppercase">
-          {titles[category]}
-        </h1>
-        <p className="text-white/40 text-lg italic">
-          Explora nuestra colecci├│n exclusiva de {category} disponible en tu cat├ílogo.
-        </p>
-      </div>
+      <h1 className="text-5xl font-black tracking-tighter mb-12 uppercase border-l-4 border-primary pl-6">
+        {titles[category]}
+      </h1>
 
       <Suspense fallback={<div className="h-64 flex items-center justify-center animate-pulse"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"/></div>}>
         {catalog.length > 0 ? (
           <MediaLibrary catalog={catalog} />
         ) : (
-          <div className="py-20 text-center bg-white/5 rounded-3xl border border-dashed border-white/10 opacity-30 italic">
-            No se encontraron t├¡tulos de "{category}" en el cat├ílogo actual.
-          </div>
+          <div className="py-20 text-center opacity-30 italic">No hay contenido disponible en esta categor├¡a.</div>
         )}
       </Suspense>
     </main>

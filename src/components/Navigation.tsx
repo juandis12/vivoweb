@@ -1,129 +1,94 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Search, Home, Film, Tv, List, X } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import { 
+  Home, 
+  Film, 
+  Tv, 
+  Zap, 
+  Heart, 
+  History, 
+  Search, 
+  User,
+  Settings
+} from 'lucide-react';
+import { useState } from 'react';
+
+const navItems = [
+  { href: '/', icon: Home, label: 'Inicio' },
+  { href: '/peliculas', icon: Film, label: 'Pel├¡culas' },
+  { href: '/series', icon: Tv, label: 'Series' },
+  { href: '/anime', icon: Zap, label: 'Anime' },
+  { href: '/milista', icon: Heart, label: 'Mi Lista' },
+  { href: '/historial', icon: History, label: 'Historial' },
+];
 
 export default function Navigation() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [scrolled, setScrolled] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Autofocus al abrir el buscador
-  useEffect(() => {
-    if (isSearchOpen) {
-      setTimeout(() => searchInputRef.current?.focus(), 100);
-    }
-  }, [isSearchOpen]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setIsSearchOpen(false);
-    }
-  };
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <>
-      <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled || isSearchOpen ? 'bg-base/95 backdrop-blur-md border-b border-white/10' : 'bg-transparent'}`}>
-        <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto gap-4">
-          
-          {/* Logo y Nav (Se oculta si el buscador est├í abierto en móvil) */}
-          {!isSearchOpen && (
-             <div className="flex items-center gap-8 animate-in fade-in duration-300">
-               <Link href="/" className="text-2xl font-black tracking-tight text-white shrink-0">
-                 VIVO<span className="text-primary">TV</span>
-               </Link>
-
-               <nav className="hidden md:flex gap-6 items-center">
-                 <NavLink href="/" currentPath={pathname}>Inicio</NavLink>
-                 <NavLink href="/peliculas" currentPath={pathname}>Películas</NavLink>
-                 <NavLink href="/series" currentPath={pathname}>Series</NavLink>
-                 <NavLink href="/anime" currentPath={pathname}>Anime</NavLink>
-                 <NavLink href="/milista" currentPath={pathname}>Mi Lista</NavLink>
-                 <NavLink href="/historial" currentPath={pathname}>Historial</NavLink>
-               </nav>
-             </div>
-          )}
-
-          {/* Buscador Expandible */}
-          <div className={`flex-1 flex justify-end items-center ${isSearchOpen ? 'w-full' : 'w-auto'}`}>
-            {isSearchOpen ? (
-              <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2 animate-in slide-in-from-right-4 duration-300">
-                <Search className="w-5 h-5 text-primary shrink-0" />
-                <input 
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Buscar películas, series..."
-                  className="w-full bg-transparent border-none outline-none text-white text-lg font-medium placeholder:text-white/30"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <button type="button" onClick={() => setIsSearchOpen(false)} className="text-white/50 hover:text-white">
-                  <X className="w-6 h-6" />
-                </button>
-              </form>
-            ) : (
-              <div className="flex items-center gap-4">
-                 <button 
-                  onClick={() => setIsSearchOpen(true)}
-                  className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
-                >
-                  <Search className="w-5 h-5" />
-                </button>
-                <Link href="/profiles" className="flex items-center gap-2 cursor-pointer bg-surface py-1.5 px-3 rounded-full border border-white/10 hover:border-white/20 transition-all">
-                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold">
-                    U
-                  </div>
-                </Link>
-              </div>
-            )}
-          </div>
+      {/* DESKTOP SIDEBAR (Apple TV Style) */}
+      <aside 
+        className={`fixed left-0 top-0 h-screen glass border-r bg-black/40 z-[100] hidden md:flex flex-col items-center py-10 transition-all duration-500 ease-in-out ${isExpanded ? 'w-64' : 'w-20'}`}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+      >
+        <div className={`mb-12 flex items-center gap-3 ${isExpanded ? 'px-6' : 'justify-center'}`}>
+           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-[0_0_15px_var(--primary-glow)]">
+             <span className="text-xl font-black italic">V</span>
+           </div>
+           {isExpanded && <span className="text-xl font-black tracking-tighter animate-fade">VIVOTV</span>}
         </div>
-      </header>
 
-      {/* Mobile Nav (Bottom Bar) */}
-      <nav className="md:hidden fixed bottom-4 left-4 right-4 z-50 glass-panel rounded-2xl flex justify-around p-3 items-center">
-        <MobileNavLink href="/" icon={Home} label="Inicio" currentPath={pathname} />
-        <MobileNavLink href="/peliculas" icon={Film} label="Cine" currentPath={pathname} />
-        <MobileNavLink href="/series" icon={Tv} label="Series" currentPath={pathname} />
-        <MobileNavLink href="/milista" icon={List} label="Lista" currentPath={pathname} />
+        <nav className="flex-1 w-full space-y-4 px-3">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group flex items-center gap-4 py-3 rounded-2xl transition-all duration-300 relative ${isActive ? 'bg-primary/10 text-primary shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'text-white/40 hover:bg-white/5 hover:text-white'} ${isExpanded ? 'px-4' : 'justify-center'}`}
+              >
+                <item.icon className={`w-6 h-6 transition-transform group-hover:scale-110 ${isActive ? 'stroke-[2.5px]' : ''}`} />
+                {isExpanded && <span className="font-bold tracking-tight animate-fade overflow-hidden whitespace-nowrap">{item.label}</span>}
+                {isActive && !isExpanded && <div className="absolute right-0 w-1 h-6 bg-primary rounded-l-full shadow-[0_0_10px_var(--primary-glow)]" />}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto w-full px-3 space-y-4">
+           <Link href="/profiles" className={`flex items-center gap-4 py-3 text-white/40 hover:text-white rounded-2xl transition-all ${isExpanded ? 'px-4' : 'justify-center'}`}>
+              <User className="w-6 h-6" />
+              {isExpanded && <span className="font-bold animate-fade">Perfiles</span>}
+           </Link>
+        </div>
+      </aside>
+
+      {/* MOBILE BOTTOM TAB BAR (Netflix Mobile Style) */}
+      <nav className="fixed bottom-0 left-0 right-0 h-20 glass bg-black/80 z-[100] border-t md:hidden flex items-center justify-around px-2 pb-2">
+        {navItems.slice(0, 4).map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${isActive ? 'text-primary' : 'text-white/40'}`}
+            >
+              <item.icon className={`w-6 h-6 ${isActive ? 'stroke-[2.5px]' : ''}`} />
+              <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+              {isActive && <div className="w-1 h-1 bg-primary rounded-full shadow-[0_0_10px_var(--primary)]" />}
+            </Link>
+          );
+        })}
+        <Link href="/profiles" className="flex flex-col items-center gap-1.5 px-3 py-2 text-white/40">
+           <User className="w-6 h-6" />
+           <span className="text-[10px] font-black uppercase tracking-widest">Cuenta</span>
+        </Link>
       </nav>
     </>
-  );
-}
-
-function NavLink({ href, children, currentPath }: { href: string; children: React.ReactNode; currentPath: string }) {
-  const isActive = currentPath === href;
-  return (
-    <Link 
-      href={href} 
-      className={`text-sm font-medium transition-colors ${isActive ? 'text-white' : 'text-white/60 hover:text-white'}`}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function MobileNavLink({ href, icon: Icon, label, currentPath }: any) {
-  const isActive = currentPath === href;
-  return (
-    <Link href={href} className="flex flex-col items-center gap-1 w-16">
-      <Icon className={`w-6 h-6 transition-all ${isActive ? 'text-primary scale-110' : 'text-white/50'}`} />
-      <span className={`text-[10px] uppercase font-bold tracking-wider ${isActive ? 'text-primary' : 'text-white/50'}`}>{label}</span>
-    </Link>
   );
 }

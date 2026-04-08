@@ -1,30 +1,75 @@
-@import 'tailwindcss';
+@import "google-fonts/roboto/index.css";
+@import "google-fonts/inter/index.css";
 
-@theme {
-  --color-base: #0b122b;
-  --color-surface: #131a33;
-  --color-primary: #2563eb;
-  --color-secondary: #facc15;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --base: #080809;
+  --surface: #121214;
+  --surface-hover: #1c1c1f;
+  --primary: #6366f1;
+  --primary-glow: rgba(99, 102, 241, 0.3);
+  --accent: #a855f7;
+  --text: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
-@layer base {
-  body {
-    background-color: var(--color-base);
-    color: #dce1ff;
-    font-family: var(--font-sans);
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-  }
+body {
+  background-color: var(--base);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-@layer utilities {
-  .glass-panel {
-    background: rgba(11, 18, 43, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
+/* EFECTOS PREMIUM */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.glow-hover {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.glow-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px var(--primary-glow);
+  border-color: var(--primary);
+  z-index: 50;
+}
+
+.neon-text {
+  text-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* BARRA DE DESPLAZAMIENTO ESTILO STREAMING */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-hover);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ANIMACIONES */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade {
+  animation: fadeIn 0.6s ease-out forwards;
 }
