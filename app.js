@@ -16,6 +16,11 @@ function fatalLog(msg) {
     console.error(`💥 ${msg}`);
 }
 
+// Simple debug logger used throughout the app
+function logDebug(msg) {
+    console.debug(`[DEBUG] ${msg}`);
+}
+
 window.onerror = function(message, source, lineno, colno, error) {
     fatalLog(`${message} at ${lineno}:${colno}`);
 };
@@ -64,6 +69,7 @@ let heroItems   = [];
 let availableMovies = new Set();
 let availableSeries = new Set();
 let availableIds    = new Set();
+let DB_CATALOG      = []; // -- NUEVO: Repositorio del catálogo 100% DB --
 let searchTimeout   = null;
 let lastSearchResults = [];
 let currentFilter     = 'all';
@@ -337,43 +343,56 @@ async function fetchAvailableIds() {
     }
 
     try {
-        // --- Fase de Adaptación: Carga Dual (Perfect Sync) ---
-        // Intentamos obtener IDs de video_sources (Fuentes reales) y de content (Referencia)
-        const [{ data: sources, error: errorS }, { data: contents, error: errorC }] = await Promise.all([
-            supabase.from('video_sources').select('tmdb_id, type'),
-            supabase.from('content').select('tmdb_id, content_type')
-        ]);
+        logDebug('Sincronizando Catálogo Maestro (Detección de Tablas)...');
         
         availableMovies = new Set();
         availableSeries = new Set();
         availableIds = new Set();
+        DB_CATALOG = [];
 
-        if (errorS && errorC) { 
-            console.error('[VivoTV] ❌ Error crítico cargando catálogo:', errorS.message || errorC.message);
-            return;
-        }
+        // 1. Cargar desde 'content' (Fuente Principal de Metadatos)
+        try {
+            const { data: contents, error: errorC } = await supabase.from('content').select('*');
+            if (errorC) throw errorC;
+            if (contents) {
+                DB_CATALOG = contents;
+                contents.forEach(item => {
+                    if (!item.tmdb_id) return;
+                    const strId = item.tmdb_id.toString();
+                    availableIds.add(strId);
+                    if (item.content_type === 'movie') availableMovies.add(strId);
+                    else if (item.content_type === 'series' || item.content_type === 'tv') availableSeries.add(strId);
+                });
+            }
+        } catch (err) { console.warn('[DB] Tabla content no disponible:', err.message); }
 
-        // 1. Procesar video_sources (Prioridad)
-        if (sources) {
-            sources.forEach(item => {
-                if (!item.tmdb_id) return;
-                const strId = item.tmdb_id.toString();
-                availableIds.add(strId);
-                if (item.type === 'movie') availableMovies.add(strId);
-                else if (item.type === 'tv' || item.type === 'series') availableSeries.add(strId);
-            });
-        }
+        // 2. Cargar desde 'video_sources' (Fuentes de Video Directas)
+        try {
+            const { data: sources, error: errorS } = await supabase.from('video_sources').select('tmdb_id, type');
+            if (sources && !errorS) {
+                sources.forEach(item => {
+                    if (!item.tmdb_id) return;
+                    const strId = item.tmdb_id.toString();
+                    availableIds.add(strId);
+                    if (item.type === 'movie') availableMovies.add(strId);
+                    else if (item.type === 'series' || item.type === 'tv') availableSeries.add(strId);
+                });
+            }
+        } catch (err) { console.warn('[DB] Tabla video_sources no disponible:', err.message); }
 
-        // 2. Procesar content (Complemento)
-        if (contents) {
-            contents.forEach(item => {
-                if (!item.tmdb_id) return;
-                const strId = item.tmdb_id.toString();
-                availableIds.add(strId);
-                if (item.content_type === 'movie') availableMovies.add(strId);
-                else if (item.content_type === 'series' || item.content_type === 'tv') availableSeries.add(strId);
-            });
-        }
+        // 3. Cargar desde 'series_episodes' (Para asegurar disponibilidad de series por episodios)
+        try {
+            const { data: episodes, error: errorE } = await supabase.from('series_episodes').select('tmdb_id');
+            if (episodes && !errorE) {
+                episodes.forEach(item => {
+                    const strId = item.tmdb_id.toString();
+                    availableIds.add(strId);
+                    availableSeries.add(strId);
+                });
+            }
+        } catch (err) { console.warn('[DB] Tabla series_episodes no disponible:', err.message); }
+
+        logDebug(`[VivoTV] 🚀 Sistema sincronizado: ${availableIds.size} títulos detectados.`);
 
         console.log(`[VivoTV] 📊 Catálogo sincronizado: ${availableIds.size} títulos (Movies: ${availableMovies.size}, TV: ${availableSeries.size})`);
 
@@ -495,9 +514,16 @@ async function toDashboard(user) {
     });
 
     try {
-        logDebug('Cargando IDs desde BD...');
-        // 2. Cargar disponibilidad de base de datos
+        logDebug('Cargando Catálogo Maestro desde BD...');
+        // 2. Cargar disponibilidad y metadatos de base de datos
         await fetchAvailableIds();
+
+        // 3. NUEVO: Renderizado impulsado por DB (Prioridad Máxima)
+        // Lo esperamos (await) para asegurar que el contenido inicial cargue antes que las tendencias
+        await renderDBCategoryRows();
+        
+        // 4. Cargar Historiales y resto de filas (TMDB adaptado)
+        loadPersonalizedRows();
         logDebug(`IDs cargados en DB: ${availableIds.size}`);
         
         // 3. Inicializar Páginas Específicas
@@ -514,7 +540,7 @@ async function toDashboard(user) {
         const isAnimePage  = document.body.classList.contains('page-anime');
         const pageType     = (isSeriesPage || isAnimePage) ? 'tv' : (isMoviesPage ? 'movie' : 'all');
 
-        // 4. Cargar Hero
+        // 4. Cargar Hero (Mezcla de Tendencias TMDB y Catálogo Propio)
         let heroData;
         if (isAnimePage) {
             heroData = await TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, sort_by: 'popularity.desc' });
@@ -526,16 +552,26 @@ async function toDashboard(user) {
             heroData = await TMDB_SERVICE.getTrending();
         }
 
-        // Filtrar Hero solo para items disponibles en la base de datos
-        let availableHeroItems = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString()));
-        heroItems = filterItemsByProfile(availableHeroItems).slice(0, 8);
+        // --- REVOLUCIÓN HERO: Filtrar tendencias Y añadir items locales ---
+        let trendingAvailable = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString()));
+        
+        // Añadir items del catálogo local que tengan backdrop_url (Prioridad Alta)
+        const localHeroItems = (DB_CATALOG || []).filter(item => item.backdrop_url).slice(0, 5);
+        
+        // Combinar (Locales primero para dar visibilidad a la DB propia)
+        let combinedHero = [...localHeroItems, ...trendingAvailable];
+        heroItems = filterItemsByProfile(combinedHero).slice(0, 10);
         
         if (heroItems.length && document.getElementById('heroBanner')) {
             CATALOG_UI.renderHero(heroItems[0], heroItems);
             startHeroRotation();
         } else if (document.getElementById('heroBanner')) {
-            // Fallback si no hay nada disponible en tendencia
-            document.getElementById('heroBanner').classList.add('hidden');
+            // Si no hay nada, intentamos mostrar al menos un item de la DB sin backdrop_url
+            if (DB_CATALOG && DB_CATALOG.length > 0) {
+                CATALOG_UI.renderHero(DB_CATALOG[0]);
+            } else {
+                document.getElementById('heroBanner').classList.add('hidden');
+            }
         }
 
         // 5. Cargar Filas (Filtradas)
@@ -600,7 +636,6 @@ async function toDashboard(user) {
                 renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10765:27 }), pageType),
             ]);
         }
-
         // 6. Cargar Grilla
         const gridContainer = document.getElementById('gridContainer');
         if (gridContainer) {
@@ -614,9 +649,8 @@ async function toDashboard(user) {
                 };
             }
         }
-
-    } catch (e) { 
-        console.error('Error cargando catálogo:', e); 
+    } catch (e) {
+        console.error('[Dashboard] Error en inicialización:', e);
     }
 
     await loadMyList();
@@ -650,42 +684,46 @@ async function loadGridData(type, page, append = false) {
             const start = (page - 1) * perPage;
             const end   = start + perPage;
             const pageIds = allIds.slice(start, end);
-
+            
             if (btnLoadMore) btnLoadMore.classList.toggle('hidden', end >= allIds.length);
 
             if (pageIds.length) {
-                const detailsArray = [];
-                const chunkSize = 6; // Menos por chunk para no golpear rate limit de TMDB
-                for (let i = 0; i < pageIds.length; i += chunkSize) {
-                    const chunk = pageIds.slice(i, i + chunkSize);
-                    const chunkRes = await Promise.all(
-                        chunk.map(id => TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv').catch(() => null))
-                    );
-                    detailsArray.push(...chunkRes);
-                    if (i + chunkSize < pageIds.length) {
-                        await new Promise(r => setTimeout(r, 250)); // Respiración API
+                const finalItems = [];
+                for (const id of pageIds) {
+                    // Prioridad 1: Buscar en el catálogo local (Ya tiene poster_url, etc)
+                    const localItem = DB_CATALOG.find(i => i.tmdb_id?.toString() === id);
+                    if (localItem) {
+                        finalItems.push(localItem);
+                    } else {
+                        // Prioridad 2: Fallback TMDB si no está en cache local
+                        const details = await TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv').catch(() => null);
+                        if (details) finalItems.push(details);
                     }
                 }
 
                 if (loader) loader.classList.add('hidden');
  
                 // Aplicar Filtrado Global por Perfil (Helper Centralizado)
-                let finalItems = detailsArray.filter(item => item && item.poster_path);
-                finalItems = filterItemsByProfile(finalItems);
+                let filteredItems = filterItemsByProfile(finalItems);
 
                 if (isAnimePage) {
-                    finalItems = finalItems.filter(item => {
+                    // Filtrado profundo de Anime (Género TMDB 16)
+                    filteredItems = await Promise.all(filteredItems.map(async (item) => {
                         const genres = item.genres || item.genre_ids || [];
-                        return genres.some(g => {
-                            const id = typeof g === 'object' ? g.id : g;
-                            return id === 16;
-                        });
-                    });
+                        const hasAnimeGenre = genres.some(g => (typeof g === 'object' ? g.id : g) === 16);
+                        if (hasAnimeGenre) return item;
+
+                        if (!item.genres && item.tmdb_id) {
+                            const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.content_type === 'series' ? 'tv' : 'movie');
+                            return (details.genres || []).some(g => g.id === 16) ? item : null;
+                        }
+                        return null;
+                    }));
+                    filteredItems = filteredItems.filter(Boolean);
                 }
 
-                // --- OPTIMIZACIÓN: DOCUMENT FRAGMENT ---
                 const fragment = document.createDocumentFragment();
-                finalItems.forEach(item => {
+                filteredItems.forEach(item => {
                     const card = CATALOG_UI.createMovieCard(item, type, true);
                     fragment.appendChild(card);
                 });
@@ -719,6 +757,71 @@ async function loadGridData(type, page, append = false) {
     } catch (e) {
         console.error('Error cargando grid:', e);
         if (loader) loader.classList.add('hidden');
+    }
+}
+
+/**
+ * Renderiza el catálogo basándose ÚNICAMENTE en lo que hay en la base de datos local.
+ * Esto garantiza que el contenido del usuario siempre sea visible.
+ */
+async function renderDBCatalog(containerId, filterType = 'all', isAnime = false) {
+    if (!DB_CATALOG || DB_CATALOG.length === 0) return;
+
+    let items = DB_CATALOG;
+    if (filterType !== 'all') {
+        items = items.filter(item => item.content_type === filterType);
+    }
+
+    if (isAnime) {
+        // --- DETECCIÓN DE ANIME SEGURA (Fase 10X) ---
+        // Para evitar bloqueos, solo consultamos los primeros 20 si no tenemos caché
+        const animeItems = [];
+        const pool = items.slice(0, 40); // Límite para no matar la conexión
+        
+        await Promise.all(pool.map(async (item) => {
+            try {
+                // Si ya tiene géneros (algunos items de la DB podrían tenerlos en el futuro)
+                if (item.genre_ids?.includes(16)) {
+                    animeItems.push(item);
+                    return;
+                }
+                
+                const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.content_type === 'series' ? 'tv' : 'movie');
+                if ((details.genres || []).some(g => g.id === 16)) {
+                    animeItems.push(item);
+                }
+            } catch(e) { console.warn('Error detectando anime:', e); }
+        }));
+        items = animeItems;
+    }
+
+    if (items.length > 0) {
+        CATALOG_UI.renderCarousel(containerId, items, null, availableIds);
+    }
+}
+
+async function renderDBCategoryRows() {
+    const isMainPage = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');
+    const isMoviePage = window.location.pathname.includes('peliculas.html');
+    const isSeriesPage = window.location.pathname.includes('series.html');
+    const isAnimePage = window.location.pathname.includes('anime.html');
+
+    try {
+        if (isMainPage) {
+            // Renderizado en paralelo para velocidad
+            await Promise.all([
+                renderDBCatalog('popularMoviesCarousel', 'movie'),
+                renderDBCatalog('popularTVCarousel', 'series')
+            ]);
+        } else if (isMoviePage) {
+            await renderDBCatalog('popularCarousel', 'movie');
+        } else if (isSeriesPage) {
+            await renderDBCatalog('popularCarousel', 'series');
+        } else if (isAnimePage) {
+            await renderDBCatalog('popularCarousel', 'all', true);
+        }
+    } catch (e) {
+        console.error('[DB Render] Error renderizando filas nativas:', e);
     }
 }
 
@@ -1195,6 +1298,63 @@ async function loadMyList() {
         } else {
             section.classList.add('hidden');
         }
+    }
+}
+
+async function loadPersonalizedRows() {
+    const section = document.getElementById('recommendedSection');
+    const carousel = document.getElementById('recommendedCarousel');
+    if (!section || !carousel || !supabase) return;
+
+    if (!currentProfile) {
+        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+    }
+    if (!currentProfile) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    logDebug('Cargando recomendaciones personalizadas...');
+
+    try {
+        // Obtener favoritos e historial para cruzar datos
+        const [{ data: favs }, { data: history }] = await Promise.all([
+            supabase.from('user_favorites').select('tmdb_id, type').eq('profile_id', currentProfile.id),
+            supabase.from('watch_history').select('tmdb_id, type').eq('profile_id', currentProfile.id).order('last_watched', { ascending: false }).limit(20)
+        ]);
+
+        const combinedIds = new Set();
+        (favs || []).forEach(f => combinedIds.add(`${f.type}:${f.tmdb_id}`));
+        (history || []).forEach(h => combinedIds.add(`${h.type}:${h.tmdb_id}`));
+
+        if (combinedIds.size === 0) {
+            // Si no hay datos, mostrar algo genérico o simplemente ocultar
+            section.classList.add('hidden');
+            return;
+        }
+
+        section.classList.remove('hidden');
+        CATALOG_UI.showSkeletons('recommendedCarousel', 6);
+
+        // Algoritmo de recomendación simple: tomar géneros de los favoritos/vistos
+        // Por ahora, mostraremos una mezcla de lo que ya han visto/marcado como favorito 
+        // pero que esté en el catálogo disponible.
+        
+        const details = await Promise.all(Array.from(combinedIds).slice(0, 12).map(async key => {
+            const [type, id] = key.split(':');
+            return TMDB_SERVICE.getDetails(id, type).catch(() => null);
+        }));
+
+        const filtered = details.filter(d => d && availableIds.has(d.id.toString()));
+        
+        if (filtered.length > 0) {
+            CATALOG_UI.renderCarousel('recommendedCarousel', filtered, null, availableIds);
+        } else {
+            section.classList.add('hidden');
+        }
+    } catch (e) {
+        console.error('Error cargando recomendaciones:', e);
+        section.classList.add('hidden');
     }
 }
 
