@@ -1,78 +1,97 @@
 'use client';
 
+import { createClient } from '@/utils/supabase/client';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { useState } from 'react';
+import { User, Plus, Lock } from 'lucide-react';
 
-const PROFILES = [
-  { id: 'damon', name: 'Damon', avatar: '/assets/avatars/avatar_damon.png' },
-  { id: 'elena', name: 'Elena', avatar: '/assets/avatars/avatar_elena.png' },
-  { id: 'ironman', name: 'Iron Man', avatar: '/assets/avatars/avatar_ironman.png' },
-  { id: 'spiderman', name: 'Spider Man', avatar: '/assets/avatars/avatar_spiderman.png' },
-  { id: 'tanjiro', name: 'Tanjiro', avatar: '/assets/avatars/avatar_tanjiro.png' },
-  { id: 'wanda', name: 'Wanda', avatar: '/assets/avatars/avatar_wanda.png' },
-  { id: 'woody', name: 'Woody', avatar: '/assets/avatars/avatar_woody.png' },
-  { id: 'scott', name: 'Scott', avatar: '/assets/avatars/avatar_scott.png' }
-];
+interface Profile {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  color: string;
+  is_kids: boolean;
+  pin?: string;
+}
 
 export default function ProfilesPage() {
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
   const router = useRouter();
-  const [selected, setSelected] = useState<string | null>(null);
 
-  const handleSelect = (profile: typeof PROFILES[0]) => {
-    setSelected(profile.id);
-    // Persistencia Local
-    localStorage.setItem('vivo_active_profile', JSON.stringify(profile));
-    
-    // Cookie para el servidor (opcional para middleware futuro)
-    document.cookie = `vivo_profile_id=${profile.id}; path=/; max-age=31536000;`;
+  useEffect(() => {
+    async function loadProfiles() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // En un sistema real, redirigir├¡amos al login.
+        // Pero para este audit, permitiremos ver el estado.
+        setLoading(false);
+        return;
+      }
 
-    // Navegar al Home con efecto
-    setTimeout(() => {
-      router.push('/');
-    }, 800);
+      // USANDO TABLA REAL: vivotv_profiles
+      const { data, error } = await supabase
+        .from('vivotv_profiles')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (data) setProfiles(data);
+      setLoading(false);
+    }
+    loadProfiles();
+  }, []);
+
+  const selectProfile = (profile: Profile) => {
+    localStorage.setItem('vivotv_current_profile', JSON.stringify(profile));
+    router.push('/');
   };
 
+  if (loading) return <div className="h-screen flex items-center justify-center animate-pulse text-primary font-black uppercase tracking-tighter text-3xl">Cargando Perfiles...</div>;
+
   return (
-    <main className="fixed inset-0 bg-base flex items-center justify-center z-[100] p-6 overflow-y-auto">
-      <div className="w-full max-w-4xl text-center">
-        <h1 className="text-4xl md:text-6xl font-black text-white mb-12 tracking-tighter animate-in fade-in slide-in-from-top-4 duration-700">
-          ¿Quién está viendo?
-        </h1>
+    <main className="h-screen flex flex-col items-center justify-center bg-base px-6">
+      <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-16 uppercase text-center">
+        ¿Quién est├í viendo <span className="text-primary">VIVOTV</span>?
+      </h1>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {PROFILES.map((profile, i) => (
+      <div className="flex flex-wrap justify-center gap-8 max-w-4xl">
+        {profiles.map((profile) => (
+          <button
+            key={profile.id}
+            onClick={() => selectProfile(profile)}
+            className="group flex flex-col items-center space-y-4 transition-transform hover:scale-110"
+          >
             <div 
-              key={profile.id}
-              onClick={() => handleSelect(profile)}
-              className="group flex flex-col items-center gap-4 cursor-pointer animate-in fade-in zoom-in duration-500"
-              style={{ animationDelay: `${i * 100}ms` }}
+              className="w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden border-4 border-transparent group-hover:border-primary transition-all shadow-2xl relative"
+              style={{ backgroundColor: profile.color || '#2563eb' }}
             >
-              <div className={`
-                relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 transition-all duration-300
-                ${selected === profile.id ? 'border-primary scale-110 shadow-[0_0_40px_rgba(37,99,235,0.6)]' : 'border-transparent group-hover:border-white group-hover:scale-105 shadow-2xl'}
-              `}>
-                <Image 
-                  src={profile.avatar} 
-                  alt={profile.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <span className={`text-lg font-bold transition-colors ${selected === profile.id ? 'text-primary' : 'text-white/50 group-hover:text-white'}`}>
-                {profile.name}
-              </span>
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-16 h-16 md:w-20 md:h-20 text-white m-auto absolute inset-0" />
+              )}
+              {profile.pin && <Lock className="absolute bottom-2 right-2 w-5 h-5 text-white/50" />}
             </div>
-          ))}
-        </div>
+            <span className="text-lg font-bold text-white/60 group-hover:text-white uppercase tracking-widest">{profile.name}</span>
+          </button>
+        ))}
 
-        <button 
-          onClick={() => router.push('/')}
-          className="mt-16 px-8 py-3 bg-transparent border border-white/20 text-white/50 hover:text-white hover:border-white tracking-widest uppercase font-bold text-sm transition-all rounded-lg"
-        >
-          Administrar Perfiles
+        {/* Bot├│n de Agregar Perfil (Funcionalidad Futura) */}
+        <button className="group flex flex-col items-center space-y-4 transition-transform hover:scale-110 opacity-30 cursor-not-allowed">
+          <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl border-4 border-dashed border-white/20 flex items-center justify-center group-hover:border-white/40 transition-all">
+            <Plus className="w-12 h-12 text-white/20 group-hover:text-white/40" />
+          </div>
+          <span className="text-lg font-bold text-white/20 uppercase tracking-widest">A├▒adir</span>
         </button>
       </div>
+
+      <button 
+        onClick={() => router.push('/')}
+        className="mt-20 px-8 py-2 border border-white/20 rounded-lg text-white/40 font-bold uppercase tracking-widest hover:text-white hover:border-white transition-all"
+      >
+        Gestionar perfiles
+      </button>
     </main>
   );
 }
