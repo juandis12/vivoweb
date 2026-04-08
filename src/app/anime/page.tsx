@@ -1,24 +1,24 @@
 import { createClient } from '@/utils/supabase/server';
-import { fetchTMDB, getPopular, getTopRated, TMDB_IMAGE_CARD } from '@/lib/tmdb';
+import { fetchTMDB, TMDB_IMAGE_CARD } from '@/lib/tmdb';
 import ClientCatalog from '@/components/ClientCatalog';
 import MeshBackground from '@/components/MeshBackground';
 
 export const revalidate = 3600;
 
-export default async function SeriesPage() {
+export default async function AnimePage() {
   const supabase = await createClient();
   
-  // 1. Fetch available series from our legacy DB tables (series_episodes)
+  // 1. Fetch available anime (filtered series_episodes) from our DB
   const { data: seriesRes } = await supabase.from('series_episodes').select('tmdb_id, stream_url');
   const availableIds = new Set<string>(seriesRes?.map((item: any) => item.tmdb_id.toString()) || []);
   const sourceMap = new Map<string, string>((seriesRes || []).map((item: any) => [item.tmdb_id.toString(), item.stream_url]));
 
-  // 2. Fetch TMDB Data with Parity
-  const [popRaw, topRaw, actionRaw, scifiRaw] = await Promise.all([
-    getPopular('tv'),
-    getTopRated('tv'),
-    fetchTMDB('/discover/tv', { with_genres: '10759' }), // Action & Adventure (TV)
-    fetchTMDB('/discover/tv', { with_genres: '10765' })  // Sci-Fi & Fantasy (TV)
+  // 2. Fetch TMDB Data specifically for Anime (Genre 16)
+  const [popRaw, topRaw, actionRaw, fantasyRaw] = await Promise.all([
+    fetchTMDB('/discover/tv', { with_genres: '16', sort_by: 'popularity.desc' }),
+    fetchTMDB('/discover/tv', { with_genres: '16', sort_by: 'vote_average.desc', 'vote_count.gte': '100' }),
+    fetchTMDB('/discover/tv', { with_genres: '16,10759' }), 
+    fetchTMDB('/discover/tv', { with_genres: '16,10765' })  
   ]);
 
   const mapItem = (item: any) => ({
@@ -29,23 +29,13 @@ export default async function SeriesPage() {
     backdrop_path: item.backdrop_path,
     poster_path: item.poster_path ? `${TMDB_IMAGE_CARD}${item.poster_path}` : null,
     source_url: sourceMap.get(item.id.toString()) || '',
-    type: 'series' as const,
+    type: 'anime' as const,
     genre_ids: item.genre_ids || []
   });
 
-  const filterAvail = (res: any, excludeAnime = true) => {
+  const filterAvail = (res: any) => {
     const results = res.results || res || [];
-    return results
-      .filter((item: any) => {
-        const isAvail = availableIds.has(item.id.toString());
-        if (!isAvail) return false;
-        if (excludeAnime) {
-          const genres = item.genre_ids || [];
-          return !genres.includes(16); // Exclude Animation (Anime)
-        }
-        return true;
-      })
-      .map(mapItem);
+    return results.filter((item: any) => availableIds.has(item.id.toString())).map(mapItem);
   };
 
   return (
@@ -55,9 +45,9 @@ export default async function SeriesPage() {
         initialPopular={filterAvail(popRaw)}
         initialTopRated={filterAvail(topRaw)}
         initialGenre1={filterAvail(actionRaw)}
-        initialGenre2={filterAvail(scifiRaw)}
-        title="Series"
-        type="series"
+        initialGenre2={filterAvail(fantasyRaw)}
+        title="Anime"
+        type="anime"
       />
     </main>
   );
