@@ -4,17 +4,26 @@ import MediaLibrary from '@/components/MediaLibrary';
 import { Suspense } from 'react';
 import { Clock } from 'lucide-react';
 
+interface MediaItem {
+  id: string;
+  tmdb_id: string;
+  title: string;
+  source_url: string;
+  poster_path: string | null;
+  type: 'movie' | 'series' | 'anime';
+  label?: string;
+}
+
 export default async function HistorialPage() {
   const supabase = await createClient();
   
-  // Consultar telemetr├¡a (Historial de progreso)
   const { data: rawHistory, error } = await supabase
     .from('telemetria')
     .select('*')
     .order('updated_at', { ascending: false })
     .limit(40);
 
-  let catalog = [];
+  let catalog: MediaItem[] = [];
 
   if (rawHistory && rawHistory.length > 0) {
     catalog = await Promise.all(
@@ -29,11 +38,11 @@ export default async function HistorialPage() {
           id: item.id.toString(),
           tmdb_id: item.tmdb_id.toString(),
           title: tmdbData?.title || tmdbData?.name || `ID: ${item.tmdb_id}`,
-          source_url: '', // El historial no suele tener la URL directa aqu├¡, pero el player la buscar├í
+          source_url: '', 
           poster_path: tmdbData?.poster_path ? `${TMDB_IMAGE_CARD}${tmdbData.poster_path}` : null,
           type: item.type || 'movie',
           label: `Visto hasta: ${minutes}:${seconds.toString().padStart(2, '0')}`
-        };
+        } as MediaItem;
       })
     );
   }

@@ -54,6 +54,7 @@ export default function Navigation() {
                  <NavLink href="/series" currentPath={pathname}>Series</NavLink>
                  <NavLink href="/anime" currentPath={pathname}>Anime</NavLink>
                  <NavLink href="/milista" currentPath={pathname}>Mi Lista</NavLink>
+                 <NavLink href="/historial" currentPath={pathname}>Historial</NavLink>
                </nav>
              </div>
           )}
