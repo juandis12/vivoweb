@@ -158,12 +158,22 @@
                 </div>
             </section>
 
+            <!-- Recomendados para ti (Fase Personalización) -->
+            <section class="catalog-row hidden" id="recommendedSection" data-section="recommended">
+                <div class="row-header">
+                    <h3 class="row-title"><span class="row-accent">✨</span> Recomendados para ti</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="recommendedCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
             <!-- Tendencias -->
             <section class="catalog-row" id="trendingSection" data-section="trending">
                 <div class="row-header">
                     <h3 class="row-title">🔥 Tendencias del Día</h3>
-                    <button class="btn-ver-mas" data-carousel="trendingCarousel" data-fetch="trending"
-                        data-type="all">Ver más <span>›</span></button>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
@@ -178,62 +188,50 @@
                 </div>
             </section>
 
-            <!-- Películas Populares -->
-            <section class="catalog-row" id="moviesSection" data-section="movies">
+            <!-- Acción y Adrenalina -->
+            <section class="catalog-row" id="actionSection" data-section="action">
                 <div class="row-header">
-                    <h3 class="row-title" id="popularMoviesTitle">🎬 Películas Populares</h3>
-                    <button class="btn-ver-mas" data-carousel="popularMoviesCarousel" data-fetch="movies"
-                        data-type="movie">Ver más <span>›</span></button>
+                    <h3 class="row-title">💥 Acción y Adrenalina</h3>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="popularMoviesCarousel">
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                    </div>
+                    <div class="carousel" id="actionCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
             </section>
 
-            <!-- Mejor Valoradas -->
-            <section class="catalog-row" id="topRatedSection" data-section="toprated">
+            <!-- Comedia -->
+            <section class="catalog-row" id="comedySection" data-section="comedy">
                 <div class="row-header">
-                    <h3 class="row-title">⭐ Mejor Valoradas</h3>
-                    <button class="btn-ver-mas" data-carousel="topRatedCarousel" data-fetch="toprated"
-                        data-type="movie">Ver más <span>›</span></button>
+                    <h3 class="row-title">😂 Para Morirse de Risa</h3>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="topRatedCarousel">
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                    </div>
+                    <div class="carousel" id="comedyCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
             </section>
 
-            <!-- Series Populares -->
-            <section class="catalog-row" id="seriesSection" data-section="series">
+            <!-- Terror -->
+            <section class="catalog-row" id="horrorSection" data-section="horror">
                 <div class="row-header">
-                    <h3 class="row-title">📺 Series Populares</h3>
-                    <button class="btn-ver-mas" data-carousel="popularTVCarousel" data-fetch="tv" data-type="tv">Ver más
-                        <span>›</span></button>
+                    <h3 class="row-title">👻 Noches de Terror</h3>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="popularTVCarousel">
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                    </div>
+                    <div class="carousel" id="horrorCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Ciencia Ficción y Fantasía -->
+            <section class="catalog-row" id="scifiSection" data-section="scifi">
+                <div class="row-header">
+                    <h3 class="row-title">🚀 Ciencia Ficción y Fantasía</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="scifiCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
             </section>

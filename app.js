@@ -114,6 +114,30 @@ function filterItemsByProfile(items) {
     });
 }
 
+// helper para validar tipos de contenido (Fase Usuario: Organización)
+function validateContentType(item, expectedType) {
+    if (!item) return false;
+    
+    // Obtener géneros (maneja array de IDs o de objetos)
+    const genres = item.genres || item.genre_ids || [];
+    const isAnim = genres.some(g => (typeof g === 'object' ? g.id : g) === 16);
+    const isJapan = (item.origin_country && item.origin_country.includes('JP')) || 
+                    item.original_language === 'ja' || 
+                    (item.name && /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/.test(item.name)); // Regex para detectar caracteres Japoneses en el título
+
+    const isAnime = isAnim && isJapan;
+
+    const isMoviesPage = document.body.classList.contains('page-movies');
+    const isSeriesPage = document.body.classList.contains('page-series');
+    const isAnimePage  = document.body.classList.contains('page-anime');
+
+    if (isAnimePage) return isAnime;
+    if (isSeriesPage) return !isAnime && expectedType === 'tv';
+    if (isMoviesPage) return expectedType === 'movie';
+    
+    return true; // En Home u otras páginas permitimos todo según su fila
+}
+
 // ================================================
 // INNOVACIÓN: UI INTERACTIVA
 // ================================================
@@ -521,8 +545,17 @@ async function toDashboard(user) {
             heroData = await TMDB_SERVICE.getTrending();
         }
 
-        // Filtrar Hero solo para items disponibles en la base de datos
-        let availableHeroItems = (heroData.results || []).filter(m => m.backdrop_path && availableIds.has(m.id.toString()));
+        // Filtrar Hero solo para items disponibles en la base de datos y válidos para la página
+        let availableHeroItems = (heroData.results || []).filter(m => {
+            const idStr = m.id.toString();
+            if (!m.backdrop_path) return false;
+            if (!availableIds.has(idStr)) return false;
+            
+            // Validar Tipo Estricto
+            const itemType = m.media_type || (pageType === 'all' ? 'movie' : pageType);
+            return validateContentType(m, itemType);
+        });
+        
         heroItems = filterItemsByProfile(availableHeroItems).slice(0, 8);
         
         if (heroItems.length && document.getElementById('heroBanner')) {
@@ -539,8 +572,16 @@ async function toDashboard(user) {
             if (!el) return;
             const data = await fetchFn();
             const tmdbCount = data.results ? data.results.length : 0;
-            // Restauramos el filtro estricto por base de datos
-            let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+
+            // FILTRO ESTRICTO (Fase Usuario: Organización)
+            let filtered = (data.results || []).filter(item => {
+                const idStr = item.id.toString();
+                if (!availableIds.has(idStr)) return false;
+                
+                // Forzar validación de tipo según la página
+                return validateContentType(item, type);
+            });
+
             let preProfileCount = filtered.length;
             filtered = filterItemsByProfile(filtered); // Aplicar filtro global
             logDebug(`Fila [${type}]: TMDB=${tmdbCount}, DB Match=${preProfileCount}, PostFiltrado=${filtered.length}`);
@@ -565,34 +606,39 @@ async function toDashboard(user) {
                 (async () => {
                     const data = await TMDB_SERVICE.getTrending();
                     let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
-                    filtered = filterItemsByProfile(filtered); // Aplicar filtro global
-                    logDebug(`Hero TMDB: TMDB=${data.results.length}, Match=${filtered.length}`);
+                    filtered = filterItemsByProfile(filtered);
                     CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds);
                 })(),
-                renderRow('popularMoviesCarousel', () => TMDB_SERVICE.getPopularMovies(), 'movie'),
-                renderRow('topRatedCarousel', () => TMDB_SERVICE.getTopRated(), 'movie'),
-                renderRow('popularTVCarousel', () => TMDB_SERVICE.getPopularTV(), 'tv')
+                loadRecommendedItems(),
+                renderRow('actionCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 28 }), 'movie'),
+                renderRow('comedyCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 35 }), 'movie'),
+                renderRow('horrorCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 27 }), 'movie'),
+                renderRow('scifiCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 878 }), 'movie')
             ]);
         } else if (isAnimePage) {
-            // Lógica específica de ANIME
+            // Lógica específica de ANIME (Solo Japonés/Anime Real - Fase Usuario)
             await Promise.all([
-                renderRow('popularCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, sort_by: 'popularity.desc' }), 'tv'),
-                renderRow('topRatedCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, sort_by: 'vote_average.desc', 'vote_count.gte': 100 }), 'tv'),
-                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759' }), 'tv'),
-                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765' }), 'tv'),
+                renderRow('popularCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }), 'tv'),
+                renderRow('topRatedCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'vote_average.desc', 'vote_count.gte': 50 }), 'tv'),
+                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', with_original_language: 'ja' }), 'tv'),
+                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', with_original_language: 'ja' }), 'tv'),
             ]);
         } else {
-            // Películas o Series
-            const fetchPopular = () => pageType === 'tv' ? TMDB_SERVICE.getPopularTV() : TMDB_SERVICE.getPopularMovies();
-            const fetchTop = () => pageType === 'tv' ? TMDB_SERVICE.fetchFromTMDB('/tv/top_rated') : TMDB_SERVICE.getTopRated();
+            // Películas o Series (Excluyendo Anime de Series)
+            const fetchPopular = () => pageType === 'tv' 
+                ? TMDB_SERVICE.fetchFromTMDB('/discover/tv', { without_genres: 16, sort_by: 'popularity.desc' }) 
+                : TMDB_SERVICE.getPopularMovies();
+            const fetchTop = () => pageType === 'tv' 
+                ? TMDB_SERVICE.fetchFromTMDB('/tv/top_rated') 
+                : TMDB_SERVICE.getTopRated();
             
             await Promise.all([
                 renderRow('popularCarousel', fetchPopular, pageType),
                 renderRow('topRatedCarousel', fetchTop, pageType),
-                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10759:28 }), pageType),
-                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: 35 }), pageType),
-                renderRow('genre3Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?18:10749 }), pageType),
-                renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10765:27 }), pageType),
+                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10759:28, ...(pageType==='tv'?{without_genres:16}:{}) }), pageType),
+                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: 35, ...(pageType==='tv'?{without_genres:16}:{}) }), pageType),
+                renderRow('genre3Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?18:10749, ...(pageType==='tv'?{without_genres:16}:{}) }), pageType),
+                renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10765:27, ...(pageType==='tv'?{without_genres:16}:{}) }), pageType),
             ]);
         }
 
@@ -668,15 +714,8 @@ async function loadGridData(type, page, append = false) {
                 let finalItems = detailsArray.filter(item => item && item.poster_path);
                 finalItems = filterItemsByProfile(finalItems);
 
-                if (isAnimePage) {
-                    finalItems = finalItems.filter(item => {
-                        const genres = item.genres || item.genre_ids || [];
-                        return genres.some(g => {
-                            const id = typeof g === 'object' ? g.id : g;
-                            return id === 16;
-                        });
-                    });
-                }
+                // Filtrado Estricto por Secciones (Página Actual)
+                finalItems = finalItems.filter(item => validateContentType(item, isMoviesPage ? 'movie' : 'tv'));
 
                 // --- OPTIMIZACIÓN: DOCUMENT FRAGMENT ---
                 const fragment = document.createDocumentFragment();
@@ -688,7 +727,7 @@ async function loadGridData(type, page, append = false) {
             } else {
                 if (loader) loader.classList.add('hidden');
                 if (!append) {
-                    container.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay ${isAnimePage ? 'animes' : (type === 'tv' ? 'series' : 'películas')} disponibles en este momento.</p>`;
+                    container.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay contenido disponible que coincida con esta sección.</p>`;
                 }
             }
             return;
@@ -1269,6 +1308,67 @@ async function loadRecentlyWatched() {
         section.classList.add('hidden');
     } else {
         section.classList.remove('hidden');
+    }
+}
+
+async function loadRecommendedItems() {
+    const section = document.getElementById('recommendedSection');
+    const carousel = document.getElementById('recommendedCarousel');
+    if (!section || !carousel || !supabase) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 1. Obtener últimas visualizaciones únicas
+        const { data: history } = await supabase.from('watch_history')
+            .select('tmdb_id, type')
+            .eq('user_id', user.id)
+            .eq('profile_id', currentProfile.id)
+            .order('last_watched', { ascending: false })
+            .limit(5);
+
+        if (!history || history.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+
+        // 2. Obtener recomendaciones de TMDB para cada uno
+        const recommendationPromises = history.map(h => 
+            TMDB_SERVICE.getRecommendations(h.tmdb_id, h.type).catch(() => ({ results: [] }))
+        );
+        
+        const allRes = await Promise.all(recommendationPromises);
+        let combinedResults = [];
+        allRes.forEach(res => {
+            if (res && res.results) combinedResults.push(...res.results);
+        });
+
+        // 3. Filtrar: Disponibles en BD + No vistos aún + Unicidad
+        const historyIds = new Set(history.map(h => h.tmdb_id.toString()));
+        const seenInRecs = new Set();
+        
+        let filtered = combinedResults.filter(item => {
+            const id = item.id.toString();
+            if (seenInRecs.has(id)) return false;
+            if (historyIds.has(id)) return false;
+            if (!availableIds.has(id)) return false;
+            seenInRecs.add(id);
+            return true;
+        });
+
+        // Aplicar filtro de perfil (Kids)
+        filtered = filterItemsByProfile(filtered);
+
+        if (filtered.length === 0) {
+            section.classList.add('hidden');
+        } else {
+            section.classList.remove('hidden');
+            CATALOG_UI.renderCarousel('recommendedCarousel', filtered.slice(0, 20), null, availableIds);
+        }
+    } catch (e) {
+        console.error('Error in loadRecommendedItems:', e);
+        section.classList.add('hidden');
     }
 }
 
