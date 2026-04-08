@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/context/SessionContext';
 import { Plus, Edit3, Trash2, Lock, Unlock } from 'lucide-react';
 
 interface Profile {
@@ -27,6 +28,7 @@ const AVATAR_LIST = [
 ];
 
 export default function ProfilesPage() {
+  const { setCurrentProfile } = useSession();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -96,7 +98,7 @@ export default function ProfilesPage() {
   };
 
   const finalizeSelection = (profile: Profile) => {
-    localStorage.setItem('vivotv_current_profile', JSON.stringify(profile));
+    setCurrentProfile(profile);
     router.push('/');
   };
 
@@ -207,7 +209,7 @@ export default function ProfilesPage() {
         <p className="subtitle text-gray-400 mb-12">
           {isEditing ? 'Haz clic en un perfil para editarlo.' : 'Selecciona un perfil para empezar a disfrutar.'}
         </p>
-
+ 
         <div className="profiles-grid flex flex-wrap justify-center gap-8">
           {profiles.map((profile) => (
             <div 
