@@ -37,9 +37,9 @@ export default async function CategoryPage({
   const dbType = typeMap[category];
   const supabase = await createClient();
   
-  // CONSULTA DIRECTA (M├ís confiable)
+  // USANDO TABLA REAL: 'content'
   const { data: rawCatalog, error } = await supabase
-    .from('peliculas')
+    .from('content')
     .select('*')
     .eq('type', dbType)
     .limit(50);
@@ -73,9 +73,9 @@ export default async function CategoryPage({
         id: item.id || Math.random().toString(),
         tmdb_id: item.tmdb_id || '0',
         title: finalTitle,
-        source_url: item.source_url || item.embed_url || '',
+        source_url: item.source_url || '',
         poster_path: poster,
-        type: item.type || 'movie'
+        type: item.type === 'movie' ? 'movie' : (item.type === 'anime' ? 'anime' : 'series')
       } as MediaItem;
     })
   );
@@ -102,7 +102,7 @@ export default async function CategoryPage({
           <MediaLibrary catalog={catalog} />
         ) : (
           <div className="py-20 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-             <p className="text-white/30">No se encontraron contenidos de tipo "{dbType}" en la tabla "peliculas".</p>
+             <p className="text-white/30">No se encontraron contenidos de tipo "{dbType}" en la tabla "content".</p>
           </div>
         )}
       </Suspense>

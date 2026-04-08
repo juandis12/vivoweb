@@ -10,8 +10,7 @@ interface CatalogItem {
   tmdb_id: string;
   title?: string;
   source_url?: string;
-  embed_url?: string;
-  type?: 'movie' | 'series' | 'anime' | 'tv' | 'serie'; // A├▒adido 'tv' y 'serie' para evitar errores de tipo
+  type?: 'movie' | 'series' | 'anime' | 'tv' | 'serie';
 }
 
 interface MediaItem {
@@ -26,17 +25,15 @@ interface MediaItem {
 export default async function HomePage() {
   const supabase = await createClient();
   
-  // CONSULTA DIRECTA
+  // USANDO TABLA REAL: 'content'
   const { data: rawData, error: supabaseError } = await supabase
-    .from('peliculas')
+    .from('content')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(100);
 
   const rawCatalog = rawData as CatalogItem[] | null;
   
-  if (supabaseError) console.error('Error fetching catalog:', supabaseError);
-
   const processCatalog = async (items: CatalogItem[]) => {
     return await Promise.all(
       items.map(async (item) => {
@@ -60,7 +57,7 @@ export default async function HomePage() {
           id: item.id || Math.random().toString(),
           tmdb_id: item.tmdb_id || '0',
           title: finalTitle,
-          source_url: item.source_url || item.embed_url || '',
+          source_url: item.source_url || '',
           poster_path: poster,
           type: item.type === 'movie' ? 'movie' : (item.type === 'anime' ? 'anime' : 'series')
         } as MediaItem;
@@ -75,7 +72,6 @@ export default async function HomePage() {
   return (
     <main className="pt-24 px-6 pb-24 max-w-7xl mx-auto space-y-16">
       
-      {/* Hero Portada Principal */}
       <section className="w-full aspect-[4/3] md:aspect-[21/9] bg-surface-container rounded-3xl border border-white/5 flex items-end relative overflow-hidden shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-t from-base via-base/80 to-transparent z-10" />
         <div className="z-20 p-8 md:p-14 w-full md:w-2/3">
@@ -103,7 +99,6 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* Secciones del Home */}
       <HomeSection title="Agregados Recientemente" items={recentItems} />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -113,12 +108,9 @@ export default async function HomePage() {
 
       {(supabaseError || !rawCatalog || rawCatalog.length === 0) && (
         <div className="p-12 text-center rounded-3xl border border-dashed border-white/10 bg-white/5">
-          <h3 className="text-xl font-bold mb-2">Conexión establecida</h3>
-          <p className="text-white/40 max-w-md mx-auto italic">
-            {supabaseError 
-              ? `Error de acceso: ${supabaseError.message}` 
-              : 'La tabla "peliculas" está conectada pero vacía o el tipo de datos no coincide.'
-            }
+          <h3 className="text-xl font-bold mb-2">Conectado a 'content'</h3>
+          <p className="text-white/40 max-w-sm mx-auto italic">
+            {supabaseError ? `Error: ${supabaseError.message}` : 'La tabla content está conectada. Si no ves nada, verifica que tenga filas.'}
           </p>
         </div>
       )}
