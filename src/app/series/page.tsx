@@ -29,8 +29,11 @@ export default async function SeriesPage() {
     type: 'series' as const
   });
 
-  const availablePopular = popTV.filter(item => availableIds.has(item.id.toString())).map(mapToMediaItem);
-  const availableTop = topTV.filter(item => availableIds.has(item.id.toString())).map(mapToMediaItem);
+  const availablePopular = popTV.filter((item: any) => availableIds.has(item.id.toString())).map((item: any) => mapToMediaItem(item));
+  const filterAvailable = (items: any[], type: 'movie' | 'series') => 
+    items.filter((item: any) => availableIds.has(item.id.toString())).map((i: any) => mapToMediaItem(i));
+  
+  const availableTop = topTV.filter((item: any) => availableIds.has(item.id.toString())).map((item: any) => mapToMediaItem(item));
   
   const heroItem = availablePopular[0];
 

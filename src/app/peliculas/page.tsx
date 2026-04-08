@@ -29,8 +29,8 @@ export default async function PeliculasPage() {
     type: 'movie' as const
   });
 
-  const availablePopular = popMovies.filter(item => availableIds.has(item.id.toString())).map(mapToMediaItem);
-  const availableTop = topMovies.filter(item => availableIds.has(item.id.toString())).map(mapToMediaItem);
+  const availablePopular = popMovies.filter((item: any) => availableIds.has(item.id.toString())).map(mapToMediaItem);
+  const availableTop = topMovies.filter((item: any) => availableIds.has(item.id.toString())).map(mapToMediaItem);
   
   const heroItem = availablePopular[0];
 

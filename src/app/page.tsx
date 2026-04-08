@@ -52,7 +52,7 @@ export default async function HomePage() {
   });
 
   const filterAvailable = (items: any[], type: 'movie' | 'series') => 
-    items.filter(item => availableIds.has(item.id.toString())).map(i => mapToMediaItem(i, type));
+    items.filter((item: any) => availableIds.has(item.id.toString())).map(i => mapToMediaItem(i, type));
 
   const historyItemsList = await Promise.all((rawHistory || []).map(async (h: any) => {
     try {

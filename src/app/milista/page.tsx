@@ -50,7 +50,7 @@ export default function MiListaPage() {
             return null;
           }
         }));
-        setFavorites(enriched.filter(i => i !== null));
+        setFavorites(enriched.filter((i: any) => i !== null));
       }
       setLoading(false);
     }

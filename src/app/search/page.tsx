@@ -53,8 +53,8 @@ function SearchResults() {
       seriesInDb.data?.forEach(s => availableMap.set(s.tmdb_id.toString(), s.stream_url));
 
       const filtered = allResults
-        .filter(r => availableMap.has(r.id.toString()))
-        .map(r => ({
+        .filter((r: any) => availableMap.has(r.id.toString()))
+        .map((r: any) => ({
           tmdb_id: r.id.toString(),
           title: r.title || r.name,
           source_url: availableMap.get(r.id.toString()),
@@ -70,7 +70,7 @@ function SearchResults() {
     }
   };
 
-  const filteredResults = results.filter(r => filter === 'all' || r.type === filter);
+  const filteredResults = results.filter((r: any) => filter === 'all' || r.type === filter);
 
   return (
     <div className="w-full">
