@@ -130,30 +130,37 @@ export const CATALOG_UI = {
         heroBanner.style.opacity = '0';
         
         setTimeout(() => {
+            // Soporte Dual: DB (backdrop_url) o TMDB (backdrop_path)
+            const backdrop = movie.backdrop_url || (movie.backdrop_path ? `${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}` : '');
+            if (backdrop) heroBanner.style.backgroundImage = `url('${backdrop}')`;
+
             heroTitle.textContent   = movie.title || movie.name;
-            heroOverview.textContent = movie.overview || 'Sin descripción disponible.';
-            heroBanner.style.backgroundImage = `url('${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}')`;
+            heroOverview.textContent = movie.description || movie.overview || 'Sin descripción disponible.';
 
             const year   = (movie.release_date || movie.first_air_date || '').split('-')[0];
-            const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
+            const rating = movie.vote_average ? movie.vote_average.toFixed(1) : (movie.rating || '9.5');
             const badge  = document.querySelector('.hero-badge');
-            if (badge) badge.textContent = (movie.media_type === 'tv' ? 'SERIE DESTACADA' : 'PELÍCULA DESTACADA');
+            
+            const type = movie.content_type || movie.media_type || (movie.first_air_date ? 'tv' : 'movie');
+            if (badge) badge.textContent = (type === 'tv' ? 'SERIE DESTACADA' : 'PELÍCULA DESTACADA');
 
             const yearEl = document.getElementById('heroYear');
             const durationEl = document.getElementById('heroDuration');
             const ratingEl = document.getElementById('heroRating');
 
             if (yearEl) yearEl.textContent = year;
-            if (durationEl) durationEl.textContent = movie.runtime ? `${movie.runtime} min` : '2h 15min';
+            const runtime = movie.runtime || movie.duration;
+            if (durationEl) durationEl.textContent = runtime ? (typeof runtime === 'number' ? `${runtime} min` : runtime) : '2h 15min';
             if (ratingEl) ratingEl.textContent = `★ ${rating}`;
 
+            const finalId = movie.id || movie.tmdb_id;
             if (btnPlay) {
-                btnPlay.dataset.tmdbId = movie.id;
-                btnPlay.dataset.type   = movie.media_type || 'movie';
+                btnPlay.dataset.tmdbId = finalId;
+                btnPlay.dataset.type   = type;
             }
             if (btnInfo) {
-                btnInfo.dataset.tmdbId = movie.id;
-                btnInfo.dataset.type   = movie.media_type || 'movie';
+                btnInfo.dataset.tmdbId = finalId;
+                btnInfo.dataset.type   = type;
             }
 
             heroBanner.style.opacity = '1';
@@ -221,17 +228,22 @@ export const CATALOG_UI = {
                 if (entry.isIntersecting) {
                     const fragment = document.createDocumentFragment();
                     items.forEach(item => {
-                        if (!item.poster_path) return;
-                        const type = typeOverride || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
-                        const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
-                        const card = this.createMovieCard(item, type, isAvail);
+                        // Soporte Dual: DB (poster_url) o TMDB (poster_path)
+                        if (!item.poster_path && !item.poster_url) return;
+                        
+                        const type = typeOverride || item.content_type || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
+                        const id = item.id || item.tmdb_id;
+                        const isAvail = id ? availableIds.has(id.toString()) : false;
+                        
+                        // USAMOS CATALOG_UI en lugar de 'this' para evitar errores de contexto
+                        const card = CATALOG_UI.createMovieCard(item, type, isAvail);
                         fragment.appendChild(card);
                     });
                     container.appendChild(fragment);
                     observer.unobserve(container);
                 }
             });
-        }, { rootMargin: '400px' }); // Margen generoso para evitar saltos visuales
+        }, { rootMargin: '600px' }); // Margen extra generoso
 
         observer.observe(container);
     },
@@ -239,12 +251,15 @@ export const CATALOG_UI = {
     createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {
         const card = document.createElement('div');
         card.className = `movie-card${isAvailable ? ' is-available' : ''}${rank ? ' ranked' : ''}`;
-        card.dataset.tmdbId = item.id;
-        card.dataset.type = type;
+        card.dataset.tmdbId = item.id || item.tmdb_id;
+        card.dataset.type = type || item.content_type || item.media_type;
 
         const year   = (item.release_date || item.first_air_date || '').split('-')[0];
-        const rating = item.vote_average ? item.vote_average.toFixed(1) : '9.5'; // Soft match fallback
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : (item.rating || '9.5');
         const title  = _escapeHTML(item.title || item.name || '');
+
+        // Soporte Dual: DB (poster_url) vs TMDB (poster_path)
+        const posterImg = item.poster_url || (item.poster_path ? `${CONFIG.TMDB_IMAGE_CARD}${item.poster_path}` : 'assets/no-poster.png');
 
         const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
 
@@ -254,7 +269,7 @@ export const CATALOG_UI = {
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
-                <img src="${CONFIG.TMDB_IMAGE_CARD}${item.poster_path}" alt="${title}" loading="lazy">
+                <img src="${posterImg}" alt="${title}" loading="lazy">
                 <div class="movie-card-title">${title}</div>
                 
                 ${isWatched ? `

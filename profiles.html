@@ -611,13 +611,25 @@
             if (error) {
                 console.error('[VivoTV] RPC Sync Error:', error);
                 
-                // Fallback a select normal si falla el RPC (aunque perderíamos precisión)
-                const { data: fallbackData } = await supabase.from('vivotv_profiles').select('*');
-                if (fallbackData) {
+                // --- FALLBACK ROBUSTO: Consulta directa si el RPC falla ---
+                const { data: fallbackData, error: fallbackError } = await supabase.from('vivotv_profiles').select('*');
+                
+                if (fallbackError) {
+                    console.error('[VivoTV] Error crítico de DB:', fallbackError);
+                    showToast('Error cargando perfiles. Verifica la conexión.', 'error');
+                    return;
+                }
+
+                if (fallbackData && fallbackData.length > 0) {
                     profiles = fallbackData;
                     selectionContainer.style.display = 'block';
                     firstProfileContainer.classList.remove('active');
                     renderProfiles();
+                } else {
+                    // Si no hay datos, es un usuario nuevo
+                    selectionContainer.style.display = 'none';
+                    firstProfileContainer.classList.add('active');
+                    setupNameInput.focus();
                 }
                 return;
             }
