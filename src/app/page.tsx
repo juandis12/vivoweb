@@ -11,7 +11,7 @@ interface CatalogItem {
   title?: string;
   source_url?: string;
   embed_url?: string;
-  type?: 'movie' | 'series' | 'anime';
+  type?: 'movie' | 'series' | 'anime' | 'tv' | 'serie'; // A├▒adido 'tv' y 'serie' para evitar errores de tipo
 }
 
 interface MediaItem {
@@ -26,7 +26,7 @@ interface MediaItem {
 export default async function HomePage() {
   const supabase = await createClient();
   
-  // CONSULTA DIRECTA (El v├¡a m├ís segura)
+  // CONSULTA DIRECTA
   const { data: rawData, error: supabaseError } = await supabase
     .from('peliculas')
     .select('*')
@@ -62,7 +62,7 @@ export default async function HomePage() {
           title: finalTitle,
           source_url: item.source_url || item.embed_url || '',
           poster_path: poster,
-          type: item.type || 'movie'
+          type: item.type === 'movie' ? 'movie' : (item.type === 'anime' ? 'anime' : 'series')
         } as MediaItem;
       })
     );
@@ -70,7 +70,7 @@ export default async function HomePage() {
 
   const recentItems = rawCatalog ? await processCatalog(rawCatalog.slice(0, 12)) : [];
   const movies = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'movie').slice(0, 6)) : [];
-  const series = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'series' || i.type === 'tv').slice(0, 6)) : [];
+  const series = rawCatalog ? await processCatalog(rawCatalog.filter(i => i.type === 'series' || i.type === 'tv' || i.type === 'serie').slice(0, 6)) : [];
 
   return (
     <main className="pt-24 px-6 pb-24 max-w-7xl mx-auto space-y-16">
@@ -114,10 +114,10 @@ export default async function HomePage() {
       {(supabaseError || !rawCatalog || rawCatalog.length === 0) && (
         <div className="p-12 text-center rounded-3xl border border-dashed border-white/10 bg-white/5">
           <h3 className="text-xl font-bold mb-2">Conexión establecida</h3>
-          <p className="text-white/40 max-w-sm mx-auto italic">
+          <p className="text-white/40 max-w-md mx-auto italic">
             {supabaseError 
               ? `Error de acceso: ${supabaseError.message}` 
-              : 'La tabla "peliculas" está conectada pero vacía. ¡Empieza a agregar contenidos!'
+              : 'La tabla "peliculas" está conectada pero vacía o el tipo de datos no coincide.'
             }
           </p>
         </div>
