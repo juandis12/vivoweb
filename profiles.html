@@ -856,10 +856,9 @@
 
             // --- LIMPIEZA DE SESIÓN (Fase Final: Solo perfil) ---
             sessionStorage.removeItem('vivotv_current_profile');
-            localStorage.removeItem('vivotv_trending_cache');
-            
+
             console.log(`[VivoTV] Seleccionando Perfil: ${p.name} (Modos Niños: ${p.is_kids})`);
-            
+
             // --- SESIÓN TEMPORAL (Fase 8) ---
             sessionStorage.setItem('vivotv_current_profile', JSON.stringify(p));
             window.location.href = 'index.html';

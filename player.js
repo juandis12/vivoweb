@@ -13,7 +13,6 @@ export const PLAYER_LOGIC = {
     currentSeason: null,
     currentEpisode: null,
     seriesData: null,
-    seasonCache: {},
     lastSeriesProgress: null,
     progressTimer: null,
     trailerTimer: null,
@@ -52,7 +51,6 @@ export const PLAYER_LOGIC = {
         this.currentType = type;
         this.currentSeason = null;
         this.currentEpisode = null;
-        this.seasonCache = {}; // Limpiar caché al abrir nuevo detalle
         this._stopProgressTimer();
 
         const modal = document.getElementById('detailModal');
@@ -312,12 +310,6 @@ export const PLAYER_LOGIC = {
         const grid = document.getElementById('episodesGrid');
         grid.innerHTML = '<div class="marathon-loader"><div class="loader"></div><p>Cargando episodios...</p></div>';
 
-        // Si ya está en caché, renderizar de inmediato
-        if (this.seasonCache[seasonNum]) {
-            this._renderEpisodes(seasonNum, this.seasonCache[seasonNum], supabaseClient);
-            return;
-        }
-
         try {
             // Cargar datos de TMDB y Supabase en paralelo
             const [seasonData, dbEps] = await Promise.all([
@@ -333,7 +325,6 @@ export const PLAYER_LOGIC = {
                 return { ...ep, stream_url: dbEp?.stream_url };
             });
 
-            this.seasonCache[seasonNum] = episodes;
             this._renderEpisodes(seasonNum, episodes, supabaseClient);
         } catch (err) {
             console.error('Error cargando temporada:', err);
@@ -806,18 +797,7 @@ export const PLAYER_LOGIC = {
     },
 
     async playNextEpisodeFrom(seasonNum, epNum, supabase) {
-        // 1. Buscar en la temporada actual (Caché)
-        const currentSeasonEps = this.seasonCache[seasonNum];
-        if (currentSeasonEps) {
-            const nextEp = currentSeasonEps.find(e => e.episode_number === epNum + 1);
-            if (nextEp && nextEp.stream_url) {
-                this._playEpisode(this.currentTmdbId, seasonNum, nextEp, supabase, 0);
-                this.currentEpisode = nextEp.episode_number;
-                return;
-            }
-        }
-
-        // 2. Si no hay más en esta temporada, buscar en DB para T+1 E1
+        // Buscar el siguiente episodio en la base de datos
         const { data: nextData } = await supabase.from('series_episodes')
             .select('season_number, episode_number, stream_url')
             .eq('tmdb_id', Number(this.currentTmdbId))
@@ -935,18 +915,8 @@ export const PLAYER_LOGIC = {
     },
 
     _getNextEpisode() {
-        if (!this.seriesData || !this.currentSeason || !this.currentEpisode) return null;
-        const currentS = this.seasonCache[this.currentSeason] || [];
-        
-        // 1. Buscar en la temporada actual
-        const nextInSeason = currentS.find(ep => ep.episode_number === this.currentEpisode + 1);
-        if (nextInSeason) return { season: this.currentSeason, data: nextInSeason };
-
-        // 2. Buscar en la siguiente temporada (provisionalmente T+1, E1)
-        const nextSeasonNum = this.currentSeason + 1;
-        // Nota: Esto requeriría precargar la siguiente temporada si no está en caché o hacer un fetch.
-        // Por ahora, solo permitimos salto automático dentro de la misma temporada ya cargada.
-        return null; 
+        // Navegación automática deshabilitada sin caching
+        return null;
     },
 
     _showMarathonCountdown(nextEp, supabaseClient) {

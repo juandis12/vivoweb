@@ -452,17 +452,6 @@
         </div>
     </div>
 
-    <!-- Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered', reg))
-                    .catch(err => console.log('SW Error', err));
-            });
-        }
-    </script>
-
     <!-- MOTOR DE AUTH AUTÓNOMO (No depende de app.js) -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';

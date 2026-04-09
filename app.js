@@ -33,36 +33,8 @@ window.addEventListener('unhandledrejection', function(event) {
 console.log('App.js cargado correctamente.');
 
 // ---- REFERENCIAS DOM ----
-const authSection   = document.getElementById('authSection');
-const dashSection   = document.getElementById('dashboardSection');
-const loginForm     = document.getElementById('loginForm');
-const emailEl       = document.getElementById('email');
-const usernameEl    = document.getElementById('username');
-const passwordEl    = document.getElementById('password');
-const btnSubmit     = document.getElementById('btnSubmit');
-const btnText       = document.getElementById('btnText');
-const btnLoader     = document.getElementById('btnLoader');
-const authError     = document.getElementById('authError');
-const toggleLink    = document.getElementById('toggleAuthMode');
-const userProfile   = document.getElementById('userProfile');
-const mainNav       = document.getElementById('mainNav');
-const mobileNav     = document.querySelector('.mobile-nav');
-const btnLogout     = document.getElementById('btnLogout');
-const userNameEl    = document.getElementById('userName');
-const userAvatar    = document.getElementById('userAvatar');
-const searchBox     = document.getElementById('searchBox');
-const searchInput   = document.getElementById('searchInput');
-const btnClear      = document.getElementById('btnClearSearch');
-const btnFav        = document.getElementById('btnAddToMyList');
-const btnPass       = document.getElementById('btnTogglePass');
-const authTitle     = document.getElementById('authTitle');
-const authSubtitle  = document.getElementById('authSubtitle');
-
-// Referencias Modal Salida (Fase 3 Global)
-const exitModal        = document.getElementById('exitModal');
-const btnSwitchProfile = document.getElementById('btnSwitchProfile');
-const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
-const btnCancelExit    = document.getElementById('btnCancelExit');
+// Movidas dentro de initAppForPage() para evitar problemas entre páginas
+let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit;
 
 let isLoginMode = !window.location.pathname.includes('registro.html');
 let heroItems   = [];
@@ -288,87 +260,15 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('resize', initMobileNavIndicator);
 window.addEventListener('orientationchange', () => setTimeout(initMobileNavIndicator, 200));
 
-// NUEVO: Toggle de búsqueda para móviles/táctil
-if (searchBox) {
-    searchBox.addEventListener('click', (e) => {
-        searchBox.classList.add('active');
-        if (searchInput) searchInput.focus();
-        e.stopPropagation();
-    });
-    document.addEventListener('click', (e) => {
-        if (searchBox && !searchBox.contains(e.target)) {
-            searchBox.classList.remove('active');
-        }
-    });
-}
-
-// ================================================
-// BUSQUEDA REAL-TIME & DEBOUNCING
-// ================================================
-if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-        const q = e.target.value.trim();
-        if (searchBox && btnClear) {
-            btnClear.classList.toggle('hidden', q.length === 0);
-        }
-        
-        if (searchTimeout) clearTimeout(searchTimeout);
-        if (q.length < 3) return;
-
-        searchTimeout = setTimeout(async () => {
-            const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query: q });
-            if (res && res.results) {
-                const isSearchPage = window.location.pathname.includes('busqueda.html');
-                
-                if (isSearchPage) {
-                    executeSearch(q);
-                } else {
-                    let filtered = res.results.filter(item => availableIds.has(item.id.toString()));
-                    filtered = filterItemsByProfile(filtered); // Aplicar filtro global
-                    
-                    const isMoviesPage = document.body.classList.contains('page-movies');
-                    const isSeriesPage = document.body.classList.contains('page-series');
-                    const targetId = isMoviesPage ? 'popularCarousel' : (isSeriesPage ? 'popularCarousel' : 'trendingCarousel');
-                    CATALOG_UI.renderCarousel(targetId, filtered, null, availableIds, `🔍 Resultados para "${q}"`);
-                }
-            }
-        }, 400);
-    });
-
-    searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const q = e.target.value.trim();
-            if (q.length >= 3) {
-                window.location.href = `busqueda.html?q=${encodeURIComponent(q)}`;
-            }
-        }
-    });
-}
-// La lógica de Auth y Recuperación ahora está unificada abajo.
 
 
 // NUEVO: Obtener IDs disponibles optimizados (Solo usa RPC de backend)
 async function fetchAvailableIds() {
     if (!supabase) return;
 
-    // Retomamos el uso de SessionStorage para evitar consultas repetitivas de red
-    const cached = sessionStorage.getItem('vivotv_catalog_ids');
-    if (cached) {
-        try {
-            const decoded = JSON.parse(cached);
-            if (decoded && decoded.all && decoded.all.length > 0) {
-                availableMovies = new Set(decoded.movies);
-                availableSeries = new Set(decoded.series);
-                availableIds = new Set(decoded.all);
-                console.log('[VivoTV] Catálogo cargado desde caché ultra-rápida.');
-                return;
-            }
-        } catch(e) { console.warn('Cache invalido:', e); }
-    }
-
     try {
         logDebug('Sincronizando Catálogo Maestro (Detección de Tablas)...');
-        
+
         availableMovies = new Set();
         availableSeries = new Set();
         availableIds = new Set();
@@ -420,12 +320,11 @@ async function fetchAvailableIds() {
 
         console.log(`[VivoTV] 📊 Catálogo sincronizado: ${availableIds.size} títulos (Movies: ${availableMovies.size}, TV: ${availableSeries.size})`);
 
-        // Guardar en sesión
-        sessionStorage.setItem('vivotv_catalog_ids', JSON.stringify({
-            movies: Array.from(availableMovies),
-            series: Array.from(availableSeries),
-            all: Array.from(availableIds)
-        }));
+        // Hacer accesibles los sets y catálogo a otros módulos ESM si lo necesitan
+        window.availableIds = availableIds;
+        window.availableMovies = availableMovies;
+        window.availableSeries = availableSeries;
+        window.DB_CATALOG = DB_CATALOG;
 
         console.log(`[VivoTV] Catálogo sincronizado desde Edge RPC: ${availableIds.size} títulos.`);
     } catch (e) { 
@@ -480,13 +379,23 @@ let isDashboardInit = false;
 async function toDashboard(user) {
     if (isDashboardInit) return; // EVITAR BUCLE INFINITO
     isDashboardInit = true;
+
+    // Obtener referencias DOM localmente
+    const authSection = document.getElementById('authSection');
+    const dashSection = document.getElementById('dashboardSection');
+    const userProfile = document.getElementById('userProfile');
+    const userNameEl = document.getElementById('userName');
+    const userAvatar = document.getElementById('userAvatar');
+    const mainNav = document.getElementById('mainNav');
+    const mobileNav = document.querySelector('.mobile-nav');
+
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
     if (userProfile) userProfile.classList.remove('hidden');
-    
+
     // --- GESTIÓN DE PERFILES (Fase 8: Sesión Temporal) ---
     currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
-    
+
     if (!currentProfile) {
         console.warn('[VivoTV] No hay perfil en sesión. Redirigiendo...');
         window.location.href = 'profiles.html';
@@ -526,13 +435,24 @@ async function toDashboard(user) {
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
 
-    // --- REESTRUCTURACIÓN: Respuesta Visual Inmediata ---
-    // 1. Mostrar skeletons inmediatamente antes de consultar la red
+    // --- LIMPIEZA: Limpiar carouseles residuales de páginas anteriores ---
     const carouselIds = [
         'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
         'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
-        'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel'
+        'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel',
+        'recommendedCarousel'
     ];
+    carouselIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = ''; // Limpiar contenido residual
+    });
+
+    // Limpiar grid si existe
+    const gridContainer = document.getElementById('gridContainer');
+    if (gridContainer) gridContainer.innerHTML = '';
+
+    // --- REESTRUCTURACIÓN: Respuesta Visual Inmediata ---
+    // 1. Mostrar skeletons inmediatamente antes de consultar la red
     carouselIds.forEach(id => {
         if (document.getElementById(id)) CATALOG_UI.showSkeletons(id);
     });
@@ -619,18 +539,12 @@ async function toDashboard(user) {
             const tmdbCount = data.results ? data.results.length : 0;
 
             // FILTRO ESTRICTO (Fase Usuario: Organización)
-            let filtered = (data.results || []).filter(item => {
-                const idStr = item.id.toString();
-                if (!availableIds.has(idStr)) return false;
-                
-                // Forzar validación de tipo según la página
-                return validateContentType(item, type);
-            });
+            let filtered = (data.results || []).filter(item => validateContentType(item, type));
 
             let preProfileCount = filtered.length;
             filtered = filterItemsByProfile(filtered); // Aplicar filtro global
             logDebug(`Fila [${type}]: TMDB=${tmdbCount}, DB Match=${preProfileCount}, PostFiltrado=${filtered.length}`);
-            CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
+            CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds, null, DB_CATALOG);
             
             const section = el.closest('.catalog-row');
             if (section) {
@@ -650,9 +564,9 @@ async function toDashboard(user) {
                 // TOP 10 TRENDING (Netflix Style)
                 (async () => {
                     const data = await TMDB_SERVICE.getTrending();
-                    let filtered = (data.results || []).filter(item => availableIds.has(item.id.toString()));
+                    let filtered = (data.results || []);
                     filtered = filterItemsByProfile(filtered);
-                    CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds);
+                    CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds, DB_CATALOG);
                 })(),
                 loadRecommendedItems(),
                 renderRow('actionCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 28 }), 'movie'),
@@ -724,53 +638,29 @@ async function loadGridData(type, page, append = false) {
         const isAnimePage  = document.body.classList.contains('page-anime');
 
         if (isMoviesPage || isSeriesPage || isAnimePage) {
-            const targetType = isMoviesPage ? 'movie' : 'tv';
-            console.log(`[VivoTV] Cargando rejilla filtrada (${targetType}).`);
-            
-            const targetSet = isMoviesPage ? availableMovies : availableSeries;
-            const allIds = Array.from(targetSet);
-            
-            const perPage = 10;
-            const start = (page - 1) * perPage;
-            const end   = start + perPage;
-            const pageIds = allIds.slice(start, end);
-            
-            if (btnLoadMore) btnLoadMore.classList.toggle('hidden', end >= allIds.length);
+            // Cargar de TMDB para mostrar todo
+            const data = type === 'tv' 
+                ? await TMDB_SERVICE.getPopularTV(page)
+                : await TMDB_SERVICE.getPopularMovies(page);
 
-            if (pageIds.length) {
-                const finalItems = [];
-                for (const id of pageIds) {
-                    // Prioridad 1: Buscar en el catálogo local (Ya tiene poster_url, etc)
-                    const localItem = DB_CATALOG.find(i => i.tmdb_id?.toString() === id);
-                    if (localItem) {
-                        finalItems.push(localItem);
-                    } else {
-                        // Prioridad 2: Fallback TMDB si no está en cache local
-                        const details = await TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv').catch(() => null);
-                        if (details) finalItems.push(details);
-                    }
-                }
+            if (loader) loader.classList.add('hidden');
 
-                if (loader) loader.classList.add('hidden');
- 
-                // Aplicar Filtrado Global por Perfil (Helper Centralizado)
-                let filteredItems = filterItemsByProfile(finalItems);
+            let filteredItems = (data.results || []);
+            filteredItems = filterItemsByProfile(filteredItems);
 
-                // Filtrado Estricto por Secciones (Página Actual)
-                filteredItems = filteredItems.filter(item => validateContentType(item, isMoviesPage ? 'movie' : 'tv'));
-
-                const fragment = document.createDocumentFragment();
-                filteredItems.forEach(item => {
-                    const card = CATALOG_UI.createMovieCard(item, type, true);
-                    fragment.appendChild(card);
-                });
-                container.appendChild(fragment);
-            } else {
-                if (loader) loader.classList.add('hidden');
-                if (!append) {
-                    container.innerHTML = `<p class="text-secondary" style="grid-column: 1/-1; text-align: center; padding: 40px;">No hay contenido disponible que coincida con esta sección.</p>`;
-                }
+            // Para anime, filtrar por género 16
+            if (isAnimePage) {
+                filteredItems = filteredItems.filter(item => (item.genre_ids || []).includes(16));
             }
+
+            const fragment = document.createDocumentFragment();
+            filteredItems.forEach(item => {
+                const card = CATALOG_UI.createMovieCard(item, type, true);
+                fragment.appendChild(card);
+            });
+            container.appendChild(fragment);
+
+            if (btnLoadMore) btnLoadMore.classList.toggle('hidden', filteredItems.length < 20); // Asumir 20 por página
             return;
         }
 
@@ -833,7 +723,7 @@ async function renderDBCatalog(containerId, filterType = 'all', isAnime = false)
     }
 
     if (items.length > 0) {
-        CATALOG_UI.renderCarousel(containerId, items, null, availableIds);
+        CATALOG_UI.renderCarousel(containerId, items, null, availableIds, null, DB_CATALOG);
     }
 }
 
@@ -864,13 +754,19 @@ async function renderDBCategoryRows() {
 
 function toAuth() {
     // Ya no hacemos sessionStorage.clear() aquí para evitar borrar el perfil al cargar.
-    
-    const isAuthPage = window.location.pathname.endsWith('index.html') || 
+
+    const isAuthPage = window.location.pathname.endsWith('index.html') ||
                        window.location.pathname.endsWith('registro.html') ||
-                       window.location.pathname === '/' || 
+                       window.location.pathname === '/' ||
                        window.location.pathname.endsWith('vivoweb/');
-    
+
     if (!isAuthPage) { window.location.href = 'index.html'; return; }
+
+    const authSection = document.getElementById('authSection');
+    const dashSection = document.getElementById('dashboardSection');
+    const userProfile = document.getElementById('userProfile');
+    const mainNav = document.getElementById('mainNav');
+    const mobileNav = document.querySelector('.mobile-nav');
 
     if (authSection) authSection.classList.remove('hidden');
     if (dashSection) dashSection.classList.add('hidden');
@@ -991,18 +887,16 @@ async function handleLogoutAction() {
 }
 
 function setLoadingLogout(loading) {
+    const btnSwitchProfile = document.getElementById('btnSwitchProfile');
+    const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
+    const btnCancelExit = document.getElementById('btnCancelExit');
     const btns = [btnSwitchProfile, btnLogoutConfirm, btnCancelExit];
     btns.forEach(b => { if(b) b.disabled = loading; });
     if (btnLogoutConfirm) btnLogoutConfirm.textContent = loading ? 'Cerrando...' : 'Cerrar sesión de la cuenta';
 }
 
 // Cerrar modal al hacer clic fuera
-window.addEventListener('click', (e) => {
-    if (e.target === exitModal) {
-        exitModal.classList.remove('active');
-        document.body.classList.remove('no-scroll');
-    }
-});
+// Movido dentro de initAppForPage()
 if (btnPass) btnPass.addEventListener('click', () => { passwordEl.type = passwordEl.type === 'password' ? 'text' : 'password'; });
 
 if (btnClear) btnClear.addEventListener('click', () => {
@@ -1014,6 +908,9 @@ if (btnClear) btnClear.addEventListener('click', () => {
 });
 
 function setLoading(v) {
+    const btnText = document.getElementById('btnText');
+    const btnLoader = document.getElementById('btnLoader');
+    const btnSubmit = document.getElementById('btnSubmit');
     if (btnText) btnText.classList.toggle('hidden', v);
     if (btnLoader) btnLoader.classList.toggle('hidden', !v);
     if (btnSubmit) btnSubmit.disabled = v;
@@ -1331,7 +1228,7 @@ async function loadMyList() {
         if (favs?.length) {
             section.classList.remove('hidden');
             const details = await Promise.all(favs.slice(0, 15).map(f => TMDB_SERVICE.getDetails(f.tmdb_id, f.type || 'movie')));
-            CATALOG_UI.renderCarousel('myListCarousel', details.filter(d => d), null, availableIds);
+            CATALOG_UI.renderCarousel('myListCarousel', details.filter(d => d), null, availableIds, null, DB_CATALOG);
         } else {
             section.classList.add('hidden');
         }
@@ -1385,7 +1282,7 @@ async function loadPersonalizedRows() {
         const filtered = details.filter(d => d && availableIds.has(d.id.toString()));
         
         if (filtered.length > 0) {
-            CATALOG_UI.renderCarousel('recommendedCarousel', filtered, null, availableIds);
+            CATALOG_UI.renderCarousel('recommendedCarousel', filtered, null, availableIds, null, DB_CATALOG);
         } else {
             section.classList.add('hidden');
         }
@@ -1530,7 +1427,7 @@ async function loadRecommendedItems() {
             section.classList.add('hidden');
         } else {
             section.classList.remove('hidden');
-            CATALOG_UI.renderCarousel('recommendedCarousel', filtered.slice(0, 20), null, availableIds);
+            CATALOG_UI.renderCarousel('recommendedCarousel', filtered.slice(0, 20), null, availableIds, null, DB_CATALOG);
         }
     } catch (e) {
         console.error('Error in loadRecommendedItems:', e);
@@ -1660,7 +1557,40 @@ document.addEventListener('mouseleave', stopDragging);
 function initAppForPage() {
     const path = window.location.pathname;
     fatalLog(`[SPA Engine] Inicializando página: ${path}`);
-    
+
+    // Resetear estado global al cambiar de página
+    isDashboardInit = false;
+
+    // Obtener referencias DOM dinámicamente para cada página
+    authSection = document.getElementById('authSection');
+    dashSection = document.getElementById('dashboardSection');
+    loginForm = document.getElementById('loginForm');
+    emailEl = document.getElementById('email');
+    usernameEl = document.getElementById('username');
+    passwordEl = document.getElementById('password');
+    btnSubmit = document.getElementById('btnSubmit');
+    btnText = document.getElementById('btnText');
+    btnLoader = document.getElementById('btnLoader');
+    authError = document.getElementById('authError');
+    toggleLink = document.getElementById('toggleAuthMode');
+    userProfile = document.getElementById('userProfile');
+    mainNav = document.getElementById('mainNav');
+    mobileNav = document.querySelector('.mobile-nav');
+    btnLogout = document.getElementById('btnLogout');
+    userNameEl = document.getElementById('userName');
+    userAvatar = document.getElementById('userAvatar');
+    searchBox = document.getElementById('searchBox');
+    searchInput = document.getElementById('searchInput');
+    btnClear = document.getElementById('btnClearSearch');
+    btnFav = document.getElementById('btnAddToMyList');
+    btnPass = document.getElementById('btnTogglePass');
+    authTitle = document.getElementById('authTitle');
+    authSubtitle = document.getElementById('authSubtitle');
+    exitModal = document.getElementById('exitModal');
+    btnSwitchProfile = document.getElementById('btnSwitchProfile');
+    btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
+    btnCancelExit = document.getElementById('btnCancelExit');
+
     try {
         // 1. Activar Listeners de Auth (Login/Registro)
         setupAuthListeners();
@@ -1677,7 +1607,85 @@ function initAppForPage() {
     if (path.includes('historial.html')) {
         loadFullHistory();
     }
-    
+
+    // Configurar event listeners que dependen de referencias DOM
+    if (exitModal) {
+        window.addEventListener('click', (e) => {
+            if (e.target === exitModal) {
+                exitModal.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+            }
+        });
+    }
+
+    if (btnPass && passwordEl) {
+        btnPass.addEventListener('click', () => {
+            passwordEl.type = passwordEl.type === 'password' ? 'text' : 'password';
+        });
+    }
+
+    if (btnClear && searchInput) {
+        btnClear.addEventListener('click', () => {
+            searchInput.value = '';
+            btnClear.classList.add('hidden');
+            const isSeriesPage = document.body.classList.contains('page-series');
+            const type = isSeriesPage ? 'tv' : 'movie';
+            loadGridData(type, 1);
+        });
+    }
+
+    // Configurar event listeners de búsqueda
+    if (searchBox && searchInput) {
+        searchBox.addEventListener('click', (e) => {
+            searchBox.classList.add('active');
+            searchInput.focus();
+            e.stopPropagation();
+        });
+        document.addEventListener('click', (e) => {
+            if (searchBox && !searchBox.contains(e.target)) {
+                searchBox.classList.remove('active');
+            }
+        });
+    }
+
+    if (searchInput && searchBox && btnClear) {
+        searchInput.addEventListener('input', (e) => {
+            const q = e.target.value.trim();
+            btnClear.classList.toggle('hidden', q.length === 0);
+
+            if (searchTimeout) clearTimeout(searchTimeout);
+            if (q.length < 3) return;
+
+            searchTimeout = setTimeout(async () => {
+                const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query: q });
+                if (res && res.results) {
+                    const isSearchPage = window.location.pathname.includes('busqueda.html');
+
+                    if (isSearchPage) {
+                        executeSearch(q);
+                    } else {
+                        let filtered = res.results.filter(item => availableIds.has(item.id.toString()));
+                        filtered = filterItemsByProfile(filtered); // Aplicar filtro global
+
+                        const isMoviesPage = document.body.classList.contains('page-movies');
+                        const isSeriesPage = document.body.classList.contains('page-series');
+                        const targetId = isMoviesPage ? 'popularCarousel' : (isSeriesPage ? 'popularCarousel' : 'trendingCarousel');
+                        CATALOG_UI.renderCarousel(targetId, filtered, null, availableIds, `🔍 Resultados para "${q}"`, DB_CATALOG);
+                    }
+                }
+            }, 400);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const q = e.target.value.trim();
+                if (q.length >= 3) {
+                    window.location.href = `busqueda.html?q=${encodeURIComponent(q)}`;
+                }
+            }
+        });
+    }
+
     // Actualizar flechas de carruseles si existen
     document.querySelectorAll('.carousel').forEach(updateCarouselArrows);
 }
@@ -1691,6 +1699,49 @@ if (document.readyState === 'loading') {
 } else {
     initAppForPage();
 }
+
+// Listener para actualizar availableIds cuando se agrega contenido
+window.addEventListener('contentAdded', async (e) => {
+    const { tmdb_id, content_type } = e.detail;
+    availableIds.add(tmdb_id);
+    if (content_type === 'movie') availableMovies.add(tmdb_id);
+    else if (content_type === 'series') availableSeries.add(tmdb_id);
+    // Actualizar badges en pantalla
+    document.querySelectorAll('.movie-card').forEach(card => {
+        const cardTmdbId = card.dataset.tmdbId;
+        if (cardTmdbId === tmdb_id) {
+            const badge = card.querySelector('.available-badge, .coming-soon-badge');
+            if (badge) {
+                badge.className = 'available-badge';
+                badge.innerHTML = '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> DISPONIBLE';
+            }
+        }
+    });
+});
+
+// Actualización en tiempo real de disponibles cada 30 segundos
+setInterval(async () => {
+    try {
+        await fetchAvailableIds();
+        // Actualizar todos los badges en pantalla
+        document.querySelectorAll('.movie-card').forEach(card => {
+            const tmdbId = card.dataset.tmdbId;
+            const isAvail = availableIds.has(tmdbId) || DB_CATALOG.some(db => db.tmdb_id == tmdbId);
+            const badge = card.querySelector('.available-badge, .coming-soon-badge');
+            if (badge) {
+                if (isAvail) {
+                    badge.className = 'available-badge';
+                    badge.innerHTML = '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> DISPONIBLE';
+                } else {
+                    badge.className = 'coming-soon-badge';
+                    badge.innerHTML = 'PRÓXIMAMENTE';
+                }
+            }
+        });
+    } catch (e) {
+        console.warn('Error actualizando disponibles:', e);
+    }
+}, 30000); // 30 segundos
 
 // Manejo de Flechas
 document.addEventListener('click', (e) => {

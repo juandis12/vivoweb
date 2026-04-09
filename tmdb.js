@@ -1,5 +1,8 @@
 import { CONFIG } from './config.js';
-import { VivoCache } from './cache.js';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+// Cliente Supabase para guardar metadatos
+const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
 // Helper para escapar HTML y prevenir XSS (Fase 3: Seguridad)
 function _escapeHTML(str) {
@@ -13,28 +16,13 @@ function _escapeHTML(str) {
 }
 
 /**
- * Servicio TMDB v3.1 — Todas las llamadas a la API con persistencia IndexedDB.
+ * Servicio TMDB v3.1 — Todas las llamadas a la API sin persistencia.
  */
 export const TMDB_SERVICE = {
-    _cache: new Map(), // Memoria volátil para acceso inmediato
-
     async fetchFromTMDB(endpoint, params = {}) {
-        const cacheKey = `vivotv_api_cache_v2_${endpoint}_${JSON.stringify(params)}`;
-        
-        // 1. Verificar Cache de MEMORIA (Nivel 1)
-        if (this._cache.has(cacheKey)) return this._cache.get(cacheKey);
-
-        // 2. Verificar Cache PERSISTENTE (Nivel 2: IndexedDB)
-        const cached = await VivoCache.get(cacheKey);
-        if (cached) {
-            console.log(`[VivoCache] Hit: ${endpoint}`);
-            this._cache.set(cacheKey, cached);
-            return cached;
-        }
-
         const currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
         const isKids = currentProfile?.is_kids === true;
-        
+
         let url;
         if (CONFIG.USE_PROXY) {
             url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
@@ -59,11 +47,7 @@ export const TMDB_SERVICE = {
             const res = await fetch(url.toString());
             if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
             const data = await res.json();
-            
-            // 3. Guardar en AMBOS niveles de cache
-            this._cache.set(cacheKey, data);
-            await VivoCache.set(cacheKey, data);
-            
+
             return data;
         } catch (e) {
             console.error(`TMDB fetch error (${endpoint}):`, e);
@@ -78,23 +62,40 @@ export const TMDB_SERVICE = {
     getPopularTV: (page = 1)    => TMDB_SERVICE.fetchFromTMDB('/tv/popular', { page }),
     
     async getDetails(id, type = 'movie') {
-        const cacheKey = `vivotv_cache_${type}_${id}`;
-        // 1. Memory Cache
-        if (this._cache.has(cacheKey)) return this._cache.get(cacheKey);
-        
-        // 2. Persistent Cache (Session)
-        const stored = sessionStorage.getItem(cacheKey);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            this._cache.set(cacheKey, parsed);
-            return parsed;
-        }
-        
         const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
+        
+        // Guardar en DB si no existe
         if (data && data.id) {
-            this._cache.set(cacheKey, data);
-            sessionStorage.setItem(cacheKey, JSON.stringify(data));
+            try {
+                const { data: existing } = await supabase
+                    .from('content')
+                    .select('id')
+                    .eq('tmdb_id', data.id.toString())
+                    .eq('content_type', type === 'tv' ? 'series' : 'movie')
+                    .single();
+                
+                if (!existing) {
+                    // Insertar metadatos básicos
+                    const contentData = {
+                        tmdb_id: data.id.toString(),
+                        content_type: type === 'tv' ? 'series' : 'movie',
+                        title: data.title || data.name || '',
+                        poster_path: data.poster_path || '',
+                        backdrop_path: data.backdrop_path || '',
+                        genre_ids: (data.genres || []).map(g => g.id),
+                        overview: data.overview || '',
+                        release_date: data.release_date || data.first_air_date || null,
+                        vote_average: data.vote_average || 0
+                    };
+                    await supabase.from('content').insert(contentData);
+                    // Notificar que se agregó contenido
+                    window.dispatchEvent(new CustomEvent('contentAdded', { detail: { tmdb_id: data.id.toString(), content_type: type === 'tv' ? 'series' : 'movie' } }));
+                }
+            } catch (e) {
+                console.warn('Error guardando en DB:', e);
+            }
         }
+        
         return data;
     },
 
@@ -204,7 +205,7 @@ export const CATALOG_UI = {
         container.appendChild(skeletonWrap);
     },
 
-    renderCarousel(containerId, items, typeOverride = null, availableIds = new Set(), titleOverride = null) {
+    renderCarousel(containerId, items, typeOverride = null, availableIds = new Set(), titleOverride = null, dbCatalog = []) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
@@ -221,31 +222,33 @@ export const CATALOG_UI = {
             return;
         }
 
-        // --- MEJORA: INTERSECTION OBSERVER (Fase 3: Lazy-Row) ---
-        // Solo inyectamos el HTML cuando la fila es visible.
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const fragment = document.createDocumentFragment();
-                    items.forEach(item => {
-                        // Soporte Dual: DB (poster_url) o TMDB (poster_path)
-                        if (!item.poster_path && !item.poster_url) return;
-                        
-                        const type = typeOverride || item.content_type || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
-                        const id = item.id || item.tmdb_id;
-                        const isAvail = id ? availableIds.has(id.toString()) : false;
-                        
-                        // USAMOS CATALOG_UI en lugar de 'this' para evitar errores de contexto
-                        const card = CATALOG_UI.createMovieCard(item, type, isAvail);
-                        fragment.appendChild(card);
-                    });
-                    container.appendChild(fragment);
-                    observer.unobserve(container);
-                }
-            });
-        }, { rootMargin: '600px' }); // Margen extra generoso
+        // Renderizado inmediato: el row debe cargar sin depender de la visibilidad.
+        const fragment = document.createDocumentFragment();
+        items.forEach(item => {
+            // Soporte Dual: DB (poster_url) o TMDB (poster_path)
+            if (!item.poster_path && !item.poster_url) return;
+            
+            const type = typeOverride || item.content_type || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
+            const isAvail = CATALOG_UI.isItemAvailable(item, availableIds, dbCatalog, type);
+            
+            const card = CATALOG_UI.createMovieCard(item, type, isAvail);
+            fragment.appendChild(card);
+        });
+        container.appendChild(fragment);
+    },
 
-        observer.observe(container);
+    isItemAvailable(item, availableIds = new Set(), dbCatalog = [], type = null) {
+        if (!availableIds || availableIds.size === 0) {
+            availableIds = window.availableIds || new Set();
+        }
+        if (!dbCatalog || dbCatalog.length === 0) {
+            dbCatalog = window.DB_CATALOG || [];
+        }
+
+        const id = item.id || item.tmdb_id;
+        if (!id) return false;
+        const idStr = id.toString();
+        return availableIds.has(idStr) || dbCatalog.some(db => db.tmdb_id?.toString() === idStr);
     },
 
     createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {
@@ -334,14 +337,14 @@ export const CATALOG_UI = {
         grid.appendChild(fragment);
     },
 
-    renderTop10(containerId, results, availableIds) {
+    renderTop10(containerId, results, availableIds, dbCatalog = []) {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = '';
         const fragment = document.createDocumentFragment();
         results.forEach((item, index) => {
-            const isAvail = availableIds.has(item.id.toString());
             const type = item.media_type || (item.title ? 'movie' : 'tv');
+            const isAvail = CATALOG_UI.isItemAvailable(item, availableIds, dbCatalog, type);
             const card = this.createTop10Card(item, index + 1, isAvail, type);
             fragment.appendChild(card);
         });

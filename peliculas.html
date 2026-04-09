@@ -308,15 +308,5 @@
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script type="module" src="./app.js"></script>
-    <!-- Script PWA -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered', reg))
-                    .catch(err => console.log('SW Error', err));
-            });
-        }
-    </script>
 </body>
 </html>
