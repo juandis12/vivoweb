@@ -214,9 +214,9 @@ export const LAYOUT = {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // 2. Extraer el contenido del <main> y el <title>
-            const newMain = doc.querySelector('main');
-            const currentMain = document.querySelector('main');
+            // 2. Extraer el contenido del contenedor principal y el <title>
+            const newMain = doc.getElementById('mainContainer') || doc.querySelector('main');
+            const currentMain = document.getElementById('mainContainer') || document.querySelector('main');
             
             if (newMain && currentMain) {
                 // Preservar scroll top para la nueva página

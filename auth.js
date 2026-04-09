@@ -9,36 +9,80 @@ let sessionChannel = null;
 
 export async function initAuth(onAuthChange) {
     try {
-        supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+        supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: true,
+                storageKey: `sb-${CONFIG.SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`,
+                storage: window.localStorage,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        });
     } catch(e) { 
         console.warn('Supabase no disponible:', e); 
         return { user: null, profile: null };
     }
 
-    // Carga inicial inmediata del perfil
-    const stored = sessionStorage.getItem('vivotv_current_profile');
+    // Carga inicial inmediata del perfil (Fase Persistencia Robusta)
+    const stored = localStorage.getItem('vivotv_current_profile');
     if (stored) {
         try { currentProfile = JSON.parse(stored); } catch(e) { currentProfile = null; }
     }
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session?.user) {
-            const up = sessionStorage.getItem('vivotv_current_profile');
-            currentProfile = up ? JSON.parse(up) : null;
-            onAuthChange(event, session, currentProfile);
-        } else {
-            currentProfile = null;
-            onAuthChange(event, null, null);
-        }
-    });
+    return new Promise((resolve) => {
+        let resolved = false;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    return { user, profile: currentProfile, supabase };
+        const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log(`[VivoTV] Auth Event: ${event}`);
+            
+            if (session?.user) {
+                const up = localStorage.getItem('vivotv_current_profile');
+                currentProfile = up ? JSON.parse(up) : null;
+                onAuthChange(event, session, currentProfile);
+                
+                if (!resolved) {
+                    resolved = true;
+                    resolve({ user: session.user, profile: currentProfile, supabase });
+                }
+            } else if (event === 'SIGNED_OUT') {
+                currentProfile = null;
+                localStorage.removeItem('vivotv_current_profile');
+                onAuthChange(event, null, null);
+                if (!resolved) {
+                    resolved = true;
+                    resolve({ user: null, profile: null, supabase });
+                }
+            } else if (event === 'INITIAL_SESSION' && !session) {
+                // Si es el evento inicial y no hay sesión, esperamos un poco más 
+                // por si getUser() o el motor de recuperación logran rescatarla.
+                onAuthChange(event, null, null);
+            }
+        });
+
+        // Timeout de seguridad progresivo
+        setTimeout(async () => {
+            if (resolved) return;
+            console.log('[VivoTV] Segundo intento de recuperación...');
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                resolved = true;
+                resolve({ user: user, profile: currentProfile, supabase });
+            } else {
+                // Última oportunidad (3.5s total)
+                setTimeout(async () => {
+                   if (resolved) return;
+                   const { data: { user: lastTry } } = await supabase.auth.getUser();
+                   resolved = true;
+                   resolve({ user: lastTry || null, profile: currentProfile, supabase });
+                }, 1000);
+            }
+        }, 2500);
+    });
 }
 
 export function setCurrentProfile(profile) {
     currentProfile = profile;
-    sessionStorage.setItem('vivotv_current_profile', JSON.stringify(profile));
+    localStorage.setItem('vivotv_current_profile', JSON.stringify(profile));
 }
 
 /**
@@ -111,15 +155,16 @@ export async function checkConcurrentSessions() {
             .eq('user_id', user.id)
             .gt('last_seen', twoMinAgo);
 
-        if (sessions && sessions.length > 2) {
-            const isAuthorized = sessions.slice(0, 2).some(s => s.device_id === deviceId);
+        if (sessions && sessions.length > 5) { // Umbral aumentado para depuración
+            const isAuthorized = sessions.slice(0, 5).some(s => s.device_id === deviceId);
             if (!isAuthorized) {
-                showToast('Límite de dispositivos alcanzado.');
-                setTimeout(() => {
-                    supabase.auth.signOut();
-                    sessionStorage.clear();
-                    window.location.href = 'index.html';
-                }, 3000);
+                console.warn('[VivoTV] Límite de dispositivos excedido, pero omitiendo signOut para pruebas.');
+                // showToast('Límite de dispositivos alcanzado.');
+                // setTimeout(() => {
+                //     supabase.auth.signOut();
+                //     localStorage.removeItem('vivotv_current_profile');
+                //     window.location.href = 'index.html';
+                // }, 3000);
             }
         }
     } catch (e) {

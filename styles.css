@@ -7,7 +7,7 @@
     --primary: #2563eb; /* Vivid Primary */
     --primary-container: #1d4ed8;
     --primary-glow: rgba(37, 99, 235, 0.4);
-    --secondary: #fac15; /* Secondary Highlight */
+    --secondary: #facc15; /* Secondary Highlight (Vivid Yellow) */
     --tertiary: #7c3aed; /* Creative Violet */
     
     /* Cinematic Glass & Depth Tokens */
@@ -460,15 +460,34 @@ nav a.active::after { width: 24px; }
     border-left: 3px solid #ff9800; margin-top: 12px;
 }
 
-.auth-divider {
-    text-align: center; color: var(--text-muted); font-size: 0.85rem;
-    position: relative; margin: 22px 0;
-}
-.auth-divider::before, .auth-divider::after {
-    content: ''; position: absolute; top: 50%; width: 35%; height: 1px; background: var(--border);
-}
-.auth-divider::before { left: 0; }
 .auth-divider::after { right: 0; }
+
+/* Mensaje de Redirección Premium */
+#authRedirect {
+    margin-top: 20px;
+    transition: all 0.5s ease;
+}
+
+.redirecting-msg {
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    color: #60a5fa;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    backdrop-filter: blur(10px);
+    animation: slideUpFade 0.5s ease both;
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 .auth-toggle { text-align: center; color: var(--text-secondary); font-size: 0.9rem; }
 .auth-toggle a { color: white; font-weight: 600; }

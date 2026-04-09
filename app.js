@@ -35,21 +35,31 @@ const mobileNav = document.querySelector('.mobile-nav');
 async function initAppForPage() {
     console.log(`[VivoTV] Inicializando página: ${window.location.pathname}`);
     
-    // 0. Inicializar listeners de UI (Auth, etc)
+    // 0. Resetear estados locales para permitir re-renderizado
     setupAuthListeners();
-
-    // 1. Resetear estados locales para permitir re-renderizado
     isDashboardInit = false;
     stopHeroRotation();
     
+    // 1. Detección Preventiva de Perfil (Fase Antigravedad)
+    const storedProfile = localStorage.getItem('vivotv_current_profile');
+    const isAuthPage = window.location.pathname.includes('profiles.html');
+    
+    if (storedProfile && !isAuthPage) {
+        console.log('[VivoTV] Perfil detectado localmente, forzando visibilidad del Dashboard...');
+        if (dashSection) dashSection.classList.remove('hidden');
+        if (authSection) authSection.classList.add('hidden');
+    }
+
     // 2. Asegurar que Supabase esté listo y detectar sesión
     const { user, profile } = await initAuth(onAuthStatusChange);
+    
     if (!user) {
+        console.warn('[VivoTV] No se encontró sesión de usuario, activando Auth.');
         toAuth();
         return;
     }
 
-    // 3. Inicializar Dashboard
+    // 3. Inicializar Dashboard con datos validados
     await toDashboard(user, profile);
 }
 
@@ -57,8 +67,18 @@ async function initAppForPage() {
  * Manejador de cambios de autenticación
  */
 function onAuthStatusChange(event, session, profile) {
+    console.log(`[VivoTV] onAuthStatusChange: ${event}`);
+
+    if (event === 'INITIAL_SESSION' && !session) {
+        console.log('[VivoTV] Esperando recuperación de sesión real...');
+        return;
+    }
+
     if (!session) {
-        toAuth();
+        // Pequeño retardo de seguridad para evitar falsos deslogueos durante hidratación 
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            toAuth();
+        }
     } else if (profile) {
         if (!isDashboardInit) toDashboard(session.user, profile);
     }
@@ -68,20 +88,27 @@ function onAuthStatusChange(event, session, profile) {
  * Configuración del Dashboard
  */
 async function toDashboard(user, profileIfKnown) {
-    if (isDashboardInit) return;
+    if (isDashboardInit) {
+        // Si ya está iniciado pero profileIfKnown es distinto, actualizamos datos
+        return;
+    }
     
     // Prioridad al perfil pasado por argumento o el global de auth
     const profile = profileIfKnown || currentProfile;
 
     if (!profile) {
         if (!window.location.pathname.includes('profiles.html')) {
-            console.log('[VivoTV] No hay perfil seleccionado, redirigiendo...');
+            console.log('[VivoTV] No hay perfil seleccionado, redirigiendo a profiles.html');
             window.location.replace('profiles.html');
         }
         return;
     }
 
-    isDashboardInit = true; // Solo marcamos como init si tenemos perfil
+    console.log(`[VivoTV] Renderizando Dashboard para: ${profile.name}`);
+    
+    // Sincronizar estado local de app.js
+    currentProfile = profile; 
+    isDashboardInit = true; 
 
     // Sync UI with Profile
     if (userNameEl) userNameEl.textContent = profile.name;
@@ -92,6 +119,20 @@ async function toDashboard(user, profileIfKnown) {
 
     if (mainNav) mainNav.classList.remove('hidden');
     if (mobileNav) mobileNav.classList.remove('hidden');
+
+    // --- VISIBILIDAD ATÓMICA DEFINITIVA ---
+    if (authSection) {
+        authSection.classList.add('hidden');
+        authSection.setAttribute('hidden', 'true');
+    }
+    if (dashSection) {
+        dashSection.classList.remove('hidden');
+        dashSection.removeAttribute('hidden');
+    }
+
+    // Ocultar Splash si existe
+    const splash = document.getElementById('splashScreen');
+    if (splash) splash.classList.add('hidden');
 
     // Sync state and rendering
     setSupabase(supabase);
