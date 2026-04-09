@@ -111,10 +111,10 @@ async function toDashboard(user, profileIfKnown) {
     isDashboardInit = true; 
 
     // Sync UI with Profile
-    if (userNameEl) userNameEl.textContent = profile.name;
+    if (userNameEl) userNameEl.textContent = currentProfile.name;
     if (userAvatar) {
-        userAvatar.textContent = profile.name[0];
-        userAvatar.className = `avatar ${profile.color}`;
+        userAvatar.textContent = currentProfile.name[0];
+        userAvatar.className = `avatar ${currentProfile.color}`;
     }
 
     if (mainNav) mainNav.classList.remove('hidden');

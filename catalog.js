@@ -269,27 +269,3 @@ export async function loadRecommendedItems(supabase, currentProfile, availableId
         return [];
     }
 }
-export async function loadRecentlyWatched(supabase, currentProfile) {
-    if (!supabase || !currentProfile) return;
-    try {
-        const { data: history } = await supabase
-            .from('watch_history')
-            .select('tmdb_id, type, last_watched')
-            .eq('profile_id', currentProfile.id)
-            .order('last_watched', { ascending: false })
-            .limit(10);
-            
-        if (!history || !history.length) return;
-        
-        const details = await Promise.all(
-            history.map(h => TMDB_SERVICE.getDetails(h.tmdb_id, h.type).catch(() => null))
-        );
-        const filtered = details.filter(d => d);
-        if (filtered.length && document.getElementById('recentCarousel')) {
-            CATALOG_UI.renderCarousel('recentCarousel', filtered, null, availableIds);
-            document.getElementById('recentSection')?.classList.remove('hidden');
-        }
-    } catch (e) {
-        console.error('[VivoTV] Error loadRecentlyWatched:', e);
-    }
-}
