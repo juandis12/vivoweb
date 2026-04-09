@@ -1,12 +1,8 @@
 import { CONFIG } from './config.js';
-<<<<<<< HEAD
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 // Cliente Supabase para guardar metadatos
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-=======
-// import { VivoCache } from './cache.js'; // Eliminado por solicitud de simplificación de caché
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
 
 // Helper para escapar HTML y prevenir XSS (Fase 3: Seguridad)
 function _escapeHTML(str) {
@@ -24,12 +20,6 @@ function _escapeHTML(str) {
  */
 export const TMDB_SERVICE = {
     async fetchFromTMDB(endpoint, params = {}) {
-<<<<<<< HEAD
-=======
-        // --- CACHÉ ELIMINADA ---
-        // Se deshabilitan Nivel 1 (Memoria) y Nivel 2 (IndexedDB) para asegurar carga fresca.
-
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
         const currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
         const isKids = currentProfile?.is_kids === true;
 
@@ -57,10 +47,7 @@ export const TMDB_SERVICE = {
             const res = await fetch(url.toString());
             if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
             const data = await res.json();
-<<<<<<< HEAD
 
-=======
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
             return data;
         } catch (e) {
             console.error(`TMDB fetch error (${endpoint}):`, e);
@@ -76,7 +63,6 @@ export const TMDB_SERVICE = {
     
     async getDetails(id, type = 'movie') {
         const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
-<<<<<<< HEAD
         
         // Guardar en DB si no existe
         if (data && data.id) {
@@ -110,8 +96,6 @@ export const TMDB_SERVICE = {
             }
         }
         
-=======
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
         return data;
     },
 
@@ -127,10 +111,11 @@ export const TMDB_SERVICE = {
     },
 };
 
-// TMDB_SERVICE is now the only export from this file.
-// CATALOG_UI has been moved to ui.js for better modularity.
+/**
+ * Motor de Renderizado de la UI del Catálogo
+ */
+export const CATALOG_UI = {
 
-<<<<<<< HEAD
     renderHero(movie, heroItems = []) {
         const heroTitle   = document.getElementById('heroTitle');
         const heroOverview = document.getElementById('heroOverview');
@@ -378,5 +363,3 @@ export const TMDB_SERVICE = {
         return wrapper;
     }
 };
-=======
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301

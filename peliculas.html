@@ -308,16 +308,5 @@
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script type="module" src="./app.js"></script>
-<<<<<<< HEAD
-=======
-    <!-- Service Worker disabled: no cache for VivoTV -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations()
-                .then(regs => regs.forEach(reg => reg.unregister()))
-                .catch(() => {});
-        }
-    </script>
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
 </body>
 </html>
