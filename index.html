@@ -53,7 +53,7 @@
             <h2 id="authTitle">Bienvenido de vuelta</h2>
             <p id="authSubtitle">Inicia sesión para disfrutar de tu contenido premium</p>
 
-            <form id="loginForm" novalidate>
+            <form id="loginForm" onsubmit="event.preventDefault();" novalidate>
                 <div class="input-group">
                     <label for="email">Correo Electrónico</label>
                     <input type="email" id="email" required placeholder="correo@ejemplo.com" autocomplete="email">
@@ -170,12 +170,22 @@
                 </div>
             </section>
 
+            <!-- Recomendados (Fase Personalización) -->
+            <section class="catalog-row hidden" id="personalizedSection" data-section="recommended">
+                <div class="row-header">
+                    <h3 class="row-title"><span class="row-accent">✨</span> Recomendados para ti</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="personalizedCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
             <!-- Tendencias -->
             <section class="catalog-row" id="trendingSection" data-section="trending">
                 <div class="row-header">
                     <h3 class="row-title">🔥 Tendencias del Día</h3>
-                    <button class="btn-ver-mas" data-carousel="trendingCarousel" data-fetch="trending"
-                        data-type="all">Ver más <span>›</span></button>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
@@ -190,62 +200,50 @@
                 </div>
             </section>
 
-            <!-- Películas Populares -->
-            <section class="catalog-row" id="moviesSection" data-section="movies">
+            <!-- Acción y Adrenalina -->
+            <section class="catalog-row" id="actionSection" data-section="action">
                 <div class="row-header">
-                    <h3 class="row-title" id="popularMoviesTitle">🎬 Películas Populares</h3>
-                    <button class="btn-ver-mas" data-carousel="popularMoviesCarousel" data-fetch="movies"
-                        data-type="movie">Ver más <span>›</span></button>
+                    <h3 class="row-title">💥 Acción y Adrenalina</h3>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="popularMoviesCarousel">
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                    </div>
+                    <div class="carousel" id="actionCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
             </section>
 
-            <!-- Mejor Valoradas -->
-            <section class="catalog-row" id="topRatedSection" data-section="toprated">
+            <!-- Comedia -->
+            <section class="catalog-row" id="comedySection" data-section="comedy">
                 <div class="row-header">
-                    <h3 class="row-title">⭐ Mejor Valoradas</h3>
-                    <button class="btn-ver-mas" data-carousel="topRatedCarousel" data-fetch="toprated"
-                        data-type="movie">Ver más <span>›</span></button>
+                    <h3 class="row-title">😂 Para Morirse de Risa</h3>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="topRatedCarousel">
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                    </div>
+                    <div class="carousel" id="comedyCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
             </section>
 
-            <!-- Series Populares -->
-            <section class="catalog-row" id="seriesSection" data-section="series">
+            <!-- Terror -->
+            <section class="catalog-row" id="horrorSection" data-section="horror">
                 <div class="row-header">
-                    <h3 class="row-title">📺 Series Populares</h3>
-                    <button class="btn-ver-mas" data-carousel="popularTVCarousel" data-fetch="tv" data-type="tv">Ver más
-                        <span>›</span></button>
+                    <h3 class="row-title">👻 Noches de Terror</h3>
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="popularTVCarousel">
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                    </div>
+                    <div class="carousel" id="horrorCarousel"></div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
+            <!-- Ciencia Ficción y Fantasía -->
+            <section class="catalog-row" id="scifiSection" data-section="scifi">
+                <div class="row-header">
+                    <h3 class="row-title">🚀 Ciencia Ficción y Fantasía</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel" id="scifiCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
             </section>
@@ -463,117 +461,6 @@
                     .catch(err => console.log('SW Error', err));
             });
         }
-    </script>
-
-    <!-- MOTOR DE AUTH AUTÓNOMO (No depende de app.js) -->
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-        import { CONFIG } from './config.js';
-
-        const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-
-        function showDashboard() {
-            const authSection = document.getElementById('authSection');
-            const dashSection = document.getElementById('dashboardSection');
-            const userProfile = document.getElementById('userProfile');
-            const mainNav = document.getElementById('mainNav');
-            const mobileNav = document.querySelector('.mobile-nav');
-            if (authSection) authSection.classList.add('hidden');
-            if (dashSection) dashSection.classList.remove('hidden');
-            if (userProfile) userProfile.classList.remove('hidden');
-            if (mainNav) mainNav.classList.remove('hidden');
-            if (mobileNav) mobileNav.classList.remove('hidden');
-            const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
-            const userNameEl = document.getElementById('userName');
-            const userAvatar = document.getElementById('userAvatar');
-            if (profile && userNameEl) userNameEl.textContent = profile.name;
-            if (profile && userAvatar) {
-                userAvatar.textContent = profile.name[0];
-                userAvatar.className = `avatar ${profile.color || 'color-1'}`;
-            }
-            console.log('[Auth] Dashboard activo ✅');
-        }
-
-        function showLogin() {
-            const authSection = document.getElementById('authSection');
-            const dashSection = document.getElementById('dashboardSection');
-            const mainNav = document.getElementById('mainNav');
-            const mobileNav = document.querySelector('.mobile-nav');
-            if (authSection) authSection.classList.remove('hidden');
-            if (dashSection) dashSection.classList.add('hidden');
-            if (mainNav) mainNav.classList.add('hidden');
-            if (mobileNav) mobileNav.classList.add('hidden');
-        }
-
-        function showAuthError(msg) {
-            const el = document.getElementById('authError');
-            if (el) { el.textContent = msg; el.classList.remove('hidden'); }
-        }
-
-        function setLoading(on) {
-            const btn = document.getElementById('btnSubmit');
-            const txt = document.getElementById('btnText');
-            const ldr = document.getElementById('btnLoader');
-            if (btn) btn.disabled = on;
-            if (txt) txt.style.opacity = on ? '0' : '1';
-            if (ldr) ldr.classList.toggle('hidden', !on);
-        }
-
-        // Verificar estado al cargar
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                const profileSaved = sessionStorage.getItem('vivotv_current_profile');
-                if (profileSaved) {
-                    showDashboard();
-                    console.log('[Auth] Usuario y perfil detectados. app.js se encargará del catálogo.');
-                } else {
-
-                    window.location.href = 'profiles.html';
-                }
-            } else {
-                showLogin();
-            }
-        });
-
-        // Escuchar cierre de sesión
-        supabase.auth.onAuthStateChange((event) => {
-            if (event === 'SIGNED_OUT') {
-                sessionStorage.clear();
-                showLogin();
-            }
-        });
-
-        // Listener del formulario de login
-        document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('loginForm');
-            if (!form) { console.error('[Auth] loginForm no encontrado'); return; }
-            console.log('[Auth] Motor autónomo listo ✅');
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const email = document.getElementById('email')?.value?.trim();
-                const password = document.getElementById('password')?.value;
-                const errEl = document.getElementById('authError');
-                if (errEl) errEl.classList.add('hidden');
-                if (!email || !password) { showAuthError('Completa todos los campos.'); return; }
-                setLoading(true);
-                try {
-                    const { error } = await supabase.auth.signInWithPassword({ email, password });
-                    if (error) throw error;
-                    window.location.href = 'profiles.html';
-                } catch (err) {
-                    const msgs = {
-                        'Invalid login credentials': 'Correo o contraseña incorrectos.',
-                        'Email not confirmed': 'Confirma tu correo primero.',
-                        'Too many requests': 'Demasiados intentos. Espera un momento.'
-                    };
-                    showAuthError(msgs[err.message] || err.message);
-                } finally {
-                    setLoading(false);
-                }
-            });
-        });
     </script>
 
     <!-- App principal (catálogo, carruseles, búsqueda) -->

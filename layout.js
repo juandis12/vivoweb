@@ -224,6 +224,11 @@ export const LAYOUT = {
                 currentMain.innerHTML = newMain.innerHTML;
                 document.title = doc.title;
 
+                // Sincronizar clases del body (Fase SPA: Consistencia)
+                document.body.className = doc.body.className;
+                // Asegurarse de mantener 'loaded' para no romper transiciones
+                document.body.classList.add('loaded');
+
                 // 3. Actualizar History API
                 if (pushState) {
                     window.history.pushState({ url }, doc.title, url);

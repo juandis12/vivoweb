@@ -2,7 +2,7 @@
 export const CONFIG = {
     // Configuración Supabase (Pública por diseño, protegida por RLS)
     SUPABASE_URL: 'https://esnrgviozjfjgnbcrduz.supabase.co',
-    SUPABASE_ANON_KEY: 'sb_publishable_-Nf_ORrYzMgPrE3WPPP8MQ_0T7pjOS6',
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzbnJndmlvempmamduYmNyZHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTUyNzYsImV4cCI6MjA4OTk3MTI3Nn0._a6k7-91c8u8YOKLW53Y-gza22qAclH1nTGM4hL_wRM',
 
     // Configuración TMDB (Segura vía Proxy Serverless)
     TMDB_PROXY_URL: '/api/tmdb', // Todas las peticiones deben pasar por aquí
@@ -17,8 +17,8 @@ export const CONFIG = {
 
     // Detección automática de entorno: Proxy en Prod, Directo en Local (Live Server)
     USE_PROXY: (
-        window.location.hostname !== 'localhost' && 
-        window.location.hostname !== '127.0.0.1' && 
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1' &&
         !window.location.hostname.startsWith('192.168.') &&
         window.location.protocol !== 'file:'
     )

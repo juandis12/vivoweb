@@ -601,7 +601,8 @@
 
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                window.location.href = 'index.html';
+                console.warn('[VivoTV] Usuario no autenticado en profiles.html, redirigiendo...');
+                window.location.replace('index.html');
                 return;
             }
 
@@ -862,7 +863,7 @@
             
             // --- SESIÓN TEMPORAL (Fase 8) ---
             sessionStorage.setItem('vivotv_current_profile', JSON.stringify(p));
-            window.location.href = 'index.html';
+            window.location.replace('index.html');
         }
 
         // --- SISTEMA DE PIN (Fase 7) ---
