@@ -279,8 +279,19 @@ function setupAuthListeners() {
 
     loginForm.onsubmit = async (e) => {
         e.preventDefault();
-        const email = getEl('email')?.value.trim();
-        const password = getEl('password')?.value;
+        
+        const emailEl = getEl('email');
+        const passwordEl = getEl('password');
+        const redirectMsg = getEl('authRedirect');
+
+        if (!emailEl || !passwordEl) {
+            console.error('[VivoTV] No se encontraron campos de login en el DOM.');
+            showToast('Error interno: Campos de login no encontrados.', 'error');
+            return;
+        }
+
+        const email = emailEl.value.trim();
+        const password = passwordEl.value;
         const btnSubmit = getEl('btnSubmit');
         const btnText = getEl('btnText');
         const btnLoader = getEl('btnLoader');
@@ -293,14 +304,21 @@ function setupAuthListeners() {
 
         UI_EFFECTS.setLoading(true, btnText, btnLoader, btnSubmit);
         if (authError) authError.classList.add('hidden');
+        if (redirectMsg) redirectMsg.classList.add('hidden');
 
         try {
             const isLogin = !window.location.pathname.includes('registro.html');
             if (isLogin) {
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
-                // Redirect will be handled by onAuthStateChange in auth.js
-                window.location.href = 'profiles.html';
+                
+                if (redirectMsg) {
+                    redirectMsg.textContent = "🚀 Autenticado. Redirigiendo...";
+                    redirectMsg.classList.remove('hidden');
+                }
+                
+                // Redirección inmediata a perfiles
+                window.location.replace('profiles.html');
             } else {
                 const username = getEl('username')?.value.trim() || 'Usuario';
                 const { error } = await supabase.auth.signUp({ 
@@ -310,8 +328,9 @@ function setupAuthListeners() {
                 showToast('📩 Revisa tu correo para activar la cuenta.', 'success');
             }
         } catch (err) {
+            console.error('[VivoTV] Error en Auth:', err);
             if (authError) {
-                authError.textContent = err.message;
+                authError.textContent = err.message || 'Error al conectar con el servidor.';
                 authError.classList.remove('hidden');
             }
             showToast(err.message, 'error');

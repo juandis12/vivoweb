@@ -26,10 +26,7 @@
         rel="stylesheet">
 
     <!-- VivoWeb Layout Engine (Fase 10X) -->
-    <script type="module">
-        import { LAYOUT } from './layout.js';
-        LAYOUT.init();
-    </script>
+    <script type="module" src="./layout.js"></script>
 </head>
 
 <body>
@@ -88,6 +85,10 @@
                 <p class="auth-toggle">
                     ¿No tienes cuenta? <a href="registro.html" id="toggleAuthMode">Regístrate gratis</a>
                 </p>
+                <!-- Mensaje de Redirección (Fix SPA Tracking) -->
+                <div id="authRedirect" class="hidden" style="margin-top:15px; text-align:center; color:var(--accent-primary); font-weight:600; font-size:0.9rem;">
+                    Iniciando sesión...
+                </div>
             </form>
         </div>
     </main>
