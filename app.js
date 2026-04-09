@@ -29,6 +29,25 @@ const userAvatar = getEl('userAvatar');
 const mainNav = getEl('mainNav');
 const mobileNav = document.querySelector('.mobile-nav');
 
+async function cleanupServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const unregistered = await Promise.all(registrations.map((reg) => reg.unregister()));
+        if (unregistered.some(Boolean)) {
+            console.log('[VivoTV] Service worker desregistrado. Recargando para aplicar el cambio.');
+            if (!sessionStorage.getItem('vivotv_sw_reloaded')) {
+                sessionStorage.setItem('vivotv_sw_reloaded', '1');
+                window.location.reload();
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('[VivoTV] No se pudo limpiar Service Worker:', e);
+    }
+}
+
 /**
  * Re-inicialización de la página (Fix Alt+F5 / SPA Navigation)
  */
@@ -279,7 +298,8 @@ window.addEventListener('open-movie-detail', (e) => {
 });
 
 // UI Effects
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await cleanupServiceWorker();
     UI_EFFECTS.initNavbarScroll();
     UI_EFFECTS.initMobileNavIndicator();
     initAppForPage();

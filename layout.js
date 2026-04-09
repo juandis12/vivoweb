@@ -11,9 +11,25 @@ export const LAYOUT = {
      */
     init() {
         this.injectStyles();
+        this.ensureNoCacheMeta();
         this.renderShell();
         this.setupNavigation();
         this.setupGlobalEvents();
+    },
+
+    ensureNoCacheMeta() {
+        const tags = [
+            { 'http-equiv': 'Cache-Control', content: 'no-cache, no-store, must-revalidate' },
+            { 'http-equiv': 'Pragma', content: 'no-cache' },
+            { 'http-equiv': 'Expires', content: '0' }
+        ];
+        tags.forEach(attrs => {
+            const existing = document.head.querySelector(`meta[http-equiv="${attrs['http-equiv']}"]`);
+            if (existing) return;
+            const meta = document.createElement('meta');
+            Object.entries(attrs).forEach(([key, value]) => meta.setAttribute(key, value));
+            document.head.appendChild(meta);
+        });
     },
 
     injectStyles() {
