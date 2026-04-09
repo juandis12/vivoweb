@@ -1,141 +1,14 @@
 import { CONFIG } from './config.js';
-<<<<<<< HEAD
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-// Cliente Supabase para guardar metadatos
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-=======
-// import { VivoCache } from './cache.js'; // Eliminado por solicitud de simplificación de caché
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
-
-// Helper para escapar HTML y prevenir XSS (Fase 3: Seguridad)
-function _escapeHTML(str) {
-    if (!str) return '';
-    return str.toString()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
 
 /**
- * Servicio TMDB v3.1 — Todas las llamadas a la API sin persistencia.
+ * Motor de Renderizado de la UI del Catálogo (Modularizado)
  */
-export const TMDB_SERVICE = {
-    async fetchFromTMDB(endpoint, params = {}) {
-<<<<<<< HEAD
-=======
-        // --- CACHÉ ELIMINADA ---
-        // Se deshabilitan Nivel 1 (Memoria) y Nivel 2 (IndexedDB) para asegurar carga fresca.
+export const CATALOG_UI = {
 
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
-        const currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
-        const isKids = currentProfile?.is_kids === true;
-
-        let url;
-        if (CONFIG.USE_PROXY) {
-            url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
-            const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-            url.searchParams.append('path', cleanPath);
-        } else {
-            const _k = CONFIG._tk;
-            url = new URL(`https://api.themoviedb.org/3${endpoint}`);
-            url.searchParams.append('api_key', _k);
-            url.searchParams.append('language', 'es-MX');
-        }
-
-        if (isKids) {
-            url.searchParams.append('certification_country', 'US');
-            url.searchParams.append('certification.lte', 'PG-13');
-            url.searchParams.append('include_adult', 'false');
-        }
-
-        Object.entries(params).forEach(([key, val]) => url.searchParams.append(key, val));
-
-        try {
-            const res = await fetch(url.toString());
-            if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-            const data = await res.json();
-<<<<<<< HEAD
-
-=======
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
-            return data;
-        } catch (e) {
-            console.error(`TMDB fetch error (${endpoint}):`, e);
-            return { results: [] };
-        }
-    },
-
-    getTrending: (type = 'all', window = 'day') =>
-        TMDB_SERVICE.fetchFromTMDB(`/trending/${type}/${window}`),
-    getPopularMovies: (page = 1) => TMDB_SERVICE.fetchFromTMDB('/movie/popular', { page }),
-    getTopRated: (page = 1)     => TMDB_SERVICE.fetchFromTMDB('/movie/top_rated', { page }),
-    getPopularTV: (page = 1)    => TMDB_SERVICE.fetchFromTMDB('/tv/popular', { page }),
-    
-    async getDetails(id, type = 'movie') {
-        const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
-<<<<<<< HEAD
-        
-        // Guardar en DB si no existe
-        if (data && data.id) {
-            try {
-                const { data: existing } = await supabase
-                    .from('content')
-                    .select('id')
-                    .eq('tmdb_id', data.id.toString())
-                    .eq('content_type', type === 'tv' ? 'series' : 'movie')
-                    .single();
-                
-                if (!existing) {
-                    // Insertar metadatos básicos
-                    const contentData = {
-                        tmdb_id: data.id.toString(),
-                        content_type: type === 'tv' ? 'series' : 'movie',
-                        title: data.title || data.name || '',
-                        poster_path: data.poster_path || '',
-                        backdrop_path: data.backdrop_path || '',
-                        genre_ids: (data.genres || []).map(g => g.id),
-                        overview: data.overview || '',
-                        release_date: data.release_date || data.first_air_date || null,
-                        vote_average: data.vote_average || 0
-                    };
-                    await supabase.from('content').insert(contentData);
-                    // Notificar que se agregó contenido
-                    window.dispatchEvent(new CustomEvent('contentAdded', { detail: { tmdb_id: data.id.toString(), content_type: type === 'tv' ? 'series' : 'movie' } }));
-                }
-            } catch (e) {
-                console.warn('Error guardando en DB:', e);
-            }
-        }
-        
-=======
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
-        return data;
-    },
-
-    search: (query) => TMDB_SERVICE.fetchFromTMDB('/search/multi', { query }),
-    getCredits: (id, type = 'movie') => TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/credits`),
-    getSeasonDetails: (id, seasonNumber) => TMDB_SERVICE.fetchFromTMDB(`/tv/${id}/season/${seasonNumber}`),
-    getVideos: (id, type = 'movie') => TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/videos`),
-    getRecommendations: (id, type = 'movie') => TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/recommendations`),
-
-    async getImagesForAuthBg() {
-        const data = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/week');
-        return (data.results || []).filter(m => m.backdrop_path).slice(0, 32);
-    },
-};
-
-// TMDB_SERVICE is now the only export from this file.
-// CATALOG_UI has been moved to ui.js for better modularity.
-
-<<<<<<< HEAD
     renderHero(movie, heroItems = []) {
         const heroTitle   = document.getElementById('heroTitle');
         const heroOverview = document.getElementById('heroOverview');
         const heroBanner  = document.getElementById('heroBanner');
-        const heroMeta    = document.getElementById('heroMeta');
         const indicators  = document.getElementById('heroIndicators');
         const btnPlay     = document.getElementById('btnHeroPlay');
         const btnInfo     = document.getElementById('btnHeroInfo');
@@ -146,12 +19,11 @@ export const TMDB_SERVICE = {
         heroBanner.style.opacity = '0';
         
         setTimeout(() => {
-            // Soporte Dual: DB (backdrop_url) o TMDB (backdrop_path)
             const backdrop = movie.backdrop_url || (movie.backdrop_path ? `${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}` : '');
             if (backdrop) heroBanner.style.backgroundImage = `url('${backdrop}')`;
 
-            heroTitle.textContent   = movie.title || movie.name;
-            heroOverview.textContent = movie.description || movie.overview || 'Sin descripción disponible.';
+            if (heroTitle) heroTitle.textContent = movie.title || movie.name;
+            if (heroOverview) heroOverview.textContent = movie.description || movie.overview || 'Sin descripción disponible.';
 
             const year   = (movie.release_date || movie.first_air_date || '').split('-')[0];
             const rating = movie.vote_average ? movie.vote_average.toFixed(1) : (movie.rating || '9.5');
@@ -182,7 +54,6 @@ export const TMDB_SERVICE = {
             heroBanner.style.opacity = '1';
         }, 500);
 
-        // Update dots
         if (indicators && heroItems.length > 1) {
             indicators.innerHTML = '';
             const activeIndex = heroItems.indexOf(movie);
@@ -205,13 +76,12 @@ export const TMDB_SERVICE = {
         return genres[id] || '';
     },
 
-
     showSkeletons(containerId, count = 6) {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = '';
         const skeletonWrap = document.createElement('div');
-        skeletonWrap.className = 'carousel-skeleton';
+        skeletonWrap.className = 'skeleton-grid';
         for (let i = 0; i < count; i++) {
             const item = document.createElement('div');
             item.className = 'skeleton-card';
@@ -220,7 +90,7 @@ export const TMDB_SERVICE = {
         container.appendChild(skeletonWrap);
     },
 
-    renderCarousel(containerId, items, typeOverride = null, availableIds = new Set(), titleOverride = null, dbCatalog = []) {
+    renderCarousel(containerId, items, typeOverride = null, availableIds = new Set(), titleOverride = null) {
         const container = document.getElementById(containerId);
         if (!container) return;
         
@@ -231,39 +101,21 @@ export const TMDB_SERVICE = {
         }
 
         container.innerHTML = '';
-
         if (!items || items.length === 0) {
             container.innerHTML = '<p style="color:var(--text-muted);padding:20px 0;">No hay resultados disponibles.</p>';
             return;
         }
 
-        // Renderizado inmediato: el row debe cargar sin depender de la visibilidad.
         const fragment = document.createDocumentFragment();
         items.forEach(item => {
-            // Soporte Dual: DB (poster_url) o TMDB (poster_path)
             if (!item.poster_path && !item.poster_url) return;
-            
-            const type = typeOverride || item.content_type || item.media_type || (containerId.includes('TV') ? 'tv' : 'movie');
-            const isAvail = CATALOG_UI.isItemAvailable(item, availableIds, dbCatalog, type);
-            
-            const card = CATALOG_UI.createMovieCard(item, type, isAvail);
+            const type = typeOverride || item.content_type || item.media_type || (containerId.toLowerCase().includes('tv') ? 'tv' : 'movie');
+            const id = item.id || item.tmdb_id;
+            const isAvail = id ? availableIds.has(id.toString()) : false;
+            const card = this.createMovieCard(item, type, isAvail);
             fragment.appendChild(card);
         });
         container.appendChild(fragment);
-    },
-
-    isItemAvailable(item, availableIds = new Set(), dbCatalog = [], type = null) {
-        if (!availableIds || availableIds.size === 0) {
-            availableIds = window.availableIds || new Set();
-        }
-        if (!dbCatalog || dbCatalog.length === 0) {
-            dbCatalog = window.DB_CATALOG || [];
-        }
-
-        const id = item.id || item.tmdb_id;
-        if (!id) return false;
-        const idStr = id.toString();
-        return availableIds.has(idStr) || dbCatalog.some(db => db.tmdb_id?.toString() === idStr);
     },
 
     createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {
@@ -274,14 +126,10 @@ export const TMDB_SERVICE = {
 
         const year   = (item.release_date || item.first_air_date || '').split('-')[0];
         const rating = item.vote_average ? item.vote_average.toFixed(1) : (item.rating || '9.5');
-        const title  = _escapeHTML(item.title || item.name || '');
+        const title  = (item.title || item.name || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-        // Soporte Dual: DB (poster_url) vs TMDB (poster_path)
         const posterImg = item.poster_url || (item.poster_path ? `${CONFIG.TMDB_IMAGE_CARD}${item.poster_path}` : 'assets/no-poster.png');
-
         const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
-
-        // Lógica de "Visto" (> 95%) - Fase Persistencia
         const isWatched = progress && progress >= 95;
 
         card.innerHTML = `
@@ -289,7 +137,6 @@ export const TMDB_SERVICE = {
             <div class="movie-card-inner">
                 <img src="${posterImg}" alt="${title}" loading="lazy">
                 <div class="movie-card-title">${title}</div>
-                
                 ${isWatched ? `
                     <div class="watched-badge watched-premium">
                         <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
@@ -301,7 +148,6 @@ export const TMDB_SERVICE = {
                         DISPONIBLE
                     </div>` : `
                     <div class="coming-soon-badge">PRÓXIMAMENTE</div>`)}
-
                 ${(progress !== null && progress > 0) && !isWatched ? `
                     <div class="card-progress-bar">
                         <div class="card-progress-fill" style="width: ${progress}%"></div>
@@ -322,17 +168,11 @@ export const TMDB_SERVICE = {
             </div>`;
 
         const openDetail = () => window.dispatchEvent(
-            new CustomEvent('open-movie-detail', { detail: { tmdbId: item.id, type } })
+            new CustomEvent('open-movie-detail', { detail: { tmdbId: item.id || item.tmdb_id, type } })
         );
 
         card.addEventListener('click', openDetail);
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); }
-        });
-        card.querySelector('.movie-tooltip-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            openDetail();
-        });
+        card.querySelector('.movie-tooltip-btn').addEventListener('click', (e) => { e.stopPropagation(); openDetail(); });
 
         return card;
     },
@@ -352,14 +192,14 @@ export const TMDB_SERVICE = {
         grid.appendChild(fragment);
     },
 
-    renderTop10(containerId, results, availableIds, dbCatalog = []) {
+    renderTop10(containerId, results, availableIds) {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = '';
         const fragment = document.createDocumentFragment();
         results.forEach((item, index) => {
+            const isAvail = availableIds.has(item.id.toString());
             const type = item.media_type || (item.title ? 'movie' : 'tv');
-            const isAvail = CATALOG_UI.isItemAvailable(item, availableIds, dbCatalog, type);
             const card = this.createTop10Card(item, index + 1, isAvail, type);
             fragment.appendChild(card);
         });
@@ -378,5 +218,45 @@ export const TMDB_SERVICE = {
         return wrapper;
     }
 };
-=======
->>>>>>> 0bc4737443b268fd8d52075126855de3ea3c1301
+
+/**
+ * Efectos Globales de UI
+ */
+export const UI_EFFECTS = {
+    initNavbarScroll() {
+        const navbar = document.getElementById('navbar');
+        if (!navbar) return;
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY > 100;
+            navbar.classList.toggle('scrolled', scrolled);
+            if (scrolled) {
+                const opacity = Math.min(0.95, 0.4 + (window.scrollY - 100) / 800);
+                navbar.style.background = `rgba(9, 9, 11, ${opacity})`;
+            } else {
+                navbar.style.background = '';
+            }
+        });
+    },
+
+    initMobileNavIndicator() {
+        const nav = document.querySelector('.mobile-nav');
+        const indicator = document.getElementById('navIndicator');
+        const activeItem = document.querySelector('.mobile-nav-item.active');
+        if (!nav || !indicator || !activeItem) return;
+        setTimeout(() => {
+            const navRect = nav.getBoundingClientRect();
+            const activeRect = activeItem.getBoundingClientRect();
+            const offsetLeft = activeRect.left - navRect.left;
+            const itemWidth = activeRect.width;
+            const indicatorWidth = 64; 
+            indicator.style.left = `${offsetLeft + (itemWidth - indicatorWidth) / 2}px`;
+            indicator.style.opacity = "1";
+        }, 100);
+    },
+
+    setLoading(isLoading, btnText, btnLoader, btnSubmit) {
+        if (btnText) btnText.classList.toggle('hidden', isLoading);
+        if (btnLoader) btnLoader.classList.toggle('hidden', !isLoading);
+        if (btnSubmit) btnSubmit.disabled = isLoading;
+    }
+};

@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
-import { TMDB_SERVICE, CATALOG_UI } from './tmdb.js';
+import { TMDB_SERVICE } from './tmdb.js';
+import { CATALOG_UI } from './ui.js';
 import { showToast } from './utils.js';
 
 let _supabase = null;
