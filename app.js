@@ -327,20 +327,8 @@ if (searchInput) {
 async function fetchAvailableIds() {
     if (!supabase) return;
 
-    // Retomamos el uso de SessionStorage para evitar consultas repetitivas de red
-    const cached = sessionStorage.getItem('vivotv_catalog_ids');
-    if (cached) {
-        try {
-            const decoded = JSON.parse(cached);
-            if (decoded && decoded.all && decoded.all.length > 0) {
-                availableMovies = new Set(decoded.movies);
-                availableSeries = new Set(decoded.series);
-                availableIds = new Set(decoded.all);
-                console.log('[VivoTV] Catálogo cargado desde caché ultra-rápida.');
-                return;
-            }
-        } catch(e) { console.warn('Cache invalido:', e); }
-    }
+    // --- CACHÉ DE CATÁLOGO ELIMINADA ---
+    // Se elimina la recuperación de SessionStorage para asegurar que el catálogo refleje cambios en tiempo real.
 
     try {
         logDebug('Sincronizando Catálogo Maestro (Detección de Tablas)...');
@@ -396,12 +384,7 @@ async function fetchAvailableIds() {
 
         console.log(`[VivoTV] 📊 Catálogo sincronizado: ${availableIds.size} títulos (Movies: ${availableMovies.size}, TV: ${availableSeries.size})`);
 
-        // Guardar en sesión
-        sessionStorage.setItem('vivotv_catalog_ids', JSON.stringify({
-            movies: Array.from(availableMovies),
-            series: Array.from(availableSeries),
-            all: Array.from(availableIds)
-        }));
+
 
         console.log(`[VivoTV] Catálogo sincronizado desde Edge RPC: ${availableIds.size} títulos.`);
     } catch (e) { 
@@ -1563,6 +1546,9 @@ function initAppForPage() {
     const path = window.location.pathname;
     fatalLog(`[SPA Engine] Inicializando página: ${path}`);
     
+    // RESET DE GUARDA: Permitir que el dashboard se re-inicialice en la nueva página SPA
+    isDashboardInit = false;
+
     try {
         // 1. Activar Listeners de Auth (Login/Registro)
         setupAuthListeners();
