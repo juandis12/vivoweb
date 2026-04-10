@@ -18,6 +18,21 @@ export const PLAYER_LOGIC = {
     progressTimer: null,
     trailerTimer: null,
     marathonTimer: null,
+    currentPlaybackTitle: null,
+
+    // Helper para formatear segundos a HH:MM:SS o MM:SS
+    formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '00:00';
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        let res = '';
+        if (hrs > 0) res += (hrs < 10 ? '0' + hrs : hrs) + ':';
+        res += (mins < 10 ? '0' + mins : mins) + ':';
+        res += (secs < 10 ? '0' + secs : secs);
+        return res;
+    },
 
     _stopTrailer() {
         if (this.trailerTimer) {
