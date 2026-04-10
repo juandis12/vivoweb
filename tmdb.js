@@ -237,18 +237,21 @@ export const CATALOG_UI = {
         container.appendChild(fragment);
     },
 
-    isItemAvailable(item, availableIds = new Set(), dbCatalog = [], type = null) {
-        if (!availableIds || availableIds.size === 0) {
-            availableIds = window.availableIds || new Set();
-        }
-        if (!dbCatalog || dbCatalog.length === 0) {
-            dbCatalog = window.DB_CATALOG || [];
-        }
+    isItemAvailable(item, availableIds = null, dbCatalog = null, type = null) {
+        // Asegurar que usamos los Sets globales si no se pasan parámetros (Fix SPA Sync)
+        const _ids = (availableIds && (availableIds instanceof Set) && availableIds.size > 0) ? availableIds : (window.availableIds || new Set());
+        const _db  = (dbCatalog && Array.isArray(dbCatalog) && dbCatalog.length > 0) ? dbCatalog : (window.DB_CATALOG || []);
 
         const id = item.id || item.tmdb_id;
         if (!id) return false;
+        
         const idStr = id.toString();
-        return availableIds.has(idStr) || dbCatalog.some(db => db.tmdb_id?.toString() === idStr);
+
+        // 1. Verificamos disponibilidad directa en los Sets de Supabase
+        if (_ids.has(idStr)) return true;
+
+        // 2. Verificamos si existe metadato en el catálogo local (Respaldo Crítico)
+        return _db.some(db => db.tmdb_id?.toString() === idStr);
     },
 
     createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {

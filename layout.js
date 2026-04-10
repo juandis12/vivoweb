@@ -220,8 +220,8 @@ export const LAYOUT = {
         overlay.classList.add('active');
         
         try {
-            // 1. Iniciar la carga en paralelo con la animación de fundido (75ms)
-            const fetchPromise = fetch(url).then(r => r.text());
+            // 1. Iniciar la carga con cache: 'no-store' para forzar datos frescos (Fix Alt+F5)
+            const fetchPromise = fetch(url, { cache: 'no-store' }).then(r => r.text());
             
             // Esperar los 75ms del fade-out antes de hacer el swap
             await new Promise(r => setTimeout(r, 75));
@@ -231,8 +231,9 @@ export const LAYOUT = {
             const doc = parser.parseFromString(html, 'text/html');
             
             // 2. Extraer el contenido del contenedor principal y el <title>
-            const newMain = doc.getElementById('mainContainer') || doc.querySelector('main');
-            const currentMain = document.getElementById('mainContainer') || document.querySelector('main');
+            // MEJORA: Buscar primero por ID específico para evitar colisiones con múltiples <main>
+            const newMain = doc.querySelector('#dashboardSection') || doc.querySelector('main');
+            const currentMain = document.querySelector('#dashboardSection') || document.querySelector('main');
             
             if (newMain && currentMain) {
                 // Preservar scroll top para la nueva página

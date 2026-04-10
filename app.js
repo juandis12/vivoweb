@@ -36,12 +36,10 @@ console.log('App.js cargado correctamente.');
 // Movidas dentro de initAppForPage() para evitar problemas entre páginas
 let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit;
 
+import { validateContentType, filterItemsByProfile, fetchAvailableIds as syncCatalog } from './catalog.js';
+
 let isLoginMode = !window.location.pathname.includes('registro.html');
 let heroItems   = [];
-let availableMovies = new Set();
-let availableSeries = new Set();
-let availableIds    = new Set();
-let DB_CATALOG      = []; // -- NUEVO: Repositorio del catálogo 100% DB --
 let searchTimeout   = null;
 let lastSearchResults = [];
 let currentFilter     = 'all';
@@ -49,72 +47,9 @@ let currentProfile    = null;
 let heartbeatTimer    = null;
 let sessionChannel    = null;
 
-// ================================================
-// CENTRALIZACIÓN: FILTRO POR PERFIL (Fase 3 Global)
-// ================================================
-function filterItemsByProfile(items) {
-    if (!items || !Array.isArray(items)) return [];
-    
-    // Si no se ha cargado el perfil global, lo cargamos
-    if (!currentProfile) {
-        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
-    }
-    
-    // Si no hay perfil o no es modo niños, devolvemos todo
-    if (!currentProfile?.is_kids) return items;
-
-    // --- MODO NUCLEAR NIÑOS (Fase Final) ---
-    // Solo permitimos cosas con estas etiquetas EXPLICITAMENTE
-    const MANDATORY_GENRES = [10751, 10762]; // Familia, Kids
-    const SAFE_GENRES      = [16, 12, 35];   // Animación, Aventura, Comedia (Solo si acompañan a Familia o son seguros)
-    const BANNED_GENRES    = [18, 27, 80, 53, 10749, 10767, 10763]; // Adulto, Terror, Crimen, Suspenso, Romance, Talk, News
-
-    console.log(`[PARENTAL GUARD] Filtrando ${items.length} ítems para perfil de niños...`);
-
-    return items.filter(item => {
-        const genres = item.genres || item.genre_ids || [];
-        const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
-        
-        // REGLA 1: Si no hay información de género, ocultar en modo Niños (Safe Mode)
-        if (genreIds.length === 0) return false;
-
-        // REGLA 2: Bloqueo absoluto si tiene géneros prohibidos (Terror, Crimen, etc.)
-        const hasBanned = genreIds.some(id => BANNED_GENRES.includes(id));
-        if (hasBanned) return false;
-
-        // REGLA 3: Permitir si es FAMILIAR, NIÑOS o ANIMACIÓN segura
-        const isFamily = genreIds.some(id => MANDATORY_GENRES.includes(id));
-        
-        // REGLA 4: Para PG-13 permitimos Animación, Aventura, Acción suave y Comedia
-        const isSafeContent = genreIds.some(id => [16, 12, 35, 10759, 10765].includes(id));
-
-        return isFamily || isSafeContent;
-    });
-}
-
-// helper para validar tipos de contenido (Fase Usuario: Organización)
-function validateContentType(item, expectedType) {
-    if (!item) return false;
-    
-    // Obtener géneros (maneja array de IDs o de objetos)
-    const genres = item.genres || item.genre_ids || [];
-    const isAnim = genres.some(g => (typeof g === 'object' ? g.id : g) === 16);
-    const isJapan = (item.origin_country && item.origin_country.includes('JP')) || 
-                    item.original_language === 'ja' || 
-                    (item.name && /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/.test(item.name)); // Regex para detectar caracteres Japoneses en el título
-
-    const isAnime = isAnim && isJapan;
-
-    const isMoviesPage = document.body.classList.contains('page-movies');
-    const isSeriesPage = document.body.classList.contains('page-series');
-    const isAnimePage  = document.body.classList.contains('page-anime');
-
-    if (isAnimePage) return isAnime;
-    if (isSeriesPage) return !isAnime && expectedType === 'tv';
-    if (isMoviesPage) return expectedType === 'movie';
-    
-    return true; // En Home u otras páginas permitimos todo según su fila
-}
+// El estado y validaciones ahora se importan de catalog.js para consistencia SPA
+const getAvailableIds = () => window.availableIds || new Set();
+const getDBCatalog    = () => window.DB_CATALOG || [];
 
 // ================================================
 // INNOVACIÓN: UI INTERACTIVA
@@ -199,7 +134,13 @@ function initMagicSlide() {
         if (targetLink && !targetLink.classList.contains('active')) {
             // Dar un feedback visual ultra rápido antes de cambiar
             targetLink.classList.add('active'); 
-            window.location.href = targetLink.href;
+            
+            // SPA BRIDGE: Usar el motor de layout en lugar de recarga completa
+            if (window.LAYOUT && typeof window.LAYOUT.navigateTo === 'function') {
+                window.LAYOUT.navigateTo(targetLink.href);
+            } else {
+                window.location.href = targetLink.href;
+            }
         } else {
             // Si soltó fuera o en el mismo, devolver a su lugar
             initMobileNavIndicator();
@@ -262,111 +203,50 @@ window.addEventListener('orientationchange', () => setTimeout(initMobileNavIndic
 
 
 
-// NUEVO: Obtener IDs disponibles optimizados (Solo usa RPC de backend)
+// NUEVO: La sincronización del catálogo ahora se maneja centralmente en catalog.js
 async function fetchAvailableIds() {
-    if (!supabase) return;
-
-    try {
-        logDebug('Sincronizando Catálogo Maestro (Detección de Tablas)...');
-
-        availableMovies = new Set();
-        availableSeries = new Set();
-        availableIds = new Set();
-        DB_CATALOG = [];
-
-        // 1. Cargar desde 'content' (Fuente Principal de Metadatos)
-        try {
-            const { data: contents, error: errorC } = await supabase.from('content').select('*');
-            if (errorC) throw errorC;
-            if (contents) {
-                DB_CATALOG = contents;
-                contents.forEach(item => {
-                    if (!item.tmdb_id) return;
-                    const strId = item.tmdb_id.toString();
-                    availableIds.add(strId);
-                    if (item.content_type === 'movie') availableMovies.add(strId);
-                    else if (item.content_type === 'series' || item.content_type === 'tv') availableSeries.add(strId);
-                });
-            }
-        } catch (err) { console.warn('[DB] Tabla content no disponible:', err.message); }
-
-        // 2. Cargar desde 'video_sources' (Fuentes de Video Directas)
-        try {
-            const { data: sources, error: errorS } = await supabase.from('video_sources').select('tmdb_id, type');
-            if (sources && !errorS) {
-                sources.forEach(item => {
-                    if (!item.tmdb_id) return;
-                    const strId = item.tmdb_id.toString();
-                    availableIds.add(strId);
-                    if (item.type === 'movie') availableMovies.add(strId);
-                    else if (item.type === 'series' || item.type === 'tv') availableSeries.add(strId);
-                });
-            }
-        } catch (err) { console.warn('[DB] Tabla video_sources no disponible:', err.message); }
-
-        // 3. Cargar desde 'series_episodes' (Para asegurar disponibilidad de series por episodios)
-        try {
-            const { data: episodes, error: errorE } = await supabase.from('series_episodes').select('tmdb_id');
-            if (episodes && !errorE) {
-                episodes.forEach(item => {
-                    const strId = item.tmdb_id.toString();
-                    availableIds.add(strId);
-                    availableSeries.add(strId);
-                });
-            }
-        } catch (err) { console.warn('[DB] Tabla series_episodes no disponible:', err.message); }
-
-        logDebug(`[VivoTV] 🚀 Sistema sincronizado: ${availableIds.size} títulos detectados.`);
-
-        console.log(`[VivoTV] 📊 Catálogo sincronizado: ${availableIds.size} títulos (Movies: ${availableMovies.size}, TV: ${availableSeries.size})`);
-
-        // Hacer accesibles los sets y catálogo a otros módulos ESM si lo necesitan
-        window.availableIds = availableIds;
-        window.availableMovies = availableMovies;
-        window.availableSeries = availableSeries;
-        window.DB_CATALOG = DB_CATALOG;
-
-        console.log(`[VivoTV] Catálogo sincronizado desde Edge RPC: ${availableIds.size} títulos.`);
-    } catch (e) { 
-        console.error('Error fetching available IDs:', e);
-        showToast('Error cargando biblioteca. Revisa tu conexión.');
-    }
+    await syncCatalog(supabase);
 }
+
+// --- NUEVO: Scope Global de Auth para evitar duplicados en SPA ---
+let authStateListenerSet = false;
 
 async function initAuth() {
     if (!supabase) return;
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session?.user) {
-            
-            // Si estamos en la página de login/registro pero ya hay sesión, ir al dashboard
-            const isAuthPage = window.location.pathname.endsWith('index.html') || 
-                               window.location.pathname.endsWith('registro.html') ||
-                               window.location.pathname === '/' ||
-                               window.location.pathname.endsWith('vivoweb/');
-            
-            if (isAuthPage) {
-                if (!isDashboardInit) toDashboard(session.user);
-            } else {
-                // Estamos en otra página (películas, etc.), solo asegurar que dashSection esté visible si es necesario
-                if (dashSection) dashSection.classList.remove('hidden');
-                if (authSection) authSection.classList.add('hidden');
+    if (!authStateListenerSet) {
+        logDebug('[Auth] Configurando listener global de estado...');
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            logDebug(`[Auth Event] ${event}`);
+            if (session?.user) {
+                const isAuthPage = window.location.pathname.endsWith('index.html') || 
+                                   window.location.pathname.endsWith('registro.html') ||
+                                   window.location.pathname === '/' ||
+                                   window.location.pathname.endsWith('vivoweb/');
                 
-                // Cargar perfil actual si no está
-                if (!currentProfile) {
-                    currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
-                    if (!currentProfile && !window.location.pathname.includes('profiles.html')) {
-                        window.location.href = 'profiles.html';
+                if (isAuthPage) {
+                    if (!isDashboardInit) toDashboard(session.user);
+                } else {
+                    if (dashSection) dashSection.classList.remove('hidden');
+                    if (authSection) authSection.classList.add('hidden');
+                    
+                    if (!currentProfile) {
+                        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+                        if (!currentProfile && !window.location.pathname.includes('profiles.html')) {
+                            window.location.href = 'profiles.html';
+                            return;
+                        }
                     }
+                    if (currentProfile && userNameEl) userNameEl.textContent = currentProfile.name;
                 }
-                
-                if (currentProfile && userNameEl) userNameEl.textContent = currentProfile.name;
+            } else {
+                toAuth();
             }
-        } else {
-            toAuth();
-        }
-    });
+        });
+        authStateListenerSet = true;
+    }
 
+    // Verificación inmediata de sesión
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
         if (!isDashboardInit) toDashboard(user);
@@ -377,9 +257,14 @@ async function initAuth() {
 
 let isDashboardInit = false;
 async function toDashboard(user) {
-    if (isDashboardInit) return; // EVITAR BUCLE INFINITO
+    if (!user) return;
+    
+    // Si ya se está inicializando, evitar duplicados
+    if (isDashboardInit) return;
     isDashboardInit = true;
-
+    
+    logDebug(`[toDashboard] Iniciando para usuario: ${user.email} en ${window.location.pathname}`);
+    
     // Obtener referencias DOM localmente
     const authSection = document.getElementById('authSection');
     const dashSection = document.getElementById('dashboardSection');
@@ -389,8 +274,14 @@ async function toDashboard(user) {
     const mainNav = document.getElementById('mainNav');
     const mobileNav = document.querySelector('.mobile-nav');
 
+    // Asegurar visibilidad del dashboard
     if (authSection) authSection.classList.add('hidden');
-    if (dashSection) dashSection.classList.remove('hidden');
+    if (dashSection) {
+        dashSection.classList.remove('hidden');
+        logDebug('[toDashboard] dashSection visible.');
+    } else {
+        console.error('[ERROR] dashSection no encontrado al iniciar dashboard.');
+    }
     if (userProfile) userProfile.classList.remove('hidden');
 
     // --- GESTIÓN DE PERFILES (Fase 8: Sesión Temporal) ---
@@ -424,9 +315,6 @@ async function toDashboard(user) {
     if (mainNav)     mainNav.classList.remove('hidden');
     if (mobileNav)   mobileNav.classList.remove('hidden');
     
-    // --- NUEVO: DEBUG VISUAL (Silenciado en consola) ---
-    const logDebug = (msg) => { console.log(`[Dashboard] ${msg}`); };
-    
     logDebug('Iniciando Dashboard...');
     
     // --- NUEVO: CORAZÓN DE SESIÓN (Máx 2 Dispositivos - Fase 3) ---
@@ -447,15 +335,30 @@ async function toDashboard(user) {
         if (el) el.innerHTML = ''; // Limpiar contenido residual
     });
 
+    // 1. Limpieza absoluta: Ocultar todas las secciones antes de decidir qué mostrar (MODO SPA)
+    const allSections = ['trendingSection', 'popularSection', 'topRatedSection', 'actionSection', 'comedySection', 'horrorSection', 'scifiSection', 'recommendedSection', 'recentSection', 'myListSection', 'popularMoviesSection', 'popularTVSection'];
+    allSections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+
+    // 2. Mostrar skeletons solo para los carruseles que EXISTEN en este HTML específico
+    carouselIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = ''; // Limpiar contenido previo
+            CATALOG_UI.showSkeletons(id);
+            // Asegurar que el padre del carrusel (la sección) sea visible si no es una sección especial
+            const section = el.closest('.catalog-row');
+            if (section && !['recentSection', 'recommendedSection', 'myListSection'].includes(section.id)) {
+                section.classList.remove('hidden');
+            }
+        }
+    });
+
     // Limpiar grid si existe
     const gridContainer = document.getElementById('gridContainer');
     if (gridContainer) gridContainer.innerHTML = '';
-
-    // --- REESTRUCTURACIÓN: Respuesta Visual Inmediata ---
-    // 1. Mostrar skeletons inmediatamente antes de consultar la red
-    carouselIds.forEach(id => {
-        if (document.getElementById(id)) CATALOG_UI.showSkeletons(id);
-    });
 
     try {
         logDebug('Cargando Catálogo Maestro desde BD...');
@@ -675,7 +578,7 @@ async function loadGridData(type, page, append = false) {
             const fragment = document.createDocumentFragment();
             data.results.forEach(item => {
                 if (!item.poster_path) return;
-                const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
+                const isAvail = window.availableIds?.has(item.id.toString());
                 const card = CATALOG_UI.createMovieCard(item, type, isAvail);
                 fragment.appendChild(card);
             });
@@ -692,38 +595,37 @@ async function loadGridData(type, page, append = false) {
  * Esto garantiza que el contenido del usuario siempre sea visible.
  */
 async function renderDBCatalog(containerId, filterType = 'all', isAnime = false) {
-    if (!DB_CATALOG || DB_CATALOG.length === 0) return;
+    const catalog = window.DB_CATALOG || [];
+    if (!catalog.length) return;
 
-    let items = DB_CATALOG;
+    let items = catalog;
+
+    // 1. Filtrado por tipo de contenido (Movies / Series)
     if (filterType !== 'all') {
-        items = items.filter(item => item.content_type === filterType);
+        items = items.filter(item => {
+            const type = (item.content_type || '').toLowerCase();
+            if (filterType === 'movie') return type === 'movie' || type === 'pelicula';
+            if (filterType === 'series') return type === 'series' || type === 'tv' || type === 'serie';
+            return type === filterType;
+        });
     }
 
+    // 2. Filtrado por Anime (Optimizado Fase 10X)
     if (isAnime) {
-        // --- DETECCIÓN DE ANIME SEGURA (Fase 10X) ---
-        // Para evitar bloqueos, solo consultamos los primeros 20 si no tenemos caché
-        const animeItems = [];
-        const pool = items.slice(0, 40); // Límite para no matar la conexión
+        // Usamos los genre_ids ya almacenados en la base de datos para filtrado instantáneo
+        items = items.filter(item => {
+            const genres = item.genre_ids || [];
+            // Género 16 = Animación. 
+            // Para ser Anime debe ser Animación y normalmente detectamos origen Japón, 
+            // pero para el catálogo de la DB confiamos en el género 16 si viene de la sección anime.
+            return genres.includes(16);
+        });
         
-        await Promise.all(pool.map(async (item) => {
-            try {
-                // Si ya tiene géneros (algunos items de la DB podrían tenerlos en el futuro)
-                if (item.genre_ids?.includes(16)) {
-                    animeItems.push(item);
-                    return;
-                }
-                
-                const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.content_type === 'series' ? 'tv' : 'movie');
-                if ((details.genres || []).some(g => g.id === 16)) {
-                    animeItems.push(item);
-                }
-            } catch(e) { console.warn('Error detectando anime:', e); }
-        }));
-        items = animeItems;
+        console.log(`[Anime Filter] Detectados ${items.length} títulos de anime en la base de datos.`);
     }
 
     if (items.length > 0) {
-        CATALOG_UI.renderCarousel(containerId, items, null, availableIds, null, DB_CATALOG);
+        CATALOG_UI.renderCarousel(containerId, items, null, window.availableIds || new Set(), null, window.DB_CATALOG || []);
     }
 }
 
@@ -1558,10 +1460,14 @@ function initAppForPage() {
     const path = window.location.pathname;
     fatalLog(`[SPA Engine] Inicializando página: ${path}`);
 
-    // Resetear estado global al cambiar de página
+    // Resetear estado global de inicialización para permitir re-carga en SPA
     isDashboardInit = false;
 
-    // Obtener referencias DOM dinámicamente para cada página
+    // Detener rotaciones e intervalos previos para evitar desbordamiento de memoria
+    stopHeroRotation();
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+
+    // Obtener referencias DOM dinámicamente (Esenciales en cada cambio de innerHTML)
     authSection = document.getElementById('authSection');
     dashSection = document.getElementById('dashboardSection');
     loginForm = document.getElementById('loginForm');
@@ -1592,16 +1498,10 @@ function initAppForPage() {
     btnCancelExit = document.getElementById('btnCancelExit');
 
     try {
-        // 1. Activar Listeners de Auth (Login/Registro)
+        // En cada cambio de página, re-asignamos listeners a elementos que podrían ser nuevos
         setupAuthListeners();
-        fatalLog('Auth listeners activados.');
-    } catch(e) { fatalLog('Error en auth listeners: ' + e.message); }
-
-    try {
-        // 2. Verificar sesión/dashboard
         initAuth();
-        fatalLog('initAuth ejecutado exitosamente.');
-    } catch(e) { fatalLog('Error crítico en initAuth: ' + e.message); }
+    } catch(e) { fatalLog('Error crítico en inicialización SPA: ' + e.message); }
 
     // 3. Cargar lógica específica
     if (path.includes('historial.html')) {
@@ -1703,10 +1603,9 @@ if (document.readyState === 'loading') {
 // Listener para actualizar availableIds cuando se agrega contenido
 window.addEventListener('contentAdded', async (e) => {
     const { tmdb_id, content_type } = e.detail;
-    availableIds.add(tmdb_id);
-    if (content_type === 'movie') availableMovies.add(tmdb_id);
-    else if (content_type === 'series') availableSeries.add(tmdb_id);
-    // Actualizar badges en pantalla
+    if (window.availableIds) window.availableIds.add(tmdb_id);
+    
+    // Actualizar badges en pantalla para este item específico
     document.querySelectorAll('.movie-card').forEach(card => {
         const cardTmdbId = card.dataset.tmdbId;
         if (cardTmdbId === tmdb_id) {
@@ -1722,11 +1621,13 @@ window.addEventListener('contentAdded', async (e) => {
 // Actualización en tiempo real de disponibles cada 30 segundos
 setInterval(async () => {
     try {
-        await fetchAvailableIds();
-        // Actualizar todos los badges en pantalla
+        await fetchAvailableIds(); // Esta función de catalog.js ya actualiza window.availableIds
+        
+        // Actualizar todos los badges en pantalla según el nuevo estado global
         document.querySelectorAll('.movie-card').forEach(card => {
             const tmdbId = card.dataset.tmdbId;
-            const isAvail = availableIds.has(tmdbId) || DB_CATALOG.some(db => db.tmdb_id == tmdbId);
+            const isAvail = window.availableIds?.has(tmdbId);
+            
             const badge = card.querySelector('.available-badge, .coming-soon-badge');
             if (badge) {
                 if (isAvail) {
