@@ -22,24 +22,24 @@ export function validateContentType(item, expectedType) {
     // Unificar tipo de item (TMDB o DB Local)
     const rawType = item.media_type || (item.content_type === 'series' ? 'tv' : (item.content_type === 'anime' ? 'tv' : (item.content_type === 'movie' ? 'movie' : expectedType)));
     
-    // Definición de Anime: Género Animación (16) + (Origen Japonés O Idioma Japonés O Nombre con caracteres Japoneses)
+    // Definición de Anime: Género Animación (16) + (Origen Japonés/Chino/Coreano O Idioma Japonés/Chino/Coreano O Nombre con caracteres Asiáticos)
     const isAnim = genreIds.includes(16);
-    const isJapan = (item.origin_country && (Array.isArray(item.origin_country) ? item.origin_country.includes('JP') : item.origin_country === 'JP')) || 
-                    item.original_language === 'ja' || 
+    const isAsian = (item.origin_country && (Array.isArray(item.origin_country) ? (item.origin_country.includes('JP') || item.origin_country.includes('CN') || item.origin_country.includes('KR')) : ['JP','CN','KR'].includes(item.origin_country))) || 
+                    ['ja', 'zh', 'ko'].includes(item.original_language) || 
                     (item.name && /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/.test(item.name));
 
-    // Si es Anime en la DB, confiamos en la etiqueta local. Si es de TMDB, combinamos Animación + Japón.
+    // Si es Anime en la DB, confiamos en la etiqueta local. Si es de TMDB, combinamos Animación + Origen Asiático.
     const isManuallyMarkedAnime = (item.content_type || '').toLowerCase() === 'anime';
-    const isAnime = isManuallyMarkedAnime || (isAnim && isJapan);
+    const isAnime = isManuallyMarkedAnime || (isAnim && isAsian);
 
     const isMoviesPage = document.body.classList.contains('page-movies');
     const isSeriesPage = document.body.classList.contains('page-series');
     const isAnimePage  = document.body.classList.contains('page-anime');
 
     // VALIDACIÓN CRUZADA: Item vs Página
-    if (isAnimePage) return isAnime && rawType === 'tv';
+    if (isAnimePage) return isAnime;
     if (isSeriesPage) return rawType === 'tv' && !isAnime;
-    if (isMoviesPage) return rawType === 'movie';
+    if (isMoviesPage) return rawType === 'movie' && !isAnime;
     
     return true;
 }
@@ -253,7 +253,11 @@ export async function loadGridData(type, page, append = false, currentProfile) {
         // MODO BIBLIOTECA: Filtrar por lo que el usuario TIENE en DB
         if (isMoviesPage || isSeriesPage || isAnimePage) {
             // Unificar IDs de disponibilidad (Priority: DB Scan)
-            const targetSet = isMoviesPage ? window.availableMovies : (window.availableSeries || availableSeries);
+            let targetSet;
+            if (isMoviesPage) targetSet = window.availableMovies;
+            else if (isSeriesPage) targetSet = window.availableSeries;
+            else if (isAnimePage) targetSet = new Set([...(window.availableMovies || []), ...(window.availableSeries || [])]);
+
             const allIds = Array.from(targetSet || []);
             
             if (allIds.length === 0) {
@@ -276,7 +280,14 @@ export async function loadGridData(type, page, append = false, currentProfile) {
                 // 2. Fallback: TMDB Details si no hay metadatos locales
                 if (!item) {
                     try {
-                        item = await TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv');
+                        // Intentar como serie primero si estamos en Anime o Series, sino como movie
+                        const typeToTry = (isSeriesPage || isAnimePage) ? 'tv' : 'movie';
+                        item = await TMDB_SERVICE.getDetails(id, typeToTry);
+                        
+                        // Si falla como TV y estamos en Anime, intentar como movie (Anime Movies)
+                        if ((!item || !item.id) && isAnimePage) {
+                            item = await TMDB_SERVICE.getDetails(id, 'movie');
+                        }
                     } catch (e) { continue; }
                 }
 
