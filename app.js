@@ -875,8 +875,11 @@ function subscribeToSessionChanges() {
 
     if (sessionChannel) supabase.removeChannel(sessionChannel);
 
+    // ESCUCHA DOBLE: 
+    // 1. postgres_changes (Cierre por DB/Timeout)
+    // 2. broadcast (Cierre inmediato por clic en LIBERAR)
     sessionChannel = supabase
-        .channel(`session-${currentProfile.id}`)
+        .channel(`kickout-${currentProfile.id}`)
         .on('postgres_changes', { 
             event: 'UPDATE', 
             schema: 'public', 
@@ -885,9 +888,13 @@ function subscribeToSessionChanges() {
         }, (payload) => {
             const { last_heartbeat } = payload.new;
             if (last_heartbeat === null) {
-                console.warn('[VivoTV] Sesión finalizada remotamente.');
+                console.warn('[VivoTV] Sesión finalizada por base de datos.');
                 handleRemoteLogout();
             }
+        })
+        .on('broadcast', { event: 'FORCE_EXIT' }, (payload) => {
+            console.warn('[VivoTV] Expulsión inmediata recibida vía Broadcast.');
+            handleRemoteLogout();
         })
         .subscribe();
 }

@@ -649,49 +649,39 @@
                 return;
             }
 
-            // Usar RPC para traer perfiles + tiempo de servidor exacto
-            const { data, error } = await supabase.rpc('vivotv_get_profiles_synced');
+            // 1. Obtener perfiles directamente filtrando por el usuario actual
+            const { data: dbData, error: dbError } = await supabase
+                .from('vivotv_profiles')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: true });
 
-            if (error) {
-                console.error('[VivoTV] RPC Sync Error:', error);
-                
-                // --- FALLBACK ROBUSTO: Consulta directa si el RPC falla ---
-                const { data: fallbackData, error: fallbackError } = await supabase.from('vivotv_profiles').select('*');
-                
-                if (fallbackError) {
-                    console.error('[VivoTV] Error crítico de DB:', fallbackError);
-                    showToast('Error cargando perfiles. Verifica la conexión.', 'error');
-                    return;
-                }
-
-                if (fallbackData && fallbackData.length > 0) {
-                    profiles = fallbackData;
-                    selectionContainer.style.display = 'block';
-                    firstProfileContainer.classList.remove('active');
-                    renderProfiles();
-                } else {
-                    // Si no hay datos, es un usuario nuevo
-                    selectionContainer.style.display = 'none';
-                    firstProfileContainer.classList.add('active');
-                    setupNameInput.focus();
-                }
+            // 2. Obtener tiempo de servidor (Sync) - Usamos el RPC original o fallback si falla
+            const { data: syncData, error: syncError } = await supabase.rpc('vivotv_get_profiles_synced');
+            
+            if (dbError) {
+                console.error('[VivoTV] Error cargando perfiles:', dbError);
+                showToast('Error cargando los perfiles.', 'error');
                 return;
             }
 
-            if (data) {
-                profiles = data;
-                if (data.length > 0) {
-                    globalServerNow = new Date(data[0].server_now);
-                    // Mostrar selección de perfiles (Usuario Antiguo)
-                    selectionContainer.style.display = 'block';
-                    firstProfileContainer.classList.remove('active');
-                    renderProfiles();
-                } else {
-                    // Mostrar bienvenida (Usuario Nuevo)
-                    selectionContainer.style.display = 'none';
-                    firstProfileContainer.classList.add('active');
-                    setupNameInput.focus();
-                }
+            profiles = dbData || [];
+            
+            // Corrección de Fecha: Asegurar que extraemos la propiedad correcta si es un objeto
+            if (syncData && syncData.server_now) {
+                globalServerNow = new Date(syncData.server_now);
+            } else {
+                globalServerNow = new Date(); // Fallback local
+            }
+
+            if (profiles && profiles.length > 0) {
+                selectionContainer.style.display = 'block';
+                firstProfileContainer.classList.remove('active');
+                renderProfiles();
+            } else {
+                selectionContainer.style.display = 'none';
+                firstProfileContainer.classList.add('active');
+                setupNameInput.focus();
             }
         }
 
