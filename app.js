@@ -484,7 +484,15 @@ async function toDashboard(user) {
             ]);
         } else if (isAnimePage) {
             await renderAnimeDashboardRows(availableIds);
-            window.addEventListener('metadataBatchSynced', () => renderAnimeDashboardRows(availableIds));
+            
+            let syncTimer = null;
+            window.addEventListener('metadataBatchSynced', () => {
+                if (syncTimer) clearTimeout(syncTimer);
+                syncTimer = setTimeout(() => {
+                    console.log('[Dashboard] Sincronización completa o pausa detectada. Refrescando filas de anime...');
+                    renderAnimeDashboardRows(availableIds);
+                }, 1500);
+            });
         } else {
             const fetchPopular = () => pageType === 'tv' 
                 ? TMDB_SERVICE.fetchFromTMDB('/discover/tv', { without_genres: 16, sort_by: 'popularity.desc' }) 

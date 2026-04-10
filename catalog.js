@@ -390,7 +390,6 @@ export async function renderHybridRow(containerId, tmdbFunc, type, secondTmdbFun
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        container.innerHTML = '';
         const currentIds = window.availableIds || availableIds;
 
         // 1. Extraer de Database Local (Prioridad)
