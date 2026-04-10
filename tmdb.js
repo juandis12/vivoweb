@@ -64,46 +64,7 @@ export const TMDB_SERVICE = {
     async getDetails(id, type = 'movie') {
         const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
         
-        // --- OPTIMIZACIÓN VIVOTV: Evitar llamadas redundantes y Errores 406 ---
-        if (data && data.id) {
-            const strId = data.id.toString();
-            // 1. Verificar si ya conocemos esta película en nuestro catálogo local
-            const isKnown = window.DB_CATALOG && window.DB_CATALOG.some(item => item.tmdb_id === strId);
-
-            if (!isKnown) {
-                try {
-                    // Solo insertamos si realmente no la conocemos (Cache pasivo)
-                    const contentData = {
-                        tmdb_id: parseInt(strId),
-                        title: data.title || data.name || '',
-                        description: data.overview || '', // Corregido: description (según SQL)
-                        poster_url: data.poster_path || '',
-                        backdrop_url: data.backdrop_path || '',
-                        video_url: 'source_id:' + strId, // Obligatorio (NOT NULL en SQL)
-                        rating: data.vote_average || 0,   // Corregido: rating (según SQL)
-                        release_date: data.release_date || data.first_air_date || '',
-                        content_type: type === 'tv' ? 'series' : 'movie'
-                    };
-                    
-                    /* 
-                       ELIMINADO POR RLS (Error 403):
-                       Tu configuración de Supabase no permite que usuarios externos guarden datos en 'content'.
-                       Silenciamos este paso para mantener la consola limpia.
-                    */
-                    // console.log(`[VivoTV] 🔒 Saltando guardado en DB (RLS) para: ${strId}`);
-                    /*
-                    supabase.from('content').insert(contentData).then(({error}) => {
-                        if (!error && window.DB_CATALOG) {
-                            window.DB_CATALOG.push(contentData);
-                        }
-                    });
-                    */
-                } catch (e) {
-                    console.warn('[VivoTV] Error en autoguardado pasivo:', e);
-                }
-            }
-        }
-        
+        // El autoguardado pasivo ha sido desactivado permanentemente para favorecer RLS
         return data;
     },
 

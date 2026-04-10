@@ -136,38 +136,93 @@ function subscribeToSessionChanges() {
         .subscribe();
 }
 
+/**
+ * Genera una huella digital básica del dispositivo (Fase 1: Seguridad)
+ * Combina UserAgent, resolución y zona horaria para dificultar la suplantación.
+ */
+function _getDeviceFingerprint() {
+    const data = [
+        navigator.userAgent,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        navigator.language
+    ].join('###');
+    
+    // Hash ultra-rápido (b-hash) para no importar librerías pesadas
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+        hash = ((hash << 5) - hash) + data.charCodeAt(i);
+        hash |= 0;
+    }
+    return 'vtv-' + Math.abs(hash).toString(16);
+}
+
 export async function checkConcurrentSessions() {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        let deviceId = localStorage.getItem('vivotv_device_id') || crypto.randomUUID();
-        localStorage.setItem('vivotv_device_id', deviceId);
-
-        await supabase.from('active_sessions').upsert(
-            { user_id: user.id, device_id: deviceId, last_seen: new Date().toISOString() },
-            { onConflict: 'user_id, device_id' }
-        );
-
-        const twoMinAgo = new Date(Date.now() - 120000).toISOString();
-        const { data: sessions } = await supabase.from('active_sessions')
-            .select('*')
-            .eq('user_id', user.id)
-            .gt('last_seen', twoMinAgo);
-
-        if (sessions && sessions.length > 5) { // Umbral aumentado para depuración
-            const isAuthorized = sessions.slice(0, 5).some(s => s.device_id === deviceId);
-            if (!isAuthorized) {
-                console.warn('[VivoTV] Límite de dispositivos excedido, pero omitiendo signOut para pruebas.');
-                // showToast('Límite de dispositivos alcanzado.');
-                // setTimeout(() => {
-                //     supabase.auth.signOut();
-                //     localStorage.removeItem('vivotv_current_profile');
-                //     window.location.href = 'index.html';
-                // }, 3000);
-            }
+        // 1. Obtener o generar ID de dispositivo persistente
+        let deviceId = localStorage.getItem('vivotv_device_id');
+        if (!deviceId) {
+            deviceId = _getDeviceFingerprint();
+            localStorage.setItem('vivotv_device_id', deviceId);
         }
+
+        /**
+         * 2. Validar Límite vía RPC (Fase de Servidor)
+         * El script SQL que el usuario ejecutará crea esta función 'vivotv_check_session_limit'.
+         * Esto es mucho más seguro que contar en el cliente.
+         */
+        const { data: sessionResult, error: rpcError } = await supabase.rpc('vivotv_check_session_limit', {
+            uid: user.id,
+            did: deviceId
+        });
+
+        if (rpcError) {
+            // Si la función aún no existe (antes del SQL), usamos el fallback manual (Legacy)
+            if (rpcError.code === 'P0001' || rpcError.message.includes('vivotv_check_session_limit')) {
+                await _legacyCheckSessions(user.id, deviceId);
+            }
+            return;
+        }
+
+        if (sessionResult && sessionResult.allowed === false) {
+            showToast('⚠️ Límite de dispositivos excedido. Cerrando sesión...', 'error', 5000);
+            setTimeout(() => {
+                supabase.auth.signOut().then(() => {
+                    localStorage.removeItem('vivotv_current_profile');
+                    window.location.href = 'index.html';
+                });
+            }, 4000);
+        }
+
     } catch (e) {
         console.error('[Session Guard Error]:', e);
+    }
+}
+
+/**
+ * Lógica de respaldo mientras el usuario aplica el SQL (Legacy)
+ */
+async function _legacyCheckSessions(userId, deviceId) {
+    const twoMinAgo = new Date(Date.now() - 120000).toISOString();
+    
+    // Upsert latido de sesión activa
+    await supabase.from('active_sessions').upsert(
+        { user_id: userId, device_id: deviceId, last_seen: new Date().toISOString() },
+        { onConflict: 'user_id, device_id' }
+    );
+
+    const { data: sessions } = await supabase.from('active_sessions')
+        .select('device_id')
+        .eq('user_id', userId)
+        .gt('last_seen', twoMinAgo);
+
+    if (sessions && sessions.length > 2) {
+        const isAuthorized = sessions.slice(0, 2).some(s => s.device_id === deviceId);
+        if (!isAuthorized) {
+            showToast('Límite de 2 dispositivos alcanzado.', 'warning');
+        }
     }
 }
