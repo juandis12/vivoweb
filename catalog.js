@@ -15,8 +15,12 @@ export let DB_CATALOG      = [];
 export function validateContentType(item, expectedType) {
     if (!item) return false;
     
+    // Unificar géneros
     const genres = item.genres || item.genre_ids || [];
-    const isAnim = genres.some(g => (typeof g === 'object' ? g.id : g) === 16);
+    const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
+    
+    // Definición de Anime: Género Animación (16) + Origen Japonés o Idioma Japonés
+    const isAnim = genreIds.includes(16);
     const isJapan = (item.origin_country && item.origin_country.includes('JP')) || 
                     item.original_language === 'ja' || 
                     (item.name && /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/.test(item.name));
@@ -27,8 +31,9 @@ export function validateContentType(item, expectedType) {
     const isSeriesPage = document.body.classList.contains('page-series');
     const isAnimePage  = document.body.classList.contains('page-anime');
 
+    // FILTRADO ESTRICTO POR PÁGINA
     if (isAnimePage) return isAnime;
-    if (isSeriesPage) return !isAnime && expectedType === 'tv';
+    if (isSeriesPage) return expectedType === 'tv' && !isAnime;
     if (isMoviesPage) return expectedType === 'movie';
     
     return true;
@@ -163,9 +168,9 @@ export async function fetchAvailableIds(supabase) {
 
         console.log(`[VivoTV] ✅ Catálogo personal sincronizado: ${availableIds.size} items.`);
         
-        // --- ESCANEO DE FONDO (IDs sin metadatos) ---
-        // Esto permite que el modo hibrido funcione aunque la tabla 'content' este vacia
-        scanAllDBContent(supabase); 
+        // --- ESCANEO DE IDs (Metadatos + Fuentes) ---
+        // Esperamos al escaneo para que el modo hibrido tenga datos desde el inicio
+        await scanAllDBContent(supabase); 
 
     } catch (e) {
         console.error('[VivoTV] ❌ Fallo en sincronización de catálogo:', e);
@@ -187,8 +192,10 @@ export async function scanAllDBContent(supabase) {
         const { data: movies } = await supabase.from('video_sources').select('tmdb_id');
         if (movies) movies.forEach(m => {
             const id = m.tmdb_id.toString();
-            availableIds.add(id);
-            availableMovies.add(id);
+            if (!availableIds.has(id)) {
+                availableIds.add(id);
+                availableMovies.add(id);
+            }
         });
 
         // Escanear Series (series_episodes)
@@ -242,50 +249,56 @@ export async function loadGridData(type, page, append = false, currentProfile) {
             const targetSet = isMoviesPage ? availableMovies : availableSeries;
             const allIds = Array.from(targetSet);
             
-            const perPage = 10;
+            const perPage = 12; // Un poco más para compensar filtros
             const start = (page - 1) * perPage;
             const end   = start + perPage;
             let pageIds = allIds.slice(start, end);
             
             if (btnLoadMore) btnLoadMore.classList.toggle('hidden', end >= allIds.length);
 
-            // Si hay IDs en la DB, los usamos. Si no (y estamos en una página vacía), avisamos.
             if (pageIds.length) {
                 const finalItems = [];
                 for (const id of pageIds) {
-                    const localItem = DB_CATALOG.find(i => i.tmdb_id?.toString() === id);
-                    if (localItem) finalItems.push(localItem);
-                    else {
-                        const details = await TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv').catch(() => null);
-                        if (details) finalItems.push(details);
+                    let item = window.DB_CATALOG?.find(i => i.tmdb_id?.toString() === id);
+                    if (!item) {
+                        try {
+                            item = await TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv');
+                        } catch (e) { continue; }
+                    }
+                    
+                    // FILTRADO ESTRICTO: Solo añadir si corresponde a la categoría de la página
+                    if (item && validateContentType(item, isMoviesPage ? 'movie' : 'tv')) {
+                        finalItems.push(item);
                     }
                 }
-
+                
                 if (loader) loader.classList.add('hidden');
-                let filteredItems = filterItemsByProfile(finalItems, currentProfile);
-                filteredItems = filteredItems.filter(item => validateContentType(item, isMoviesPage ? 'movie' : 'tv'));
-
-                const fragment = document.createDocumentFragment();
-                filteredItems.forEach(item => {
-                    const card = CATALOG_UI.createMovieCard(item, type, true);
-                    fragment.appendChild(card);
-                });
-                container.appendChild(fragment);
+                
+                if (finalItems.length > 0) {
+                    const fragment = document.createDocumentFragment();
+                    finalItems.forEach(item => {
+                        const card = CATALOG_UI.createMovieCard(item, isMoviesPage ? 'movie' : 'tv', true);
+                        fragment.appendChild(card);
+                    });
+                    container.appendChild(fragment);
+                } else if (end < allIds.length) {
+                    // Si no hubo resultados tras el filtro, intentar con el siguiente lote automáticamente
+                    return loadGridData(type, page + 1, true, currentProfile);
+                }
             } else {
                 if (loader) loader.classList.add('hidden');
             }
             return;
         }
 
-        // --- MODO DESCUBRIMIENTO (Dashboard / Trending) ---
+        // --- MODO DESCUBRIMIENTO (Dashboard / Búsqueda) ---
         const data = type === 'tv' ? await TMDB_SERVICE.getPopularTV(page) : await TMDB_SERVICE.getPopularMovies(page);
         if (loader) loader.classList.add('hidden');
         if (data.results?.length) {
-            // Filtramos por perfil, pero NO por availableIds en el Dashboard principal
             const results = filterItemsByProfile(data.results, currentProfile);
             const fragment = document.createDocumentFragment();
             results.forEach(item => {
-                const isAvail = availableIds.has(item.id.toString());
+                const isAvail = (window.availableIds || availableIds).has(item.id.toString());
                 const card = CATALOG_UI.createMovieCard(item, type, isAvail);
                 fragment.appendChild(card);
             });
