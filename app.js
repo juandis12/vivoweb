@@ -483,8 +483,8 @@ async function toDashboard(user) {
                 renderRow('scifiCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 878 }), 'movie')
             ]);
         } else if (isAnimePage) {
-            const animeParamsP1 = { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc', page: 1 };
-            const animeParamsP2 = { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc', page: 2 };
+            const animeParamsP1 = { with_genres: 16, sort_by: 'popularity.desc', page: 1 };
+            const animeParamsP2 = { with_genres: 16, sort_by: 'popularity.desc', page: 2 };
 
             await Promise.all([
                 renderHybridRow('popularCarousel', 
@@ -493,9 +493,11 @@ async function toDashboard(user) {
                 renderHybridRow('topRatedCarousel', 
                     () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { ...animeParamsP1, sort_by: 'vote_average.desc', 'vote_count.gte': 50 }), 'tv'),
                 renderHybridRow('genre1Carousel', 
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', with_original_language: 'ja' }), 'tv'),
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759' }), 'tv',
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', page: 2 }), 10759),
                 renderHybridRow('genre2Carousel', 
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', with_original_language: 'ja' }), 'tv'),
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765' }), 'tv',
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', page: 2 }), 10765),
             ]);
         } else {
             const fetchPopular = () => pageType === 'tv' 

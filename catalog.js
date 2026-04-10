@@ -262,7 +262,7 @@ export async function loadGridData(type, page, append = false, currentProfile) {
             
             if (allIds.length === 0) {
                 if (loader) loader.classList.add('hidden');
-                if (!append) container.innerHTML = '<p class="no-results-msg">No tienes contenido en esta sección todavía.</p>';
+                if (!append) container.innerHTML = '<p class=\"no-results-msg\">No tienes contenido en esta sección todavía.</p>';
                 if (btnLoadMore) btnLoadMore.classList.add('hidden');
                 return;
             }
@@ -315,7 +315,7 @@ export async function loadGridData(type, page, append = false, currentProfile) {
                 // Si este lote no tuvo matches tras filtro, intentar siguiente
                 return loadGridData(type, page + 1, true, currentProfile);
             } else if (!append && container.innerHTML === '') {
-                container.innerHTML = '<p class="no-results-msg">No hay títulos que coincidan con los filtros de esta sección.</p>';
+                container.innerHTML = '<p class=\"no-results-msg\">No hay títulos que coincidan con los filtros de esta sección.</p>';
             }
             return;
         }
@@ -348,35 +348,49 @@ export async function loadGridData(type, page, append = false, currentProfile) {
  * RENDERIZADO HÍBRIDO (DB + TMDB)
  * Muestra contenido de TMDB que el usuario TIENE en su DB (Intersección)
  */
-export async function renderHybridRow(containerId, tmdbFunc, type, secondTmdbFunc = null) {
+export async function renderHybridRow(containerId, tmdbFunc, type, secondTmdbFunc = null, genreId = null) {
     try {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        // Limpiar para mostrar loaders o refresh
         container.innerHTML = '';
-        
-        let allMatches = [];
         const currentIds = window.availableIds || availableIds;
 
-        // 1. Intento de búsqueda en profundidad (Página 1 y Página 2 si es necesario)
-        const fetchAndFilter = async (func) => {
-            const data = await func();
-            if (!data || !data.results) return [];
-            return data.results.filter(item => currentIds.has(item.id.toString()));
-        };
-
-        allMatches = await fetchAndFilter(tmdbFunc);
-
-        // Si tenemos menos de 5 resultados y la función permite paginación (simulada aquí con fetch adicional)
-        if (allMatches.length < 5 && secondTmdbFunc) {
-            const extraMatches = await fetchAndFilter(secondTmdbFunc);
-            allMatches = [...allMatches, ...extraMatches];
+        // 1. Extraer de Database Local (Prioridad)
+        let dbMatches = [];
+        if (genreId && window.DB_CATALOG) {
+            dbMatches = window.DB_CATALOG.filter(item => {
+                const genresArr = item.genres || item.genre_ids || [];
+                const gIds = genresArr.map(g => typeof g === 'object' ? g.id : g);
+                return gIds.includes(parseInt(genreId)) && validateContentType(item, type);
+            });
         }
 
-        // 3. Renderizado
-        if (allMatches.length > 0) {
-            CATALOG_UI.renderCarousel(containerId, allMatches.slice(0, 20), type, currentIds);
+        // 2. Extraer de TMDB
+        const fetchFn = async (func) => {
+            const data = await func();
+            return data?.results || [];
+        };
+
+        let tmdbResults = await fetchFn(tmdbFunc);
+        if (tmdbResults.length < 10 && secondTmdbFunc) {
+            const extra = await fetchFn(secondTmdbFunc);
+            tmdbResults = [...tmdbResults, ...extra];
+        }
+
+        // 3. Combinar y FILTRAR por disponibilidad real (Solo lo que está en DB)
+        const seenIds = new Set(dbMatches.map(m => (m.id || m.tmdb_id).toString()));
+        const availableTmdb = tmdbResults.filter(m => {
+            const id = (m.id || m.tmdb_id).toString();
+            return currentIds.has(id) && !seenIds.has(id);
+        });
+
+        let finalItems = [...dbMatches, ...availableTmdb];
+        
+        finalItems = filterItemsByProfile(finalItems).slice(0, 20);
+
+        if (finalItems.length > 0) {
+            CATALOG_UI.renderCarousel(containerId, finalItems, type, currentIds);
             const section = container.closest('.catalog-row');
             if (section) section.classList.remove('hidden');
             window.dispatchEvent(new Event('resize'));
@@ -384,7 +398,7 @@ export async function renderHybridRow(containerId, tmdbFunc, type, secondTmdbFun
             hideRow(containerId);
         }
     } catch (e) {
-        console.warn(`[Hybrid] Error en fila ${containerId}:`, e);
+        console.error(`Error en hybrid row ${containerId}:`, e);
         hideRow(containerId);
     }
 }
