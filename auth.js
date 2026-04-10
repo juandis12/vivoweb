@@ -37,7 +37,19 @@ export async function initAuth(onAuthChange) {
             
             if (session?.user) {
                 const up = localStorage.getItem('vivotv_current_profile');
-                currentProfile = up ? JSON.parse(up) : null;
+                let localP = up ? JSON.parse(up) : null;
+                
+                // --- SEGURIDAD FASE 3: Verificación de Integridad ---
+                if (localP) {
+                    const { data: dbP } = await supabase.from('vivotv_profiles').select('is_kids').eq('id', localP.id).single();
+                    if (dbP && dbP.is_kids !== localP.is_kids) {
+                        console.warn('[VivoTV] 🛡️ Integridad de perfil restaurada (Filtro parental)');
+                        localP.is_kids = dbP.is_kids;
+                        localStorage.setItem('vivotv_current_profile', JSON.stringify(localP));
+                    }
+                }
+
+                currentProfile = localP;
                 onAuthChange(event, session, currentProfile);
                 
                 if (!resolved) {

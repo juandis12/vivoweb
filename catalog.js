@@ -578,6 +578,14 @@ export async function executeSearch(query, currentProfile, availableIds) {
         const res = await TMDB_SERVICE.fetchFromTMDB('/search/multi', { query });
         if (res && res.results) {
             let results = res.results.filter(item => item.media_type !== 'person');
+            
+            // --- OPTIMIZACIÓN FASE 3: Priorizar Disponibles ---
+            results.sort((a, b) => {
+                const availA = availableIds.has(a.id.toString()) ? 1 : 0;
+                const availB = availableIds.has(b.id.toString()) ? 1 : 0;
+                return availB - availA; // Disponibles arriba
+            });
+
             return filterItemsByProfile(results, currentProfile);
         }
         return [];
