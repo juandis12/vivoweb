@@ -236,22 +236,22 @@
             transform: translate(-50%, -50%) scale(1.1);
         }
 
-        /* Edit Overlays */
+        /* Edit Overlays (Simplified for Redesign) */
         .edit-overlay {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.4);
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             opacity: 0;
-            transition: 0.3s;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(2px);
+            z-index: 10;
         }
 
         .admin-mode .edit-overlay {
@@ -259,40 +259,239 @@
             pointer-events: auto;
         }
 
-        .edit-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-
-        .kids-toggle-label {
-            font-size: 0.8rem;
+        .edit-icon-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            margin-top: 10px;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 5px 12px;
-            border-radius: 20px;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #fff;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
-        .lock-btn, .bio-btn {
+        .edit-overlay:hover .edit-icon-btn {
+            transform: scale(1.15) rotate(-10deg);
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #fff;
+        }
+
+        /* --- NUEVO: MODAL DE AJUSTES PREMIUM --- */
+        .settings-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(25px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .settings-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .settings-content {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 480px;
+            border-radius: 32px;
+            padding: 35px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .settings-modal.active .settings-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .settings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .settings-avatar-w {
+            width: 100px;
+            height: 100px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .settings-avatar-edit-hint {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .settings-avatar-w:hover .settings-avatar-edit-hint {
+            opacity: 1;
+        }
+
+        .settings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .settings-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 16px 20px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: 0.2s;
+        }
+
+        .settings-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .settings-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .settings-icon-box {
+            width: 38px;
+            height: 38px;
             background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 8px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .settings-text h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .settings-text p {
             font-size: 0.75rem;
+            color: #94a3b8;
+            margin: 2px 0 0 0;
+        }
+
+        /* Switch Estilo iOS */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255,255,255,0.1);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .slider {
+            background-color: #2563eb;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .settings-btn-action {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.8rem;
             font-weight: 700;
             cursor: pointer;
-            margin-top: 10px;
-            width: 140px;
-            transition: all 0.3s;
+            transition: 0.2s;
         }
 
-        .lock-btn:hover, .bio-btn:hover {
+        .settings-btn-action:hover {
             background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+            border-color: #fff;
+        }
+
+        .settings-footer {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Mobile specific adjustments for settings */
+        @media (max-width: 480px) {
+            .settings-content {
+                width: 100%;
+                height: 100%;
+                max-width: none;
+                border-radius: 0;
+                padding: 40px 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                background: #0b122b;
+            }
+            
+            .settings-item {
+                padding: 14px 15px;
+            }
+
+            .settings-avatar-w {
+                width: 120px;
+                height: 120px;
+            }
         }
 
         /* Buttons */
@@ -770,6 +969,64 @@
         </div>
     </div>
 
+    <!-- MODAL: Ajustes de Perfil Premium (Fase 18) -->
+    <div id="settingsModal" class="settings-modal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <div class="settings-avatar-w" id="settingsAvatarContainer" onclick="openAvatarFromSettings()">
+                    <div id="settingsAvatarImg" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: 800; color: #fff;"></div>
+                    <div class="settings-avatar-edit-hint">✏️</div>
+                </div>
+                <input type="text" id="settingsNameInput" class="setup-input" placeholder="Nombre" maxlength="15" style="margin-bottom: 0; background: transparent; border: none; font-size: 2rem;">
+            </div>
+
+            <div class="settings-list">
+                <!-- Modo Niños -->
+                <div class="settings-item">
+                    <div class="settings-info">
+                        <div class="settings-icon-box" style="color: #fde047;">👶</div>
+                        <div class="settings-text">
+                            <h3>Modo Niños</h3>
+                            <p>Contenido filtrado para menores</p>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="settingsKidsToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- PIN -->
+                <div class="settings-item">
+                    <div class="settings-info">
+                        <div class="settings-icon-box" style="color: #38bdf8;">🔒</div>
+                        <div class="settings-text">
+                            <h3>PIN de Perfil</h3>
+                            <p id="settingsPinStatus">Bloqueo desactivado</p>
+                        </div>
+                    </div>
+                    <button class="settings-btn-action" id="settingsPinBtn">Configurar</button>
+                </div>
+
+                <!-- Biometría -->
+                <div class="settings-item">
+                    <div class="settings-info">
+                        <div class="settings-icon-box" style="color: #c084fc;">🧬</div>
+                        <div class="settings-text">
+                            <h3>Face ID / Huella</h3>
+                            <p id="settingsBioStatus">Desactivado</p>
+                        </div>
+                    </div>
+                    <button class="settings-btn-action" id="settingsBioBtn">Activar</button>
+                </div>
+            </div>
+
+            <div class="settings-footer">
+                <button class="btn-vtv btn-primary-vtv" onclick="closeSettingsModal()" style="flex: 1;">Guardar y Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- PIN Pad Modal (iOS High Fidelity Overhaul) -->
     <div id="pinModal" class="pin-modal">
         <div class="pin-content" id="pinContent">
@@ -842,6 +1099,10 @@
         const avatarModal = document.getElementById('avatarModal');
         const avatarGrid = document.getElementById('avatarGrid');
         const btnCancelAvatar = document.getElementById('btnCancelAvatar');
+        const btnAdmin = document.getElementById('btnAdmin');
+        const btnFinish = document.getElementById('btnFinish');
+        const bodyRoot = document.getElementById('bodyRoot');
+        const mainTitle = document.getElementById('mainTitle');
 
         let currentEditingProfileId = null;
 
@@ -920,7 +1181,7 @@
                 const item = document.createElement('div');
                 item.className = 'profile-item';
                 item.innerHTML = `
-                    <div class="profile-avatar ${p.avatar_url ? '' : p.color}" onclick="openAvatarPicker('${p.id}')">
+                    <div class="profile-avatar ${p.avatar_url ? '' : p.color}">
                         ${p.avatar_url ? `<img src="${p.avatar_url}" alt="${p.name}">` : p.name[0]}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
                         ${_isOccupied(p) ? `
@@ -935,35 +1196,20 @@
                                     <div class="playback-time">${p.now_playing.formattedTime}</div>
                                 </div>
                             ` : ''}
-                            <button class="release-btn" onclick="forceRelease('${p.id}', ${p.now_playing ? JSON.stringify(p.now_playing).replace(/"/g, '&quot;') : 'null'})">LIBERAR</button>
+                            <button class="release-btn" onclick="forceRelease('${p.id}')">LIBERAR</button>
                         ` : ''}
-                        <div class="edit-overlay">
-                            <span class="edit-icon">✏️</span>
-                            <label class="kids-toggle-label">
-                                <input type="checkbox" ${p.is_kids ? 'checked' : ''} onchange="updateKidsMode('${p.id}', this.checked)">
-                                Modo Niños
-                            </label>
-                            <button class="lock-btn" onclick="manageProfilePin('${p.id}')">
-                                🔒 ${p.pin ? 'Cambiar PIN' : 'Poner PIN'}
-                            </button>
-                            <button class="bio-btn" onclick="setupBiometrics('${p.id}')" title="Configurar Huella/FaceID">
-                                🧬 ${p.biometric_key ? 'Actualizar Bio' : 'Activar Bio'}
-                            </button>
+                        <div class="edit-overlay" onclick="openProfileSettings('${p.id}')">
+                            <div class="edit-icon-btn">✏️</div>
                         </div>
                     </div>
-                    <input type="text" class="profile-name-input" value="${p.name}" 
-                           oninput="updateProfileName('${p.id}', this.value)" 
-                           maxlength="15">
+                    <div class="profile-name-input">${p.name}</div>
                 `;
 
                 if (_isOccupied(p)) item.classList.add('occupied');
 
                 item.onclick = (e) => {
-                    if (isEditing) {
-                        if (e.target.closest('.profile-avatar')) openAvatarPicker(p.id);
-                        return;
-                    }
-                    if (e.target.closest('.edit-overlay') || e.target.closest('.profile-name-input')) return;
+                    if (isEditing) return;
+                    if (e.target.closest('.release-btn')) return;
                     selectProfile(p);
                 };
                 grid.appendChild(item);
@@ -1136,7 +1382,6 @@
         let pinResolve = null;
         let pinReject = null;
         const pinModal = document.getElementById('pinModal');
-        const pinLabel = document.getElementById('pinLabel');
 
         /**
          * Abre el teclado numérico iOS y resuelve una promesa con el PIN ingresado.
@@ -1454,6 +1699,55 @@
                 sessionStorage.setItem('vivotv_current_profile', JSON.stringify(data));
                 window.location.href = 'index.html';
             }
+        };
+
+        // --- SISTEMA DE AJUSTES PREMIUM (Fase 18) ---
+        window.openProfileSettings = (pid) => {
+            const p = profiles.find(x => x.id === pid);
+            if (!p) return;
+
+            currentEditingProfileId = pid;
+            const modal = document.getElementById('settingsModal');
+            const avatarImg = document.getElementById('settingsAvatarImg');
+            const nameInput = document.getElementById('settingsNameInput');
+            const kidsToggle = document.getElementById('settingsKidsToggle');
+            const pinStatus = document.getElementById('settingsPinStatus');
+            const bioStatus = document.getElementById('settingsBioStatus');
+            const pinBtn = document.getElementById('settingsPinBtn');
+            const bioBtn = document.getElementById('settingsBioBtn');
+
+            // Avatar
+            avatarImg.innerHTML = p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : p.name[0];
+            avatarImg.parentElement.className = `settings-avatar-w ${p.avatar_url ? '' : p.color}`;
+            
+            // Name
+            nameInput.value = p.name;
+            nameInput.oninput = (e) => updateProfileName(pid, e.target.value);
+
+            // Kids Mode
+            kidsToggle.checked = p.is_kids;
+            kidsToggle.onchange = (e) => updateKidsMode(pid, e.target.checked);
+
+            // PIN
+            pinStatus.textContent = p.pin ? 'Protegido con código' : 'Sin seguridad activa';
+            pinBtn.textContent = p.pin ? 'Cambiar' : 'Activar';
+            pinBtn.onclick = () => manageProfilePin(pid);
+
+            // Bio
+            bioStatus.textContent = p.biometric_key ? 'Biometría configurada' : 'Disponible';
+            bioBtn.textContent = p.biometric_key ? 'Actualizar' : 'Activar';
+            bioBtn.onclick = () => setupBiometrics(pid);
+
+            modal.classList.add('active');
+        };
+
+        window.closeSettingsModal = () => {
+            document.getElementById('settingsModal').classList.remove('active');
+            renderProfiles();
+        };
+
+        window.openAvatarFromSettings = () => {
+            openAvatarPicker(currentEditingProfileId);
         };
 
         window.logoutGlobal = async () => {
