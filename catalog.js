@@ -56,90 +56,163 @@ export function filterItemsByProfile(items, currentProfile) {
     });
 }
 
-/**
- * Sincronización Progresiva por Lotes
- * Evita saturación y permite actualizaciones en tiempo real
- */
-export async function fetchAvailableIds(supabase) {
-    if (!supabase) return;
+let isSyncing = false;
 
+export async function validateBatchAvailability(supabase, ids) {
+    if (!supabase || !ids || !ids.length) return;
+    
     try {
-        console.log('[VivoTV] 🔄 Iniciando Sincronización Progresiva...');
+        const strIds = ids.map(id => id.toString());
+        
+        // CONSULTA MULTI-TABLA PARALELA (Películas + Series/Anime)
+        const [movieRes, seriesRes] = await Promise.all([
+            supabase.from('video_sources').select('tmdb_id, type').in('tmdb_id', strIds),
+            supabase.from('series_episodes').select('tmdb_id').in('tmdb_id', strIds)
+        ]);
 
-        const BATCH_SIZE = 200;
-        let hasMore = true;
-        let offset = 0;
+        const matches = [];
 
-        // Limpieza parcial solo si es la primera carga del ciclo
-        if (offset === 0) {
-            window.DB_CATALOG = [];
-            // Nota: availableIds no se limpia para permitir persistencia entre lotes
+        // Procesar Películas
+        if (movieRes.data && movieRes.data.length > 0) {
+            movieRes.data.forEach(m => {
+                const id = m.tmdb_id.toString();
+                availableIds.add(id);
+                if (m.type === 'movie' || m.type === 'pelicula') availableMovies.add(id);
+                matches.push({ tmdb_id: id, type: m.type });
+            });
         }
 
-        // --- MODO RÁPIDO: VIDEO_SOURCES (DISPONIBILIDAD REAL) ---
-        // Solo lo que esté aquí activará el badge de "DISPONIBLE"
-        const { data: quickSources } = await supabase.from('video_sources').select('tmdb_id, type');
-        if (quickSources) {
-            console.log(`[VivoTV] 🎥 ${quickSources.length} fuentes de video detectadas (Disponibilidad Real).`);
-            quickSources.forEach(item => {
-                const id = item.tmdb_id?.toString().trim();
-                if (id) {
+        // Procesar Series/Anime
+        if (seriesRes.data && seriesRes.data.length > 0) {
+            seriesRes.data.forEach(s => {
+                const id = s.tmdb_id.toString();
+                if (!availableIds.has(id)) {
                     availableIds.add(id);
-                    if (item.type === 'movie' || item.type === 'pelicula') availableMovies.add(id);
-                    else availableSeries.add(id);
+                    availableSeries.add(id);
+                    matches.push({ tmdb_id: id, type: 'tv' });
                 }
             });
+        }
+
+        if (matches.length > 0) {
+            console.log(`[VivoTV] 🔍 Multi-Tabla: Encontrados ${matches.length} matches (Cine/Series) de ${strIds.length} IDs.`);
+            
+            // Sincronizar referencias globales
             window.availableIds = availableIds;
             window.availableMovies = availableMovies;
             window.availableSeries = availableSeries;
-            // Notificar cambios de disponibilidad
-            dispatchBatchEvent(quickSources);
-        }
 
-        // --- MODO LOTE: CONTENT (MEMORIA DE METADATOS) ---
-        // Estos items se guardan para búsqueda y visualización, pero NO activan disponibilidad automática
+            // Notificar a la UI
+            dispatchBatchEvent(matches);
+        }
+    } catch (e) {
+        console.warn('[VivoTV] Error en validación multi-tabla:', e);
+    }
+}
+
+/**
+ * SINCRONIZACIÓN DE METADATOS (Cache Local)
+ * Solo carga lo que hay en tu tabla 'content' para las filas de "Disponibles"
+ */
+export async function fetchAvailableIds(supabase) {
+    if (!supabase || isSyncing) return;
+    isSyncing = true;
+
+    try {
+        console.log('[VivoTV] 📡 Sincronizando Catálogo Personal...');
+        const BATCH_SIZE = 500;
+        let hasMore = true;
+        let offset = 0;
+
         while (hasMore) {
-            console.log(`[VivoTV] 📡 Cargando lote de metadatos: ${offset} - ${offset + BATCH_SIZE}`);
-            
             const { data: batch, error } = await supabase
                 .from('content')
-                .select('tmdb_id, content_type')
+                .select('*')
                 .range(offset, offset + BATCH_SIZE - 1);
 
-            if (error) {
-                console.warn('[VivoTV] ⚠️ Error en lote de metadatos:', error.message);
+            if (error || !batch || batch.length === 0) {
                 hasMore = false;
                 break;
             }
 
-            if (!batch || batch.length === 0) {
-                hasMore = false;
-                break;
-            }
-
-            console.log(`[VivoTV] 📥 Recibidos ${batch.length} items de metadatos.`);
-
-            // Procesar lote de metadatos (Cache local)
             if (!window.DB_CATALOG) window.DB_CATALOG = [];
             
             batch.forEach(item => {
-                const id = item.tmdb_id?.toString().trim();
+                const id = item.tmdb_id?.toString();
                 if (!id) return;
                 
-                // Guardamos en el catálogo maestro
+                // Si está en 'content', por definición está disponible
+                availableIds.add(id);
+                if (item.content_type === 'series') availableSeries.add(id);
+                else availableMovies.add(id);
+
                 const exists = window.DB_CATALOG.some(db => db.tmdb_id === id);
                 if (!exists) window.DB_CATALOG.push(item);
             });
 
+            window.availableIds = availableIds;
+            
             if (batch.length < BATCH_SIZE) hasMore = false;
             offset += BATCH_SIZE;
-
-            await new Promise(r => setTimeout(r, 50));
+            
+            // Notificar disponibilidad de este lote de tu catálogo
+            dispatchBatchEvent(batch);
+            
+            await new Promise(r => setTimeout(r, 100));
         }
 
-        console.log(`[VivoTV] ✅ Sincronización Progresiva Completa. Disponibles: ${availableIds.size}. Conocidos: ${window.DB_CATALOG?.length || 0}.`);
+        console.log(`[VivoTV] ✅ Catálogo personal sincronizado: ${availableIds.size} items.`);
+        
+        // --- ESCANEO DE FONDO (IDs sin metadatos) ---
+        // Esto permite que el modo hibrido funcione aunque la tabla 'content' este vacia
+        scanAllDBContent(supabase); 
+
     } catch (e) {
-        console.error('[VivoTV] ❌ Fallo en sincronización:', e);
+        console.error('[VivoTV] ❌ Fallo en sincronización de catálogo:', e);
+    } finally {
+        isSyncing = false;
+    }
+}
+
+/**
+ * ESCANEO MASIVO DE IDs (Para modo híbrido)
+ * Recolecta todos los IDs de video_sources y series_episodes en el set global
+ */
+export async function scanAllDBContent(supabase) {
+    if (!supabase) return;
+    try {
+        console.log('[VivoTV] 🔎 Escaneando fuentes de video para descubrimiento híbrido...');
+        
+        // Escanear Películas (video_sources)
+        const { data: movies } = await supabase.from('video_sources').select('tmdb_id');
+        if (movies) movies.forEach(m => {
+            const id = m.tmdb_id.toString();
+            availableIds.add(id);
+            availableMovies.add(id);
+        });
+
+        // Escanear Series (series_episodes)
+        const { data: series } = await supabase.from('series_episodes').select('tmdb_id');
+        if (series) series.forEach(s => {
+            const id = s.tmdb_id.toString();
+            if (!availableIds.has(id)) {
+                availableIds.add(id);
+                availableSeries.add(id);
+            }
+        });
+
+        // Sincronizar referencias globales
+        window.availableIds = availableIds;
+        window.availableMovies = availableMovies;
+        window.availableSeries = availableSeries;
+
+        console.log(`[VivoTV] 🚀 Escaneo completo. Disponibles para híbrido: ${availableIds.size} títulos.`);
+        
+        // Notificar que hay nuevos IDs disponibles para habilitar badges o carruseles hibridos
+        window.dispatchEvent(new CustomEvent('scanCompleted', { detail: { count: availableIds.size } }));
+
+    } catch (e) {
+        console.warn('[VivoTV] Error en escaneo de IDs:', e);
     }
 }
 
@@ -224,20 +297,105 @@ export async function loadGridData(type, page, append = false, currentProfile) {
     }
 }
 
-export async function renderDBCatalog(containerId, filterType = 'all', isAnime = false) {
-    if (!DB_CATALOG || DB_CATALOG.length === 0) return;
-    let items = DB_CATALOG;
-    if (filterType !== 'all') items = items.filter(item => item.content_type === filterType);
-    if (isAnime) {
-        const animeItems = [];
-        const pool = items.slice(0, 40);
-        await Promise.all(pool.map(async (item) => {
-            const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.content_type === 'series' ? 'tv' : 'movie').catch(() => null);
-            if (details && (details.genres || []).some(g => g.id === 16)) animeItems.push(item);
-        }));
-        items = animeItems;
+/**
+ * RENDERIZADO HÍBRIDO (DB + TMDB)
+ * Muestra contenido de TMDB que el usuario TIENE en su DB (Intersección)
+ */
+export async function renderHybridRow(containerId, tmdbFunc, type) {
+    try {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Limpiar para mostrar loaders o refresh
+        container.innerHTML = '';
+        
+        // 1. Obtener datos de TMDB (Descubrimiento)
+        const data = await tmdbFunc();
+        if (!data || !data.results || data.results.length === 0) {
+            hideRow(containerId);
+            return;
+        }
+
+        // 2. CRUCE DE DATOS: Quedarse solo con lo que existe en DB (disponibleIds)
+        // Usamos window.availableIds para que use la version mas fresca del escaneo
+        const currentIds = window.availableIds || availableIds;
+        const filtered = data.results.filter(item => {
+            const idStr = item.id.toString();
+            return currentIds.has(idStr);
+        });
+
+        // 3. Renderizado
+        if (filtered.length > 0) {
+            CATALOG_UI.renderCarousel(containerId, filtered, type, currentIds);
+            const section = container.closest('.catalog-row');
+            if (section) section.classList.remove('hidden');
+            
+            // Si la fila tiene flechas, actualizarlas
+            const carousel = document.getElementById(containerId);
+            if (carousel) {
+                // Notificar redimensionamiento para flechas
+                window.dispatchEvent(new Event('resize'));
+            }
+        } else {
+            // Si no hay intersección, ocultamos la fila para no mostrar carruseles vacios
+            hideRow(containerId);
+        }
+    } catch (e) {
+        console.warn(`[Hybrid] Error en fila ${containerId}:`, e);
+        hideRow(containerId);
     }
-    if (items.length > 0) CATALOG_UI.renderCarousel(containerId, items, null, availableIds);
+}
+
+function hideRow(containerId) {
+    const container = document.getElementById(containerId);
+    const section = container?.closest('.catalog-row');
+    if (section) section.classList.add('hidden');
+}
+
+export async function renderDBCatalog(containerId, filterType = 'all', isAnime = false) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // LIMPIEZA PREVENTIVA: Eliminar skeletons de carga antes de validar
+    container.innerHTML = '';
+
+    if (!window.DB_CATALOG || window.DB_CATALOG.length === 0) {
+        console.warn(`[VivoTV] renderDBCatalog: El catálogo está vacío. Ocultando carrusel ${containerId}`);
+        const section = container.closest('.catalog-row');
+        if (section) section.classList.add('hidden');
+        return;
+    }
+    
+    let items = window.DB_CATALOG;
+
+    // 1. Filtrado Estricto DB-Only
+    if (isAnime) {
+        items = items.filter(item => {
+            const genres = item.genres || item.genre_ids || [];
+            const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
+            const tmdbIsAnime = genreIds.includes(16) || (item.origin_country && item.origin_country.includes('JP'));
+            const localIsAnime = (item.content_type || '').toLowerCase() === 'anime';
+            return tmdbIsAnime || localIsAnime;
+        });
+    } else if (filterType !== 'all') {
+        items = items.filter(item => {
+            const type = (item.content_type || '').toLowerCase() === 'series' ? 'tv' : 'movie';
+            return type === filterType;
+        });
+    }
+
+    // 2. Manejo de resultados vacíos
+    if (items.length === 0) {
+        const section = container.closest('.catalog-row');
+        if (section) section.classList.add('hidden');
+        return;
+    }
+
+    // 3. Renderizado Real
+    CATALOG_UI.renderCarousel(containerId, items.slice(0, 20), null, window.availableIds, null, window.DB_CATALOG);
+    
+    const section = container.closest('.catalog-row');
+    if (section) section.classList.remove('hidden');
 }
 
 export async function executeSearch(query, currentProfile, availableIds) {

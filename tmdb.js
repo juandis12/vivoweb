@@ -70,25 +70,30 @@ export const TMDB_SERVICE = {
                 try {
                     // Solo insertamos si realmente no la conocemos (Cache pasivo)
                     const contentData = {
-                        tmdb_id: strId,
-                        content_type: type === 'tv' ? 'series' : 'movie',
+                        tmdb_id: parseInt(strId),
                         title: data.title || data.name || '',
-                        poster_url: data.poster_path || '',   // Corregido: poster_url
-                        backdrop_url: data.backdrop_path || '', // Corregido: backdrop_url
-                        overview: data.overview || '',
-                        release_date: data.release_date || data.first_air_date || null,
-                        vote_average: data.vote_average || 0
+                        description: data.overview || '', // Corregido: description (según SQL)
+                        poster_url: data.poster_path || '',
+                        backdrop_url: data.backdrop_path || '',
+                        video_url: 'source_id:' + strId, // Obligatorio (NOT NULL en SQL)
+                        rating: data.vote_average || 0,   // Corregido: rating (según SQL)
+                        release_date: data.release_date || data.first_air_date || '',
+                        content_type: type === 'tv' ? 'series' : 'movie'
                     };
                     
-                    // Insertar sin esperar (Background fire-and-forget)
+                    /* 
+                       ELIMINADO POR RLS (Error 403):
+                       Tu configuración de Supabase no permite que usuarios externos guarden datos en 'content'.
+                       Silenciamos este paso para mantener la consola limpia.
+                    */
+                    // console.log(`[VivoTV] 🔒 Saltando guardado en DB (RLS) para: ${strId}`);
+                    /*
                     supabase.from('content').insert(contentData).then(({error}) => {
                         if (!error && window.DB_CATALOG) {
                             window.DB_CATALOG.push(contentData);
                         }
                     });
-
-                    // NOTA: NO disparamos 'contentAdded' aquí. 
-                    // Ver detalles no la hace "Disponible". El badge solo cambia vía video_sources.
+                    */
                 } catch (e) {
                     console.warn('[VivoTV] Error en autoguardado pasivo:', e);
                 }

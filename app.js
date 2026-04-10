@@ -2,6 +2,18 @@ import { CONFIG, supabase } from './config.js';
 import { TMDB_SERVICE, CATALOG_UI } from './tmdb.js';
 import { PLAYER_LOGIC, setSupabase } from './player.js';
 import { showToast } from './utils.js';
+import { 
+    fetchAvailableIds as syncCatalog, 
+    availableIds,
+    availableMovies, 
+    availableSeries,
+    renderDBCatalog,
+    renderHybridRow,
+    validateContentType,
+    filterItemsByProfile,
+    validateBatchAvailability,
+    DB_CATALOG
+} from './catalog.js';
 
 // Usar instancia única centralizada
 if (supabase) {
@@ -33,7 +45,7 @@ console.log('App.js cargado correctamente.');
 // Movidas dentro de initAppForPage() para evitar problemas entre páginas
 let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit;
 
-import { validateContentType, filterItemsByProfile, fetchAvailableIds as syncCatalog } from './catalog.js';
+
 
 let isLoginMode = !window.location.pathname.includes('registro.html');
 let heroItems   = [];
@@ -358,13 +370,14 @@ async function toDashboard(user) {
     if (gridContainer) gridContainer.innerHTML = '';
 
     try {
-        logDebug('Cargando Catálogo Maestro desde BD...');
-        // 2. Cargar disponibilidad y metadatos de base de datos
-        await fetchAvailableIds();
+        // 2. Sincronizar Catálogo Personal (En segundo plano)
+        // Ya no bloqueamos la app esperando miles de registros
+        syncCatalog(supabase); 
+
 
         // 3. NUEVO: Renderizado impulsado por DB (Prioridad Máxima)
-        // Lo esperamos (await) para asegurar que el contenido inicial cargue antes que las tendencias
-        await renderDBCategoryRows();
+        renderDBCategoryRows();
+
         
         // 4. Cargar Historiales y resto de filas (TMDB adaptado)
         loadPersonalizedRows();
@@ -396,20 +409,21 @@ async function toDashboard(user) {
             heroData = await TMDB_SERVICE.getTrending();
         }
 
-        // --- REVOLUCIÓN HERO: Filtrar tendencias Y añadir items locales ---
+        // --- REVOLUCIÓN HERO: Mostrar tendencias de inmediato ---
+        // Durante el arranque, permitimos mostrar items aunque la sincronización masiva no haya terminado
         let availableHeroItems = (heroData.results || []).filter(m => {
-            const idStr = m.id.toString();
             if (!m.backdrop_path) return false;
-            if (!availableIds.has(idStr)) return false;
+            // Si ya terminó el sync, filtramos. Si no, mostramos los top para no dejar el Hero vacío.
+            if (availableIds.size > 0 && !availableIds.has(m.id.toString())) return false;
             
-            // Validar Tipo Estricto
             const itemType = m.media_type || (pageType === 'all' ? 'movie' : pageType);
             return validateContentType(m, itemType);
         });
+
         
         // Añadir items del catálogo local que tengan backdrop_url (Prioridad Alta)
         // Solo si coinciden con el tipo de la página
-        const localHeroItems = (DB_CATALOG || []).filter(item => {
+        const localHeroItems = (window.DB_CATALOG || []).filter(item => {
             if (!item.backdrop_url) return false;
             const itemType = item.content_type === 'series' ? 'tv' : 'movie';
             return validateContentType(item, itemType);
@@ -422,40 +436,37 @@ async function toDashboard(user) {
         if (heroItems.length && document.getElementById('heroBanner')) {
             CATALOG_UI.renderHero(heroItems[0], heroItems);
             startHeroRotation();
+            
+            // VALIDACIÓN POST-RENDER: Verificar disponibilidad solo de lo que mostramos en el Hero
+            validateBatchAvailability(supabase, heroItems.map(m => m.id));
         } else if (document.getElementById('heroBanner')) {
             // Si no hay nada, intentamos mostrar al menos un item de la DB sin backdrop_url
-            if (DB_CATALOG && DB_CATALOG.length > 0) {
-                CATALOG_UI.renderHero(DB_CATALOG[0]);
+            const catalog = window.DB_CATALOG || [];
+            if (catalog.length > 0) {
+                CATALOG_UI.renderHero(catalog[0]);
             } else {
                 document.getElementById('heroBanner').classList.add('hidden');
             }
         }
 
-        // 5. Cargar Filas (Filtradas)
-        const renderRow = async (containerId, fetchFn, type, title) => {
+        // 5. Cargar Filas (Progresivas)
+        const renderRow = async (containerId, fetchFn, type) => {
             const el = document.getElementById(containerId);
             if (!el) return;
             const data = await fetchFn();
-            const tmdbCount = data.results ? data.results.length : 0;
-
-            // FILTRO ESTRICTO (Fase Usuario: Organización)
-            let filtered = (data.results || []).filter(item => validateContentType(item, type));
-
-            let preProfileCount = filtered.length;
-            filtered = filterItemsByProfile(filtered); // Aplicar filtro global
-            logDebug(`Fila [${type}]: TMDB=${tmdbCount}, DB Match=${preProfileCount}, PostFiltrado=${filtered.length}`);
-            CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds, null, DB_CATALOG);
             
-            const section = el.closest('.catalog-row');
-            if (section) {
-                if (filtered.length === 0) section.classList.add('hidden');
-                else {
-                    section.classList.remove('hidden');
-                    const btnVerMas = section.querySelector('.btn-ver-mas');
-                    if (btnVerMas) {
-                        btnVerMas.onclick = () => { document.getElementById('gridContainer')?.scrollIntoView({ behavior: 'smooth' }); };
-                    }
-                }
+            // FILTRO PROGRESIVO: Mostramos lo que TMDB nos da
+            // Las insignias de "DISPONIBLE" se actualizarán solas gracias al evento batchLoaded
+            let filtered = (data.results || []);
+            filtered = filterItemsByProfile(filtered).slice(0, 20);
+
+            if (filtered.length > 0) {
+                CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
+                const section = el.closest('.catalog-row');
+                if (section) section.classList.remove('hidden');
+
+                // VALIDACIÓN BAJO DEMANDA: Verificar disponibilidad solo de esta fila
+                validateBatchAvailability(supabase, filtered.map(m => m.id));
             }
         };
 
@@ -475,13 +486,15 @@ async function toDashboard(user) {
                 renderRow('scifiCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 878 }), 'movie')
             ]);
         } else if (isAnimePage) {
-            // Lógica específica de ANIME (Solo Japonés/Anime Real - Fase Usuario)
+            // MODO HÍBRIDO: Llamamos a TMDB para descubrir, pero filtramos por lo que hay en tu DB
             await Promise.all([
-                renderRow('popularCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }), 'tv'),
-                renderRow('topRatedCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'vote_average.desc', 'vote_count.gte': 50 }), 'tv'),
-                renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', with_original_language: 'ja' }), 'tv'),
-                renderRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', with_original_language: 'ja' }), 'tv'),
+                renderHybridRow('popularCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }), 'tv'),
+                renderHybridRow('topRatedCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'vote_average.desc', 'vote_count.gte': 50 }), 'tv'),
+                renderHybridRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', with_original_language: 'ja' }), 'tv'),
+                renderHybridRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', with_original_language: 'ja' }), 'tv'),
             ]);
+
+
         } else {
             // Películas o Series (Excluyendo Anime de Series)
             const fetchPopular = () => pageType === 'tv' 
@@ -587,44 +600,7 @@ async function loadGridData(type, page, append = false) {
     }
 }
 
-/**
- * Renderiza el catálogo basándose ÚNICAMENTE en lo que hay en la base de datos local.
- * Esto garantiza que el contenido del usuario siempre sea visible.
- */
-async function renderDBCatalog(containerId, filterType = 'all', isAnime = false) {
-    const catalog = window.DB_CATALOG || [];
-    if (!catalog.length) return;
 
-    let items = catalog;
-
-    // 1. Filtrado por tipo de contenido (Movies / Series)
-    if (filterType !== 'all') {
-        items = items.filter(item => {
-            const type = (item.content_type || '').toLowerCase();
-            if (filterType === 'movie') return type === 'movie' || type === 'pelicula';
-            if (filterType === 'series') return type === 'series' || type === 'tv' || type === 'serie';
-            return type === filterType;
-        });
-    }
-
-    // 2. Filtrado por Anime (Optimizado Fase 10X)
-    if (isAnime) {
-        // Usamos los genre_ids ya almacenados en la base de datos para filtrado instantáneo
-        items = items.filter(item => {
-            const genres = item.genre_ids || [];
-            // Género 16 = Animación. 
-            // Para ser Anime debe ser Animación y normalmente detectamos origen Japón, 
-            // pero para el catálogo de la DB confiamos en el género 16 si viene de la sección anime.
-            return genres.includes(16);
-        });
-        
-        console.log(`[Anime Filter] Detectados ${items.length} títulos de anime en la base de datos.`);
-    }
-
-    if (items.length > 0) {
-        CATALOG_UI.renderCarousel(containerId, items, null, window.availableIds || new Set(), null, window.DB_CATALOG || []);
-    }
-}
 
 async function renderDBCategoryRows() {
     const isMainPage = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');
@@ -633,8 +609,15 @@ async function renderDBCategoryRows() {
     const isAnimePage = window.location.pathname.includes('anime.html');
 
     try {
+        logDebug('Renderizando filas desde DB...');
         if (isMainPage) {
-            // Renderizado en paralelo para velocidad
+            // Filas principales por categoría (Nuevas)
+            await Promise.all([
+                renderDBCatalog('categoryMoviesCarousel', 'movie'),
+                renderDBCatalog('categorySeriesCarousel', 'series'),
+                renderDBCatalog('categoryAnimeCarousel', 'all', true)
+            ]);
+            // Mantener compatibilidad con filas antiguas si existen
             await Promise.all([
                 renderDBCatalog('popularMoviesCarousel', 'movie'),
                 renderDBCatalog('popularTVCarousel', 'series')
@@ -1674,6 +1657,8 @@ document.addEventListener('scroll', (e) => {
         updateCarouselArrows(e.target);
     }
 }, true);
+
+
 
 // ================================================
 // GLOBAL SYNC: REFRESH ON VISIBILITY
