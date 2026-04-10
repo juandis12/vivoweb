@@ -19,6 +19,9 @@ export function validateContentType(item, expectedType) {
     const genres = item.genres || item.genre_ids || [];
     const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
     
+    // Unificar tipo de item (TMDB o DB Local)
+    const rawType = item.media_type || (item.content_type === 'series' ? 'tv' : (item.content_type === 'anime' ? 'tv' : (item.content_type === 'movie' ? 'movie' : expectedType)));
+    
     // Definición de Anime: Género Animación (16) + (Origen Japonés O Idioma Japonés O Nombre con caracteres Japoneses)
     const isAnim = genreIds.includes(16);
     const isJapan = (item.origin_country && (Array.isArray(item.origin_country) ? item.origin_country.includes('JP') : item.origin_country === 'JP')) || 
@@ -27,17 +30,16 @@ export function validateContentType(item, expectedType) {
 
     // Si es Anime en la DB, confiamos en la etiqueta local. Si es de TMDB, combinamos Animación + Japón.
     const isManuallyMarkedAnime = (item.content_type || '').toLowerCase() === 'anime';
-
     const isAnime = isManuallyMarkedAnime || (isAnim && isJapan);
 
     const isMoviesPage = document.body.classList.contains('page-movies');
     const isSeriesPage = document.body.classList.contains('page-series');
     const isAnimePage  = document.body.classList.contains('page-anime');
 
-    // FILTRADO ESTRICTO POR PÁGINA
-    if (isAnimePage) return isAnime;
-    if (isSeriesPage) return expectedType === 'tv' && !isAnime;
-    if (isMoviesPage) return expectedType === 'movie';
+    // VALIDACIÓN CRUZADA: Item vs Página
+    if (isAnimePage) return isAnime && rawType === 'tv';
+    if (isSeriesPage) return rawType === 'tv' && !isAnime;
+    if (isMoviesPage) return rawType === 'movie';
     
     return true;
 }
@@ -248,53 +250,66 @@ export async function loadGridData(type, page, append = false, currentProfile) {
         const isSeriesPage = document.body.classList.contains('page-series');
         const isAnimePage  = document.body.classList.contains('page-anime');
 
+        // MODO BIBLIOTECA: Filtrar por lo que el usuario TIENE en DB
         if (isMoviesPage || isSeriesPage || isAnimePage) {
-            const targetSet = isMoviesPage ? availableMovies : availableSeries;
-            const allIds = Array.from(targetSet);
+            // Unificar IDs de disponibilidad (Priority: DB Scan)
+            const targetSet = isMoviesPage ? window.availableMovies : (window.availableSeries || availableSeries);
+            const allIds = Array.from(targetSet || []);
             
-            const perPage = 12; // Un poco más para compensar filtros
-            const start = (page - 1) * perPage;
-            const end   = start + perPage;
-            let pageIds = allIds.slice(start, end);
-            
-            if (btnLoadMore) btnLoadMore.classList.toggle('hidden', end >= allIds.length);
+            if (allIds.length === 0) {
+                if (loader) loader.classList.add('hidden');
+                if (!append) container.innerHTML = '<p class="no-results-msg">No tienes contenido en esta sección todavía.</p>';
+                if (btnLoadMore) btnLoadMore.classList.add('hidden');
+                return;
+            }
 
-            if (pageIds.length) {
-                const finalItems = [];
-                for (const id of pageIds) {
-                    let item = window.DB_CATALOG?.find(i => i.tmdb_id?.toString() === id);
-                    if (!item) {
-                        try {
-                            item = await TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv');
-                        } catch (e) { continue; }
-                    }
-                    
-                    // FILTRADO ESTRICTO: Solo añadir si corresponde a la categoría de la página
-                    if (item && validateContentType(item, isMoviesPage ? 'movie' : 'tv')) {
-                        finalItems.push(item);
-                    }
-                }
+            const perPage = 20;
+            const startIdx = (page - 1) * perPage;
+            const endIdx = startIdx + perPage;
+            const pageIds = allIds.slice(startIdx, endIdx);
+
+            const finalItems = [];
+            for (const id of pageIds) {
+                // 1. Buscar en cache de metadatos (DB_CATALOG)
+                let item = (window.DB_CATALOG || []).find(i => i.tmdb_id?.toString() === id.toString());
                 
-                if (loader) loader.classList.add('hidden');
-                
-                if (finalItems.length > 0) {
-                    const fragment = document.createDocumentFragment();
-                    finalItems.forEach(item => {
-                        const card = CATALOG_UI.createMovieCard(item, isMoviesPage ? 'movie' : 'tv', true);
-                        fragment.appendChild(card);
-                    });
-                    container.appendChild(fragment);
-                } else if (end < allIds.length) {
-                    // Si no hubo resultados tras el filtro, intentar con el siguiente lote automáticamente
-                    return loadGridData(type, page + 1, true, currentProfile);
+                // 2. Fallback: TMDB Details si no hay metadatos locales
+                if (!item) {
+                    try {
+                        item = await TMDB_SERVICE.getDetails(id, isMoviesPage ? 'movie' : 'tv');
+                    } catch (e) { continue; }
                 }
-            } else {
-                if (loader) loader.classList.add('hidden');
+
+                // 3. Validar tipo y añadir
+                if (item && validateContentType(item, isMoviesPage ? 'movie' : 'tv')) {
+                    finalItems.push(item);
+                }
+            }
+
+            if (loader) loader.classList.add('hidden');
+
+            if (finalItems.length > 0) {
+                const fragment = document.createDocumentFragment();
+                finalItems.forEach(item => {
+                    const card = CATALOG_UI.createMovieCard(item, isMoviesPage ? 'movie' : 'tv', true);
+                    fragment.appendChild(card);
+                });
+                container.appendChild(fragment);
+                
+                if (btnLoadMore) {
+                    btnLoadMore.classList.toggle('hidden', endIdx >= allIds.length);
+                    btnLoadMore.onclick = () => loadGridData(type, page + 1, true, currentProfile);
+                }
+            } else if (endIdx < allIds.length) {
+                // Si este lote no tuvo matches tras filtro, intentar siguiente
+                return loadGridData(type, page + 1, true, currentProfile);
+            } else if (!append && container.innerHTML === '') {
+                container.innerHTML = '<p class="no-results-msg">No hay títulos que coincidan con los filtros de esta sección.</p>';
             }
             return;
         }
 
-        // --- MODO DESCUBRIMIENTO (Dashboard / Búsqueda) ---
+        // MODO DESCUBRIMIENTO (Inicio / Búsqueda)
         const data = type === 'tv' ? await TMDB_SERVICE.getPopularTV(page) : await TMDB_SERVICE.getPopularMovies(page);
         if (loader) loader.classList.add('hidden');
         if (data.results?.length) {
@@ -306,6 +321,11 @@ export async function loadGridData(type, page, append = false, currentProfile) {
                 fragment.appendChild(card);
             });
             container.appendChild(fragment);
+            
+            if (btnLoadMore) {
+                btnLoadMore.classList.toggle('hidden', data.page >= data.total_pages);
+                btnLoadMore.onclick = () => loadGridData(type, page + 1, true, currentProfile);
+            }
         }
     } catch (e) {
         console.error('Error cargando grid:', e);

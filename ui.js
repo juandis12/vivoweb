@@ -107,11 +107,13 @@ export const CATALOG_UI = {
         }
 
         const fragment = document.createDocumentFragment();
+        const _ids = (availableIds instanceof Set) ? availableIds : (window.availableIds || new Set());
+        
         items.forEach(item => {
             if (!item.poster_path && !item.poster_url) return;
             const type = typeOverride || item.content_type || item.media_type || (containerId.toLowerCase().includes('tv') ? 'tv' : 'movie');
             const id = item.id || item.tmdb_id;
-            const isAvail = id ? (availableIdsSet && availableIdsSet.has(id.toString())) : false;
+            const isAvail = id ? _ids.has(id.toString()) : false;
             const card = this.createMovieCard(item, type, isAvail);
             fragment.appendChild(card);
         });
