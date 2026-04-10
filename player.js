@@ -423,8 +423,11 @@ export const PLAYER_LOGIC = {
         this.currentSeason = seasonNum;
         this.currentEpisode = ep.episode_number;
 
-        // Guardar nombre para telemetría
+        // Guardar nombre para telemetría (Inmediato)
         this.currentPlaybackTitle = `${this.seriesData?.name || 'Serie'} (T${seasonNum}:E${ep.episode_number})`;
+        if (window.updateGlobalPlaybackStatus) {
+            window.updateGlobalPlaybackStatus({ title: this.currentPlaybackTitle, type: 'tv' });
+        }
 
         this._playSource(ep.stream_url, seekSeconds);
     },
@@ -448,6 +451,9 @@ export const PLAYER_LOGIC = {
         // Determinar título para telemetría si es película
         if (this.currentType === 'movie') {
             this.currentPlaybackTitle = this.movieData?.title || 'Película';
+            if (window.updateGlobalPlaybackStatus) {
+                window.updateGlobalPlaybackStatus({ title: this.currentPlaybackTitle, type: 'movie' });
+            }
         }
 
         // Listener para fin de video (Solo streams directos)
@@ -521,17 +527,18 @@ export const PLAYER_LOGIC = {
         let hasJumped = seek <= 0;
         let lastSavedTime = -1;
 
-        // --- SALTO INTELIGENTE CON RETRASO (Fase 10X UX) ---
-        // Ajustado a 10 segundos para sincronizar con la duración de los anuncios
+        // --- SALTO INTELIGENTE (Auto-Resume) ---
+        // Fase 10X UX: Delay reducido para fluidez
         if (seek > 0) {
-            console.log(`[VivoTV] Programando salto de progreso (${seek}s) en 10 segundos...`);
+            const delay = isDirectStream ? 2000 : 10000; // Iframe necesita más tiempo por anuncios
+            console.log(`[VivoTV] Programando salto de progreso (${seek}s) en ${delay/1000}s...`);
             setTimeout(() => {
-                if (video && !video.paused) {
+                if (video && (video.readyState >= 1 || !video.paused)) {
                     video.currentTime = seek;
                     hasJumped = true;
                     showToast("Reanudando desde donde te quedaste...", "info");
                 }
-            }, 10000); // 10 segundos de espera
+            }, delay);
         }
 
         this._createSmartControls();
@@ -603,10 +610,20 @@ export const PLAYER_LOGIC = {
             }
 
             // Detección de Intro (Primeros 3 minutos)
+            const skipBtn = document.getElementById('btnSkipIntro');
             if (cur > 10 && cur < 180) {
-                document.getElementById('btnSkipIntro')?.classList.add('active');
+                if (skipBtn && !skipBtn.classList.contains('active')) {
+                    skipBtn.classList.add('active');
+                    // AUTO-SKIP SOLICITADO: Saltar solo tras 10s
+                    setTimeout(() => {
+                        if (skipBtn.classList.contains('active')) {
+                            skipBtn.click();
+                            showToast("Intro saltada automáticamente", "info");
+                        }
+                    }, 10000);
+                }
             } else {
-                document.getElementById('btnSkipIntro')?.classList.remove('active');
+                skipBtn?.classList.remove('active');
             }
         };
     },
@@ -966,8 +983,25 @@ export const PLAYER_LOGIC = {
         } catch (e) { console.error('Error auto trailer:', e); }
     },
 
-    _getNextEpisode() {
-        // Navegación automática deshabilitada sin caching
+    async _getNextEpisode() {
+        if (!this.currentTmdbId || !this.currentSeason || !this.currentEpisode) return null;
+        
+        // Buscar el siguiente episodio en la base de datos (Fase Marathon PRO)
+        const { data: nextData } = await _supabase.from('series_episodes')
+            .select('season_number, episode_number, stream_url')
+            .eq('tmdb_id', Number(this.currentTmdbId))
+            .or(`and(season_number.eq.${this.currentSeason},episode_number.gt.${this.currentEpisode}),season_number.gt.${this.currentSeason}`)
+            .order('season_number', { ascending: true })
+            .order('episode_number', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+        if (nextData && nextData.stream_url) {
+            return {
+                season: nextData.season_number,
+                data: nextData
+            };
+        }
         return null;
     },
 

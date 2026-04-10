@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +19,7 @@
             overflow: hidden;
             font-family: 'Manrope', sans-serif;
         }
+
         .profile-container {
             text-align: center;
             animation: fadeIn 0.8s ease;
@@ -25,14 +27,21 @@
             max-width: 800px;
             padding: 20px;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } }
-        
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+
         h1 {
             font-size: 3.5rem;
             font-weight: 800;
             margin-bottom: 20px;
             letter-spacing: -1px;
         }
+
         .subtitle {
             color: #94a3b8;
             margin-bottom: 40px;
@@ -45,12 +54,14 @@
             justify-content: center;
             flex-wrap: wrap;
         }
+
         .profile-item {
             cursor: pointer;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             width: 160px;
             position: relative;
         }
+
         .profile-avatar {
             width: 150px;
             height: 150px;
@@ -62,15 +73,17 @@
             font-size: 4.5rem;
             position: relative;
             border: 4px solid transparent;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             transition: all 0.3s;
             overflow: hidden;
         }
+
         .profile-item:hover .profile-avatar {
             border-color: #fff;
             transform: scale(1.08);
-            box-shadow: 0 15px 45px rgba(0,0,0,0.7);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.7);
         }
+
         .profile-name-input {
             background: transparent;
             border: none;
@@ -83,12 +96,13 @@
             border-radius: 4px;
             pointer-events: none;
         }
+
         .admin-mode .profile-name-input {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
             border-bottom: 2px solid #fff;
             pointer-events: auto;
         }
-        
+
         .kids-badge {
             position: absolute;
             top: 10px;
@@ -100,7 +114,7 @@
             font-size: 0.75rem;
             font-weight: 800;
             text-transform: uppercase;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             z-index: 5;
         }
 
@@ -108,11 +122,13 @@
         .profile-item.occupied {
             cursor: default;
         }
+
         .profile-item.occupied .profile-avatar {
             opacity: 0.4;
             filter: grayscale(1);
             border-color: #ef4444;
         }
+
         .occupied-badge {
             position: absolute;
             top: 10px;
@@ -136,7 +152,7 @@
             right: 0;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             padding: 8px 5px;
             text-align: center;
             border-bottom-left-radius: 12px;
@@ -144,7 +160,18 @@
             z-index: 5;
             animation: slideUp 0.3s ease-out;
         }
-        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
 
         .playback-status-header {
             display: flex;
@@ -153,13 +180,18 @@
             gap: 5px;
             margin-bottom: 2px;
         }
-        .playback-icon { font-size: 10px; }
+
+        .playback-icon {
+            font-size: 10px;
+        }
+
         .playback-label {
             font-size: 8px;
             font-weight: 800;
             letter-spacing: 0.5px;
             color: #ef4444;
         }
+
         .playback-title {
             font-size: 10px;
             font-weight: 600;
@@ -169,11 +201,13 @@
             text-overflow: ellipsis;
             max-width: 100%;
         }
+
         .playback-time {
             font-size: 9px;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
             margin-top: 1px;
         }
+
         .release-btn {
             position: absolute;
             top: 50%;
@@ -192,9 +226,11 @@
             transition: 0.2s;
             box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
         }
+
         .profile-item.occupied:hover .release-btn {
             display: block;
         }
+
         .release-btn:hover {
             background: #dc2626;
             transform: translate(-50%, -50%) scale(1.1);
@@ -203,8 +239,11 @@
         /* Edit Overlays */
         .edit-overlay {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -214,9 +253,17 @@
             pointer-events: none;
             backdrop-filter: blur(4px);
         }
-        .admin-mode .edit-overlay { opacity: 1; pointer-events: auto; }
-        .edit-icon { font-size: 2rem; margin-bottom: 10px; }
-        
+
+        .admin-mode .edit-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .edit-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
         .kids-toggle-label {
             font-size: 0.8rem;
             display: flex;
@@ -224,7 +271,7 @@
             gap: 8px;
             cursor: pointer;
             margin-top: 10px;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             padding: 5px 12px;
             border-radius: 20px;
         }
@@ -236,6 +283,7 @@
             gap: 20px;
             justify-content: center;
         }
+
         .btn-vtv {
             padding: 14px 45px;
             border: 2px solid #575c76;
@@ -248,150 +296,272 @@
             transition: 0.3s;
             border-radius: 8px;
         }
+
         .btn-vtv:hover {
             color: #fff;
             border-color: #fff;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
         }
+
         .btn-primary-vtv {
             background: #fff;
             color: #0b122b;
             border-color: #fff;
         }
+
         .btn-primary-vtv:hover {
             background: #e2e8f0;
             color: #000;
         }
 
         /* Profile Colors */
-        .color-1 { background: linear-gradient(135deg, #2563eb, #1e40af); }
-        .color-2 { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
-        .color-3 { background: linear-gradient(135deg, #db2777, #9d174d); }
-        .color-4 { background: linear-gradient(135deg, #059669, #065f46); }
-        
-        .hidden { display: none !important; }
-
-        @media (max-width: 480px) {
-            h1 { font-size: 2rem; }
-            .profiles-grid { gap: 20px; }
-            .profile-item { width: 120px; }
-            .profile-avatar { width: 110px; height: 110px; font-size: 3rem; }
-            .profile-name-input { font-size: 1rem; }
-            .kids-badge { padding: 2px 8px; font-size: 0.65rem; }
-            .subtitle { font-size: 0.9rem; margin-bottom: 25px; }
-            .actions-container { margin-top: 40px; flex-direction: column; gap: 12px; padding: 0 40px; }
-            .btn-vtv { width: 100%; padding: 12px; font-size: 0.8rem; }
-            #btnLogoutGlobal { border-color: rgba(239, 68, 68, 0.5) !important; color: #ef4444 !important; }
+        .color-1 {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
         }
 
-        /* PIN Pad Modal - iOS Glassmorphism Style 🎬 */
+        .color-2 {
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+        }
+
+        .color-3 {
+            background: linear-gradient(135deg, #db2777, #9d174d);
+        }
+
+        .color-4 {
+            background: linear-gradient(135deg, #059669, #065f46);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .profiles-grid {
+                gap: 20px;
+            }
+
+            .profile-item {
+                width: 120px;
+            }
+
+            .profile-avatar {
+                width: 110px;
+                height: 110px;
+                font-size: 3rem;
+            }
+
+            .profile-name-input {
+                font-size: 1rem;
+            }
+
+            .kids-badge {
+                padding: 2px 8px;
+                font-size: 0.65rem;
+            }
+
+            .subtitle {
+                font-size: 0.9rem;
+                margin-bottom: 25px;
+            }
+
+            .actions-container {
+                margin-top: 40px;
+                flex-direction: column;
+                gap: 12px;
+                padding: 0 40px;
+            }
+
+            .btn-vtv {
+                width: 100%;
+                padding: 12px;
+                font-size: 0.8rem;
+            }
+
+            #btnLogoutGlobal {
+                border-color: rgba(239, 68, 68, 0.5) !important;
+                color: #ef4444 !important;
+            }
+        }
+
+        /* Ultra-Premium iOS 26 "Floating" PIN Pad Style 🎬 */
         .pin-modal {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(25px) saturate(180%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(65px) saturate(180%) contrast(95%);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 10000;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
         }
-        .pin-modal.active { opacity: 1; pointer-events: auto; }
-        
-        .pin-content {
-            background: rgba(255, 255, 255, 0.08); /* Frosted Glass */
-            backdrop-filter: blur(45px);
-            padding: 50px 40px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            text-align: center;
-            max-width: 380px;
-            width: 90%;
-            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
-            transform: scale(0.9);
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .pin-modal.active .pin-content { transform: scale(1); }
 
-        .pin-title { 
-            font-size: 1.4rem; 
-            font-weight: 500;
-            color: #fff; 
-            margin-bottom: 40px;
-            letter-spacing: -0.5px;
+        .pin-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pin-content {
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            transform: translateY(30px);
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .pin-modal.active .pin-content {
+            transform: translateY(0);
+        }
+
+        .pin-header-text {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 400;
+            margin-bottom: 30px;
+            opacity: 0.9;
         }
 
         .pin-dots {
             display: flex;
             gap: 20px;
             justify-content: center;
-            margin-bottom: 50px;
+            margin-bottom: 70px;
         }
+
         .dot {
-            width: 14px; height: 14px;
+            width: 13px;
+            height: 13px;
+            border: 1.5px solid #fff;
             border-radius: 50%;
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
-            transition: all 0.3s ease;
+            background: transparent;
+            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
         }
-        .dot.filled { 
-            background: #fff; 
-            border-color: #fff; 
+
+        .dot.filled {
+            background: #fff;
             transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
         }
 
         .pin-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-            justify-items: center;
+            grid-template-columns: repeat(3, 85px);
+            gap: 20px 25px;
+            justify-content: center;
+            margin-bottom: 60px;
         }
+
         .pin-key {
-            width: 75px;
-            height: 75px;
+            width: 85px;
+            height: 85px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.12);
-            border: 1.5px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            font-size: 2.1rem;
-            font-weight: 400;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 300;
+            color: #fff;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .pin-key:hover { 
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.3);
+
+        .pin-key:active,
+        .pin-key.active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.92);
         }
-        .pin-key:active { 
-            background: rgba(255, 255, 255, 0.33);
-            transform: scale(0.9);
+
+        .pin-key.empty {
+            visibility: hidden;
         }
-        .pin-key.empty { visibility: hidden; }
-        .pin-key.backspace { font-size: 1rem; color: #94a3b8; }
-        .pin-close {
-            margin-top: 30px;
-            color: #94a3b8;
-            font-size: 0.9rem;
+
+        .pin-footer {
+            width: 100%;
+            max-width: 320px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 0 10px;
+        }
+
+        .pin-footer-btn {
             cursor: pointer;
+            font-size: 1rem;
+            color: #fff;
+            font-weight: 500;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+            padding: 10px;
         }
-        .shake { animation: shake 0.4s ease-in-out; }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
+
+        .pin-footer-btn:hover {
+            opacity: 1;
+        }
+
+        /* Lock Icon en Título si es necesario */
+        .ios-pin-title {
+            font-size: 1.6rem;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        @keyframes iosShake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20%,
+            60% {
+                transform: translateX(-10px);
+            }
+
+            40%,
+            80% {
+                transform: translateX(10px);
+            }
+        }
+
+        .pin-content.shake {
+            animation: iosShake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        /* Estilo de Tarjeta de telemetría (Polished) */
+        .playback-status-card {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            padding: 10px 5px;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
         }
 
         /* Lock Icon in Edit Mode */
         .lock-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
             padding: 5px 10px;
             border-radius: 12px;
@@ -402,20 +572,31 @@
             align-items: center;
             gap: 5px;
         }
-        .lock-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .lock-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
 
         /* --- ESTILOS SELECTOR DE AVATARES --- */
         .avatar-modal {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.8);
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(20px);
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 11000;
-            opacity: 0; pointer-events: none;
+            opacity: 0;
+            pointer-events: none;
             transition: 0.4s;
         }
-        .avatar-modal.active { opacity: 1; pointer-events: auto; }
-        
+
+        .avatar-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
         .avatar-selector-content {
             background: #0b122b;
             padding: 40px;
@@ -425,16 +606,16 @@
             max-height: 80vh;
             overflow-y: auto;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .avatar-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             gap: 20px;
             margin-top: 30px;
         }
-        
+
         .avatar-option {
             cursor: pointer;
             transition: 0.3s;
@@ -443,15 +624,27 @@
             border: 3px solid transparent;
             aspect-ratio: 1/1;
         }
-        .avatar-option:hover { transform: scale(1.05); border-color: rgba(255,255,255,0.3); }
-        .avatar-option.selected { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
-        
-        .avatar-img-choice {
-            width: 100%; height: 100%; object-fit: cover;
+
+        .avatar-option:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.3);
         }
-        
+
+        .avatar-option.selected {
+            border-color: #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        }
+
+        .avatar-img-choice {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         .profile-avatar img {
-            width: 100%; height: 100%; object-fit: cover;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         /* --- ESTILOS ONBOARDING (Nuevos Usuarios) --- */
@@ -464,8 +657,11 @@
             width: 100%;
             max-width: 500px;
         }
-        #firstProfileContainer.active { display: flex; }
-        
+
+        #firstProfileContainer.active {
+            display: flex;
+        }
+
         .setup-card {
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(20px);
@@ -474,21 +670,25 @@
             border-radius: 40px;
             width: 100%;
             text-align: center;
-            box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
         }
 
         .setup-avatar {
-            width: 160px; height: 160px;
+            width: 160px;
+            height: 160px;
             background: var(--color-1, linear-gradient(135deg, #2563eb, #1e40af));
             border-radius: 30px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 5rem; font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            font-weight: 800;
             margin: 0 auto 30px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
-            border: 4px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            border: 4px solid rgba(255, 255, 255, 0.1);
             color: #fff;
         }
-        
+
         .setup-input {
             width: 100%;
             background: rgba(255, 255, 255, 0.05);
@@ -503,18 +703,20 @@
             outline: none;
             margin-bottom: 25px;
         }
+
         .setup-input:focus {
             background: rgba(255, 255, 255, 0.1);
             border-color: #fff;
         }
     </style>
 </head>
+
 <body class="selection-mode" id="bodyRoot">
     <!-- Contenedor de Selección Normal (Antiguos) -->
     <div class="profile-container" id="selectionContainer">
         <h1 id="mainTitle">¿Quién está viendo?</h1>
         <p class="subtitle" id="mainSubtitle">Selecciona un perfil para empezar a disfrutar.</p>
-        
+
         <div class="profiles-grid" id="profilesGrid">
             <!-- Dinámico -->
         </div>
@@ -522,7 +724,9 @@
         <div class="actions-container">
             <button class="btn-vtv" id="btnAdmin">Administrar Perfiles</button>
             <button class="btn-vtv btn-primary-vtv hidden" id="btnFinish">Listo</button>
-            <button class="btn-vtv" id="btnLogoutGlobal" style="border-color: rgba(255,255,255,0.1); color: #94a3b8; font-size: 0.8rem;">Cerrar Sesión en esta cuenta</button>
+            <button class="btn-vtv" id="btnLogoutGlobal"
+                style="border-color: rgba(255,255,255,0.1); color: #94a3b8; font-size: 0.8rem;">Cerrar Sesión en esta
+                cuenta</button>
         </div>
     </div>
 
@@ -531,25 +735,26 @@
         <div class="setup-card">
             <h1 style="font-size: 2.5rem; margin-bottom: 10px;">¡Bienvenido!</h1>
             <p class="subtitle" style="margin-bottom: 40px;">¿Cómo quieres que te llamemos en VivoTV?</p>
-            
+
             <div class="setup-avatar" id="setupAvatar">?</div>
-            
-            <input type="text" id="setupName" class="setup-input" placeholder="Escribe tu nombre" maxlength="15" autofocus>
-            
+
+            <input type="text" id="setupName" class="setup-input" placeholder="Escribe tu nombre" maxlength="15"
+                autofocus>
+
             <button class="btn-vtv btn-primary-vtv" id="btnCreateFirst" style="width: 100%;">
                 Empezar a disfrutar
             </button>
-            
+
             <p style="margin-top: 25px; color: #64748b; font-size: 0.85rem; cursor: pointer;" onclick="logoutGlobal()">
                 Cerrar sesión en esta cuenta
             </p>
         </div>
     </div>
 
-    <!-- PIN Pad Modal -->
+    <!-- PIN Pad Modal (iOS High Fidelity Overhaul) -->
     <div id="pinModal" class="pin-modal">
         <div class="pin-content" id="pinContent">
-            <h2 class="pin-title" id="pinLabel">Introduce PIN</h2>
+            <p class="pin-header-text" id="pinHeaderText">Desliza hacia arriba para Face ID o usa el código</p>
             <div class="pin-dots" id="pinDots">
                 <div class="dot"></div>
                 <div class="dot"></div>
@@ -557,20 +762,22 @@
                 <div class="dot"></div>
             </div>
             <div class="pin-grid">
-                <div class="pin-key" onclick="pressPin('1')">1</div>
-                <div class="pin-key" onclick="pressPin('2')">2</div>
-                <div class="pin-key" onclick="pressPin('3')">3</div>
-                <div class="pin-key" onclick="pressPin('4')">4</div>
-                <div class="pin-key" onclick="pressPin('5')">5</div>
-                <div class="pin-key" onclick="pressPin('6')">6</div>
-                <div class="pin-key" onclick="pressPin('7')">7</div>
-                <div class="pin-key" onclick="pressPin('8')">8</div>
-                <div class="pin-key" onclick="pressPin('9')">9</div>
+                <div class="pin-key" data-key="1" onclick="handlePinKey('1')">1</div>
+                <div class="pin-key" data-key="2" onclick="handlePinKey('2')">2</div>
+                <div class="pin-key" data-key="3" onclick="handlePinKey('3')">3</div>
+                <div class="pin-key" data-key="4" onclick="handlePinKey('4')">4</div>
+                <div class="pin-key" data-key="5" onclick="handlePinKey('5')">5</div>
+                <div class="pin-key" data-key="6" onclick="handlePinKey('6')">6</div>
+                <div class="pin-key" data-key="7" onclick="handlePinKey('7')">7</div>
+                <div class="pin-key" data-key="8" onclick="handlePinKey('8')">8</div>
+                <div class="pin-key" data-key="9" onclick="handlePinKey('9')">9</div>
                 <div class="pin-key empty"></div>
-                <div class="pin-key" onclick="pressPin('0')">0</div>
-                <div class="pin-key backspace" onclick="pressPin('back')">⌫</div>
+                <div class="pin-key" data-key="0" onclick="handlePinKey('0')">0</div>
+                <div class="pin-key empty"></div>
             </div>
-            <div class="pin-close" id="btnCancelPin">Cancelar</div>
+            <div class="pin-footer">
+                <span class="pin-footer-btn" onclick="closePinPad()">Cancelar</span>
+            </div>
         </div>
     </div>
 
@@ -579,11 +786,11 @@
         <div class="avatar-selector-content">
             <h2 style="font-size: 2rem; margin-bottom: 10px;">Elige tu avatar</h2>
             <p style="color: #94a3b8; margin-bottom: 30px;">Selecciona el personaje que más te guste.</p>
-            
+
             <div class="avatar-grid" id="avatarGrid">
                 <!-- Se llena dinámicamente -->
             </div>
-            
+
             <div style="margin-top: 40px; display: flex; gap: 15px;">
                 <button class="btn-vtv" id="btnCancelAvatar" style="flex: 1;">Cancelar</button>
             </div>
@@ -591,11 +798,8 @@
     </div>
 
     <script type="module">
-        import { CONFIG } from './config.js';
+        import { CONFIG, supabase } from './config.js';
         import { showToast } from './utils.js';
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-        const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
         let isEditing = false;
         let profiles = [];
@@ -609,7 +813,7 @@
 
         const grid = document.getElementById('profilesGrid');
         const mainSubtitle = document.getElementById('mainSubtitle');
-        
+
         const selectionContainer = document.getElementById('selectionContainer');
         const firstProfileContainer = document.getElementById('firstProfileContainer');
         const setupNameInput = document.getElementById('setupName');
@@ -658,7 +862,7 @@
 
             // 2. Obtener tiempo de servidor (Sync) - Usamos el RPC original o fallback si falla
             const { data: syncData, error: syncError } = await supabase.rpc('vivotv_get_profiles_synced');
-            
+
             if (dbError) {
                 console.error('[VivoTV] Error cargando perfiles:', dbError);
                 showToast('Error cargando los perfiles.', 'error');
@@ -666,7 +870,7 @@
             }
 
             profiles = dbData || [];
-            
+
             // Corrección de Fecha: Asegurar que extraemos la propiedad correcta si es un objeto
             if (syncData && syncData.server_now) {
                 globalServerNow = new Date(syncData.server_now);
@@ -687,7 +891,7 @@
 
         function renderProfiles() {
             grid.innerHTML = '';
-            
+
             if (profiles.length === 0 && !isEditing) {
                 mainTitle.textContent = "¡Bienvenido a VivoTV!";
                 mainSubtitle.textContent = "Crea tu primer perfil para empezar a disfrutar.";
@@ -731,7 +935,7 @@
                 `;
 
                 if (_isOccupied(p)) item.classList.add('occupied');
-                
+
                 item.onclick = (e) => {
                     if (isEditing) {
                         if (e.target.closest('.profile-avatar')) openAvatarPicker(p.id);
@@ -761,12 +965,12 @@
         window.addNewProfile = async () => {
             const name = prompt("Nombre del nuevo perfil (máx 15 caracteres):");
             if (!name || name.trim() === "") return;
-            
+
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
             const randomColor = `color-${Math.floor(Math.random() * 4) + 1}`;
-            
+
             const { error } = await supabase
                 .from('vivotv_profiles')
                 .insert([{
@@ -787,39 +991,69 @@
 
         function _isOccupied(p, nowOverride = null) {
             if (!p.last_heartbeat) return false;
-            
+
             // --- CÁLCULO DE PRECISIÓN (Fase Auditoria) ---
             const last = new Date(p.last_heartbeat).getTime();
-            const now  = (nowOverride || globalServerNow).getTime(); 
-            
+            const now = (nowOverride || globalServerNow).getTime();
+
             const diff = (now - last) / 1000;
             // Un perfil está ocupado si el latido ocurrió en los últimos 30 segundos
             // Quitamos la restricción diff >= 0 para mayor tolerancia a microsincronización
-            return diff < 30; 
+            return diff < 30;
         }
 
-        window.forceRelease = async (id, nowPlaying = null) => {
-            // RESTRICCIÓN SOLICITADA: No permitir liberar si está viendo algo activamente
-            if (nowPlaying) {
-                showToast(`No es posible liberar este perfil: está viendo "${nowPlaying.title}" en este momento.`, 'error', 5000);
+        window.forceRelease = async (id) => {
+            // --- VERIFICACIÓN DE SEGURIDAD PRE-VUELO (Fase 17) ---
+            // Consultamos la DB directamente para evitar el lag de la UI
+            const { data: freshProfile, error: fetchError } = await supabase
+                .from('vivotv_profiles')
+                .select('now_playing')
+                .eq('id', id)
+                .single();
+
+            if (fetchError) {
+                console.error('Error verificando estado para liberación:', fetchError);
+                return;
+            }
+
+            if (freshProfile && freshProfile.now_playing && freshProfile.now_playing.title) {
+                showToast(`🔒 BLOQUEO ACTIVADO: No puedes liberar este perfil porque está viendo: "${freshProfile.now_playing.title}".`, 'error', 8000);
+                // Forzamos actualización de la UI para que se vea el cambio
+                loadProfilesFromDB();
                 return;
             }
 
             if (!confirm('¿Deseas liberar este perfil a la fuerza? Se cerrará la sesión en el otro dispositivo.')) return;
-            
+
             // 1. Liberar en DB para persistencia
             const { error } = await supabase.rpc('vivotv_release_session', { pid: id });
-            
-            // 2. Enviar señal de expulsión inmediata por Broadcast (Fase 10X)
-            const channel = supabase.channel(`kickout-${id}`);
+
+            // 2. Enviar señal de expulsión inmediata por Broadcast (Relay Robusto)
+            const channel = supabase.channel(`kickout-${id}`, {
+                config: { 
+                    broadcast: { self: false, ack: true } 
+                }
+            });
+
+            console.log(`[Realtime] Intentando suscribir para expulsión: kickout-${id}`);
+
             channel.subscribe(async (status) => {
+                console.log(`[Realtime] Estado suscripción expulsión: ${status}`);
                 if (status === 'SUBSCRIBED') {
-                    await channel.send({
+                    console.log(`[Realtime] Enviando señal de expulsión...`);
+                    const resp = await channel.send({
                         type: 'broadcast',
                         event: 'FORCE_EXIT',
                         payload: { profileId: id }
                     });
-                    setTimeout(() => supabase.removeChannel(channel), 2000);
+                    
+                    console.log(`[Realtime] Respuesta de envío broadcast:`, resp);
+                    
+                    // Dejamos el canal abierto un poco más para asegurar entrega
+                    setTimeout(() => {
+                        console.log(`[Realtime] Cerrando canal temporal de expulsión.`);
+                        supabase.removeChannel(channel);
+                    }, 5000);
                 }
             });
 
@@ -833,9 +1067,9 @@
         window.updateProfileName = (id, newName) => {
             const p = profiles.find(x => x.id === id);
             if (!p) return;
-            
+
             p.name = newName;
-            
+
             // --- OPTIMIZACIÓN: DEBOUNCE (Fase 11) ---
             clearTimeout(updateTimers[id]);
             updateTimers[id] = setTimeout(async () => {
@@ -843,7 +1077,7 @@
                     .from('vivotv_profiles')
                     .update({ name: newName })
                     .eq('id', id);
-                
+
                 if (error) {
                     console.error('[VivoTV] Error:', error);
                     showToast('Error al sincronizar nombre', 'error');
@@ -861,7 +1095,7 @@
                     .from('vivotv_profiles')
                     .update({ is_kids: checked })
                     .eq('id', id);
-                
+
                 if (error) {
                     showToast('Error al cambiar modo parental', 'error');
                 } else {
@@ -871,101 +1105,137 @@
             }
         };
 
-        async function selectProfile(p) {
-            if (isEditing) return;
+        // --- GESTIÓN DE SELECCIÓN CONSOLIDADA ---
 
-            // --- BLOQUEO ESTRICTO (Fase Precision) ---
-            // Re-sincronizar estado y tiempo del servidor inmediatamente antes de entrar
-            const { data: latestProfiles, error: syncError } = await supabase.rpc('vivotv_get_profiles_synced');
-            
-            if (!syncError && latestProfiles) {
-                const dbP = latestProfiles.find(x => x.id === p.id);
-                const freshServerNow = new Date(latestProfiles[0].server_now);
-                
-                if (dbP && _isOccupied(dbP, freshServerNow)) {
-                    showToast("❌ Perfil en uso. Por favor, elige otro.", "error");
-                    // Refrescar vista local con los datos más recientes
-                    profiles = latestProfiles;
-                    globalServerNow = freshServerNow;
-                    renderProfiles();
-                    return;
-                }
-            }
-
-            // Validar PIN si existe
-            if (p.pin) {
-                const entered = await showPinPad(`🔒 Perfil Protegido`);
-                if (!entered) return;
-                if (entered !== p.pin) {
-                    shakePinPad();
-                    return;
-                }
-            }
-
-            // --- LIMPIEZA DE SESIÓN (Fase Final: Solo perfil) ---
-            sessionStorage.removeItem('vivotv_current_profile');
-
-            console.log(`[VivoTV] Seleccionando Perfil: ${p.name} (Modos Niños: ${p.is_kids})`);
-
-            // --- SESIÓN TEMPORAL (Fase 8) ---
-            sessionStorage.setItem('vivotv_current_profile', JSON.stringify(p));
-            window.location.href = 'index.html';
-        }
-
-        // --- SISTEMA DE PIN (Fase 7) ---
-        let pinCallback = null;
-        let currentPinInput = "";
+        // ==========================================================
+        // SISTEMA DE PIN ESTILO iOS (Fase 17: Premium Experience)
+        // ==========================================================
+        let currentPin = '';
+        let pinResolve = null;
+        let pinReject = null;
         const pinModal = document.getElementById('pinModal');
-        const pinDots = document.querySelectorAll('.dot');
         const pinLabel = document.getElementById('pinLabel');
 
-        async function showPinPad(title) {
-            return new Promise(resolve => {
-                pinLabel.textContent = title;
-                currentPinInput = "";
+        /**
+         * Abre el teclado numérico iOS y resuelve una promesa con el PIN ingresado.
+         * @param {string} title - El título a mostrar en el modal (ej: "Introduce tu código")
+         */
+        window.showPinPad = (title) => {
+            return new Promise((resolve) => {
+                const headerText = document.getElementById('pinHeaderText');
+                if (headerText) {
+                    headerText.textContent = title || "Desliza hacia arriba para Face ID o usa el código";
+                }
+                currentPin = '';
                 updatePinDots();
                 pinModal.classList.add('active');
-                pinCallback = resolve;
+                pinResolve = resolve;
             });
-        }
+        };
 
-        function closePinPad(value = null) {
+        window.closePinPad = () => {
             pinModal.classList.remove('active');
-            if (pinCallback) pinCallback(value);
-            pinCallback = null;
-        }
+            if (pinResolve) pinResolve(null);
+            pinResolve = null;
+        };
 
-        window.pressPin = (key) => {
-            if (key === 'back') {
-                currentPinInput = currentPinInput.slice(0, -1);
-            } else if (currentPinInput.length < 4) {
-                currentPinInput += key;
+        window.handlePinKey = (val) => {
+            if (val === 'back') {
+                currentPin = currentPin.slice(0, -1);
+            } else if (currentPin.length < 4) {
+                currentPin += val;
+
+                // Animación visual de la tecla (Flash blanco)
+                const keyEl = document.querySelector(`.pin-key[data-key="${val}"]`);
+                if (keyEl) {
+                    keyEl.classList.add('active');
+                    setTimeout(() => keyEl.classList.remove('active'), 150);
+                }
             }
+
             updatePinDots();
 
-            if (currentPinInput.length === 4) {
-                const val = currentPinInput;
-                setTimeout(() => closePinPad(val), 200);
+            if (currentPin.length === 4) {
+                const result = currentPin;
+                setTimeout(() => {
+                    pinModal.classList.remove('active');
+                    if (pinResolve) pinResolve(result);
+                    pinResolve = null;
+                }, 150);
             }
         };
 
         function updatePinDots() {
-            pinDots.forEach((dot, i) => {
-                dot.classList.toggle('filled', i < currentPinInput.length);
+            const dots = document.querySelectorAll('#pinDots .dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('filled', idx < currentPin.length);
             });
         }
 
-        function shakePinPad() {
+        /**
+         * Realiza una animación de vibración (shake) en caso de error.
+         */
+        window.shakePinPad = () => {
             const content = document.getElementById('pinContent');
             content.classList.add('shake');
-            setTimeout(() => {
-                content.classList.remove('shake');
-                currentPinInput = "";
-                updatePinDots();
-            }, 500);
-        }
+            currentPin = '';
+            updatePinDots();
+            setTimeout(() => content.classList.remove('shake'), 400);
+        };
 
-        document.getElementById('btnCancelPin').onclick = () => closePinPad(null);
+        // Escucha de teclado físico (Optimizado para PC)
+        document.addEventListener('keydown', (e) => {
+            if (!pinModal.classList.contains('active')) return;
+
+            if (e.key >= '0' && e.key <= '9') {
+                handlePinKey(e.key);
+            } else if (e.key === 'Backspace') {
+                handlePinKey('back');
+            } else if (e.key === 'Escape') {
+                closePinPad();
+            }
+        });
+
+        // ==========================================================
+        // GESTIÓN DE PERFILES Y PIN
+        // ==========================================================
+        window.selectProfile = async (p) => {
+            if (isEditing) return;
+
+            // 1. Re-verificar ocupación antes de entrar (Seguridad 10X)
+            const { data: syncData } = await supabase.rpc('vivotv_get_profiles_synced');
+            if (syncData && syncData.profiles) {
+                const dbP = syncData.profiles.find(x => x.id === p.id);
+                const freshNow = new Date(syncData.server_now);
+
+                if (dbP && _isOccupied(dbP, freshNow)) {
+                    showToast("❌ Este perfil se acaba de ocupar. Elige otro.", "error");
+                    profiles = syncData.profiles;
+                    renderProfiles();
+                    return;
+                }
+
+                // Usar la versión más fresca del perfil si es posible
+                if (dbP) p = dbP;
+            }
+
+            // 2. Validar PIN si existe usando el nuevo sistema iOS
+            if (p.pin) {
+                const entered = await showPinPad(`🔒 Perfil Protegido`);
+                if (entered === null) return; // Cancelado
+
+                if (entered !== p.pin) {
+                    shakePinPad();
+                    showToast("PIN incorrecto", "error");
+                    return;
+                }
+            }
+
+            // --- SESIÓN TEMPORAL (Fase 8) ---
+            sessionStorage.removeItem('vivotv_current_profile');
+            sessionStorage.setItem('vivotv_current_profile', JSON.stringify(p));
+            window.location.href = 'index.html';
+        };
 
         window.manageProfilePin = async (id) => {
             const p = profiles.find(x => x.id === id);
@@ -976,7 +1246,8 @@
                 const old = await showPinPad("Introduce PIN actual");
                 if (old === null) return;
                 if (old !== p.pin) {
-                    alert("PIN incorrecto. No se puede cambiar.");
+                    shakePinPad();
+                    showToast("PIN incorrecto", "error");
                     return;
                 }
             }
@@ -994,14 +1265,14 @@
                     .update({ pin: newPin })
                     .eq('id', id);
                 if (error) {
-                    alert("Error guardando PIN.");
+                    showToast("Error guardando PIN.", "error");
                     console.error(error);
                 } else {
                     showToast("PIN actualizado con éxito.", "success");
                     renderProfiles();
                 }
             } else {
-                alert("Los PINs no coinciden.");
+                showToast("Los PINs no coinciden.", "warning");
             }
         };
 
@@ -1023,7 +1294,7 @@
             document.getElementById('btnLogoutGlobal').classList.remove('hidden');
             mainTitle.textContent = '¿Quién está viendo?';
             mainSubtitle.textContent = 'Selecciona un perfil para empezar a disfrutar.';
-            
+
             // Forzar recarga final
             await loadProfilesFromDB();
         };
@@ -1037,11 +1308,11 @@
         };
 
         btnAdmin.addEventListener('click', () => {
-             document.getElementById('btnLogoutGlobal').classList.add('hidden');
+            document.getElementById('btnLogoutGlobal').classList.add('hidden');
         });
-        
+
         btnFinish.addEventListener('click', () => {
-             document.getElementById('btnLogoutGlobal').classList.remove('hidden');
+            document.getElementById('btnLogoutGlobal').classList.remove('hidden');
         });
 
         // --- LÓGICA DE BIENVENIDA ---
@@ -1056,7 +1327,7 @@
                 showToast("Por favor, ingresa un nombre", "warning");
                 return;
             }
-            
+
             btnCreateFirst.disabled = true;
             btnCreateFirst.textContent = "Creando...";
 
@@ -1102,7 +1373,7 @@
         function renderAvatarGrid() {
             avatarGrid.innerHTML = '';
             const p = profiles.find(x => x.id === currentEditingProfileId);
-            
+
             AVATAR_LIST.forEach(av => {
                 const opt = document.createElement('div');
                 opt.className = `avatar-option ${p?.avatar_url === av.url ? 'selected' : ''}`;
@@ -1115,9 +1386,9 @@
         async function selectAvatar(url) {
             const id = currentEditingProfileId;
             avatarModal.classList.remove('active');
-            
+
             showToast("Guardando avatar...", "info");
-            
+
             const { error } = await supabase
                 .from('vivotv_profiles')
                 .update({ avatar_url: url })
@@ -1125,7 +1396,7 @@
 
             if (error) {
                 console.error('[VivoTV] Supabase Error:', error);
-                
+
                 if (error.message && error.message.includes('column "avatar_url" of relation "vivotv_profiles" does not exist')) {
                     showToast("❌ Error: Debes ejecutar el script SQL en Supabase para habilitar avatares.", "error", 8000);
                 } else {
@@ -1135,7 +1406,7 @@
                 // Actualizar localmente solo si el server confirmó
                 const p = profiles.find(x => x.id === id);
                 if (p) p.avatar_url = url;
-                
+
                 showToast("Avatar actualizado con éxito", "success");
                 renderProfiles();
             }
@@ -1150,4 +1421,5 @@
         }, 10000);
     </script>
 </body>
+
 </html>

@@ -793,9 +793,23 @@ async function startHeartbeat() {
 }
 
 // Expone una función global para que player.js actualice el estado
-window.updateGlobalPlaybackStatus = (status) => {
+window.updateGlobalPlaybackStatus = async (status) => {
+    const oldTitle = window.VIVOTV_VIEWING_STATUS?.title;
     window.VIVOTV_VIEWING_STATUS = status;
+    
     console.log('[Telemetry] Estado actualizado:', status?.title || 'Limpiando...');
+
+    // --- GUARDADO REACTIVO (Fase 16) ---
+    // Si el título cambió, forzamos un guardado inmediato en la DB
+    if (status?.title && status.title !== oldTitle && supabase && currentProfile) {
+        try {
+            await supabase
+                .from('vivotv_profiles')
+                .update({ now_playing: status })
+                .eq('id', currentProfile.id);
+            logDebug('[Telemetry] Guardado instantáneo exitoso.');
+        } catch(e) { console.warn('Error en guardado instantáneo telemetry:', e); }
+    }
 };
 
 // ================================================
@@ -871,32 +885,53 @@ async function stopHeartbeat() {
 
 // --- SISTEMA DE EXPULSIÓN (Fase 16: Realtime) ---
 function subscribeToSessionChanges() {
-    if (!supabase || !currentProfile) return;
+    if (!supabase || !currentProfile) {
+        console.warn('[Realtime] No se puede suscribir: falta Supabase o Perfil.');
+        return;
+    }
 
+    const channelName = `kickout-${currentProfile.id}`;
     if (sessionChannel) supabase.removeChannel(sessionChannel);
 
-    // ESCUCHA DOBLE: 
-    // 1. postgres_changes (Cierre por DB/Timeout)
-    // 2. broadcast (Cierre inmediato por clic en LIBERAR)
+    console.log(`[Realtime] Suscribiéndose a canal de expulsión: ${channelName}`);
+
     sessionChannel = supabase
-        .channel(`kickout-${currentProfile.id}`)
+        .channel(channelName, {
+            config: {
+                broadcast: { ack: true }
+            }
+        })
         .on('postgres_changes', { 
             event: 'UPDATE', 
             schema: 'public', 
             table: 'vivotv_profiles',
             filter: `id=eq.${currentProfile.id}`
         }, (payload) => {
+            console.log('[Realtime] Cambio detectado en perfil via Postgres:', payload);
             const { last_heartbeat } = payload.new;
             if (last_heartbeat === null) {
-                console.warn('[VivoTV] Sesión finalizada por base de datos.');
+                console.warn('[Realtime] Sesión invalidada por base de datos.');
                 handleRemoteLogout();
             }
         })
         .on('broadcast', { event: 'FORCE_EXIT' }, (payload) => {
-            console.warn('[VivoTV] Expulsión inmediata recibida vía Broadcast.');
-            handleRemoteLogout();
-        })
-        .subscribe();
+            console.log('[Realtime] Señal de expulsión recibida:', payload);
+            // --- FILTRO DE SEGURIDAD (Fase 18) ---
+            // Solo cerramos si el ID del mensaje coincide exactamente con nuestro perfil actual
+            if (payload && payload.payload && payload.payload.profileId === currentProfile.id) {
+                console.warn('[Realtime] Expulsión confirmada para este perfil.');
+                handleRemoteLogout();
+            } else {
+                console.log('[Realtime] Señal ignorada (pertenece a otro perfil).');
+            }
+        });
+
+    sessionChannel.subscribe((status) => {
+        console.log(`[Realtime] Estado del canal ${channelName}: ${status}`);
+        if (status === 'CHANNEL_ERROR') {
+            console.error('[Realtime] Error crítico en suscripción de canal.');
+        }
+    });
 }
 
 function handleRemoteLogout() {
