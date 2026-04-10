@@ -57,86 +57,95 @@ export function filterItemsByProfile(items, currentProfile) {
 }
 
 /**
- * Sincronización del catálogo disponible desde Supabase
- * Único Punto de Verdad (Single Source of Truth)
+ * Sincronización Progresiva por Lotes
+ * Evita saturación y permite actualizaciones en tiempo real
  */
 export async function fetchAvailableIds(supabase) {
-    if (!supabase) {
-        console.error('[VivoTV] Supabase client is null');
-        return;
-    }
+    if (!supabase) return;
 
     try {
-        console.log('[VivoTV] 🔄 Sincronizando Catálogo Maestro...');
+        console.log('[VivoTV] 🔄 Iniciando Sincronización Progresiva...');
 
-        // Reinicio de estado para evitar contaminación
-        availableMovies = new Set();
-        availableSeries = new Set();
-        availableIds = new Set();
-        DB_CATALOG = [];
+        const BATCH_SIZE = 200;
+        let hasMore = true;
+        let offset = 0;
 
-        // 1. Cargar desde 'content' (Fuente Principal y Metadatos)
-        console.log('[VivoTV] 📡 Consultando tabla "content" (TMDB_ID, TYPE)...');
-        const { data: contents, error: err1 } = await supabase
-            .from('content')
-            .select('tmdb_id, content_type');
-        
-        if (err1) {
-            console.warn('[VivoTV] ⚠️ Error parcial en tabla content (Posible columna faltante o RLS):', err1.message);
+        // Limpieza parcial solo si es la primera carga del ciclo
+        if (offset === 0) {
+            window.DB_CATALOG = [];
+            // Nota: availableIds no se limpia para permitir persistencia entre lotes
         }
 
-        if (contents && contents.length > 0) {
-            DB_CATALOG = contents;
-            contents.forEach(item => {
-                const rawId = item.tmdb_id?.toString() || '';
-                const strId = rawId.trim();
-                if (!strId) return;
-
-                availableIds.add(strId);
-                
-                const type = (item.content_type || '').toLowerCase();
-                if (type === 'movie' || type === 'pelicula') {
-                    availableMovies.add(strId);
-                } else {
-                    availableSeries.add(strId);
+        // --- MODO RÁPIDO: VIDEO_SOURCES (DISPONIBILIDAD REAL) ---
+        // Solo lo que esté aquí activará el badge de "DISPONIBLE"
+        const { data: quickSources } = await supabase.from('video_sources').select('tmdb_id, type');
+        if (quickSources) {
+            console.log(`[VivoTV] 🎥 ${quickSources.length} fuentes de video detectadas (Disponibilidad Real).`);
+            quickSources.forEach(item => {
+                const id = item.tmdb_id?.toString().trim();
+                if (id) {
+                    availableIds.add(id);
+                    if (item.type === 'movie' || item.type === 'pelicula') availableMovies.add(id);
+                    else availableSeries.add(id);
                 }
             });
-            console.log(`[VivoTV] 📥 ${contents.length} registros cargados desde "content".`);
+            window.availableIds = availableIds;
+            window.availableMovies = availableMovies;
+            window.availableSeries = availableSeries;
+            // Notificar cambios de disponibilidad
+            dispatchBatchEvent(quickSources);
         }
 
-        // 2. Cargar desde 'video_sources' (Refuerzo de Disponibilidad Directa)
-        console.log('[VivoTV] 📡 Consultando tabla "video_sources"...');
-        const { data: sources, error: err2 } = await supabase.from('video_sources').select('tmdb_id, type');
-        
-        if (sources && !err2) {
-            sources.forEach(item => {
-                const rawId = item.tmdb_id?.toString() || '';
-                const strId = rawId.trim();
-                if (!strId) return;
+        // --- MODO LOTE: CONTENT (MEMORIA DE METADATOS) ---
+        // Estos items se guardan para búsqueda y visualización, pero NO activan disponibilidad automática
+        while (hasMore) {
+            console.log(`[VivoTV] 📡 Cargando lote de metadatos: ${offset} - ${offset + BATCH_SIZE}`);
+            
+            const { data: batch, error } = await supabase
+                .from('content')
+                .select('tmdb_id, content_type')
+                .range(offset, offset + BATCH_SIZE - 1);
 
-                availableIds.add(strId);
+            if (error) {
+                console.warn('[VivoTV] ⚠️ Error en lote de metadatos:', error.message);
+                hasMore = false;
+                break;
+            }
+
+            if (!batch || batch.length === 0) {
+                hasMore = false;
+                break;
+            }
+
+            console.log(`[VivoTV] 📥 Recibidos ${batch.length} items de metadatos.`);
+
+            // Procesar lote de metadatos (Cache local)
+            if (!window.DB_CATALOG) window.DB_CATALOG = [];
+            
+            batch.forEach(item => {
+                const id = item.tmdb_id?.toString().trim();
+                if (!id) return;
                 
-                const type = (item.type || '').toLowerCase();
-                if (type === 'movie' || type === 'pelicula') {
-                    availableMovies.add(strId);
-                } else {
-                    availableSeries.add(strId);
-                }
+                // Guardamos en el catálogo maestro
+                const exists = window.DB_CATALOG.some(db => db.tmdb_id === id);
+                if (!exists) window.DB_CATALOG.push(item);
             });
+
+            if (batch.length < BATCH_SIZE) hasMore = false;
+            offset += BATCH_SIZE;
+
+            await new Promise(r => setTimeout(r, 50));
         }
 
-        // Sincronización con el objeto global para acceso cross-module (Legacy/SPA Support)
-        window.availableIds = availableIds;
-        window.availableMovies = availableMovies;
-        window.availableSeries = availableSeries;
-        window.DB_CATALOG = DB_CATALOG;
-
-        console.log(`[VivoTV] ✅ Sincronización exitosa: ${availableIds.size} títulos detectados.`);
-        
-    } catch (e) { 
-        console.error('[VivoTV] ❌ Error crítico en fetchAvailableIds:', e);
-        showToast('Error sincronizando biblioteca.');
+        console.log(`[VivoTV] ✅ Sincronización Progresiva Completa. Disponibles: ${availableIds.size}. Conocidos: ${window.DB_CATALOG?.length || 0}.`);
+    } catch (e) {
+        console.error('[VivoTV] ❌ Fallo en sincronización:', e);
     }
+}
+
+function dispatchBatchEvent(items) {
+    const ids = items.map(i => i.tmdb_id?.toString().trim()).filter(id => id);
+    window.dispatchEvent(new CustomEvent('batchLoaded', { detail: { ids } }));
 }
 
 /**

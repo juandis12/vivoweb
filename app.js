@@ -1,15 +1,12 @@
-import { CONFIG } from './config.js';
+import { CONFIG, supabase } from './config.js';
 import { TMDB_SERVICE, CATALOG_UI } from './tmdb.js';
 import { PLAYER_LOGIC, setSupabase } from './player.js';
 import { showToast } from './utils.js';
 
-// ---- SUPABASE ----
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-let supabase;
-try {
-    supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+// Usar instancia única centralizada
+if (supabase) {
     setSupabase(supabase);
-} catch(e) { console.warn('Supabase no disponible:', e); }
+}
 
 // ---- FUNCIONES DE DEBUG ----
 function fatalLog(msg) {
@@ -1600,49 +1597,46 @@ if (document.readyState === 'loading') {
     initAppForPage();
 }
 
-// Listener para actualizar availableIds cuando se agrega contenido
-window.addEventListener('contentAdded', async (e) => {
-    const { tmdb_id, content_type } = e.detail;
-    if (window.availableIds) window.availableIds.add(tmdb_id);
-    
-    // Actualizar badges en pantalla para este item específico
-    document.querySelectorAll('.movie-card').forEach(card => {
+// Listener PROGRESIVO para actualizar la UI conforme llegan los lotes
+window.addEventListener('batchLoaded', (e) => {
+    const { ids } = e.detail;
+    if (!ids || !ids.length) return;
+
+    // Actualizar badges en pantalla SOLO para los IDs recibidos en este lote
+    const cards = document.querySelectorAll('.movie-card');
+    cards.forEach(card => {
         const cardTmdbId = card.dataset.tmdbId;
-        if (cardTmdbId === tmdb_id) {
-            const badge = card.querySelector('.available-badge, .coming-soon-badge');
+        if (ids.includes(cardTmdbId)) {
+            const badge = card.querySelector('.coming-soon-badge');
             if (badge) {
-                badge.className = 'available-badge';
-                badge.innerHTML = '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> DISPONIBLE';
+                // Aplicar clase de animación
+                badge.classList.add('availability-pop');
+                
+                setTimeout(() => {
+                    badge.className = 'available-badge';
+                    badge.innerHTML = '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> DISPONIBLE';
+                }, 300);
             }
         }
     });
 });
 
-// Actualización en tiempo real de disponibles cada 30 segundos
+// Listener heredado para compatibilidad
+window.addEventListener('contentAdded', async (e) => {
+    const { tmdb_id } = e.detail;
+    if (window.availableIds) window.availableIds.add(tmdb_id);
+    window.dispatchEvent(new CustomEvent('batchLoaded', { detail: { ids: [tmdb_id] } }));
+});
+
+// Sincronización continua de bajo impacto (Solo cada 2 minutos)
 setInterval(async () => {
     try {
-        await fetchAvailableIds(); // Esta función de catalog.js ya actualiza window.availableIds
-        
-        // Actualizar todos los badges en pantalla según el nuevo estado global
-        document.querySelectorAll('.movie-card').forEach(card => {
-            const tmdbId = card.dataset.tmdbId;
-            const isAvail = window.availableIds?.has(tmdbId);
-            
-            const badge = card.querySelector('.available-badge, .coming-soon-badge');
-            if (badge) {
-                if (isAvail) {
-                    badge.className = 'available-badge';
-                    badge.innerHTML = '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> DISPONIBLE';
-                } else {
-                    badge.className = 'coming-soon-badge';
-                    badge.innerHTML = 'PRÓXIMAMENTE';
-                }
-            }
-        });
+        console.log('[VivoTV] 🔄 Iniciando refresh de catálogo en segundo plano...');
+        await fetchAvailableIds(); 
     } catch (e) {
         console.warn('Error actualizando disponibles:', e);
     }
-}, 30000); // 30 segundos
+}, 120000); // 2 minutos para no saturar
 
 // Manejo de Flechas
 document.addEventListener('click', (e) => {

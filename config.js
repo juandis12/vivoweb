@@ -23,3 +23,8 @@ export const CONFIG = {
         window.location.protocol !== 'file:'
     )
 };
+
+// Instancia Única de Supabase (Fase 11: Estabilidad)
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+export const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+window.supabase = supabase; // Disponibilidad global para scripts no-módulos

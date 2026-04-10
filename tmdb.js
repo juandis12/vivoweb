@@ -1,8 +1,4 @@
-import { CONFIG } from './config.js';
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-// Cliente Supabase para guardar metadatos
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+import { CONFIG, supabase } from './config.js';
 
 // Helper para escapar HTML y prevenir XSS (Fase 3: Seguridad)
 function _escapeHTML(str) {
@@ -64,35 +60,38 @@ export const TMDB_SERVICE = {
     async getDetails(id, type = 'movie') {
         const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
         
-        // Guardar en DB si no existe
+        // --- OPTIMIZACIÓN VIVOTV: Evitar llamadas redundantes y Errores 406 ---
         if (data && data.id) {
-            try {
-                const { data: existing } = await supabase
-                    .from('content')
-                    .select('id')
-                    .eq('tmdb_id', data.id.toString())
-                    .eq('content_type', type === 'tv' ? 'series' : 'movie')
-                    .single();
-                
-                if (!existing) {
-                    // Insertar metadatos básicos
+            const strId = data.id.toString();
+            // 1. Verificar si ya conocemos esta película en nuestro catálogo local
+            const isKnown = window.DB_CATALOG && window.DB_CATALOG.some(item => item.tmdb_id === strId);
+
+            if (!isKnown) {
+                try {
+                    // Solo insertamos si realmente no la conocemos (Cache pasivo)
                     const contentData = {
-                        tmdb_id: data.id.toString(),
+                        tmdb_id: strId,
                         content_type: type === 'tv' ? 'series' : 'movie',
                         title: data.title || data.name || '',
-                        poster_path: data.poster_path || '',
-                        backdrop_path: data.backdrop_path || '',
-                        genre_ids: (data.genres || []).map(g => g.id),
+                        poster_url: data.poster_path || '',   // Corregido: poster_url
+                        backdrop_url: data.backdrop_path || '', // Corregido: backdrop_url
                         overview: data.overview || '',
                         release_date: data.release_date || data.first_air_date || null,
                         vote_average: data.vote_average || 0
                     };
-                    await supabase.from('content').insert(contentData);
-                    // Notificar que se agregó contenido
-                    window.dispatchEvent(new CustomEvent('contentAdded', { detail: { tmdb_id: data.id.toString(), content_type: type === 'tv' ? 'series' : 'movie' } }));
+                    
+                    // Insertar sin esperar (Background fire-and-forget)
+                    supabase.from('content').insert(contentData).then(({error}) => {
+                        if (!error && window.DB_CATALOG) {
+                            window.DB_CATALOG.push(contentData);
+                        }
+                    });
+
+                    // NOTA: NO disparamos 'contentAdded' aquí. 
+                    // Ver detalles no la hace "Disponible". El badge solo cambia vía video_sources.
+                } catch (e) {
+                    console.warn('[VivoTV] Error en autoguardado pasivo:', e);
                 }
-            } catch (e) {
-                console.warn('Error guardando en DB:', e);
             }
         }
         

@@ -454,10 +454,7 @@
 
     <!-- MOTOR DE AUTH AUTÓNOMO (No depende de app.js) -->
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-        import { CONFIG } from './config.js';
-
-        const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+        import { CONFIG, supabase } from './config.js';
 
         function showDashboard() {
             const authSection = document.getElementById('authSection');

@@ -930,6 +930,21 @@ nav a.active::after { width: 24px; }
     text-align: center;
     letter-spacing: 1.5px;
     z-index: 5;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.availability-pop {
+    animation: availabilityPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: rgba(46, 213, 115, 0.9) !important; /* Verde vibrante temporal */
+    color: white !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(46, 213, 115, 0.6);
+}
+
+@keyframes availabilityPop {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.1); filter: brightness(1.5); }
+    100% { transform: scale(1); filter: brightness(1); }
 }
 
 .card-progress-bar {
