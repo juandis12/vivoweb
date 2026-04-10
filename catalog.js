@@ -9,6 +9,10 @@ export let availableSeries = new Set();
 export let availableIds    = new Set();
 export let DB_CATALOG      = [];
 
+// Exportar al objeto window para acceso global
+window.DB_CATALOG = DB_CATALOG;
+window.isCatalogSyncing = false;
+
 /**
  * Validador de tipos de contenido por página
  */
@@ -173,7 +177,9 @@ export async function fetchAvailableIds(supabase) {
     } catch (e) {
         console.error('[VivoTV] ❌ Fallo en sincronización de catálogo:', e);
     } finally {
-        isSyncing = false;
+        window.isCatalogSyncing = false;
+        // Re-renderizar filas de la DB al terminar el proceso global
+        if (window.renderDBCategoryRows) window.renderDBCategoryRows();
     }
 }
 
@@ -214,7 +220,7 @@ export async function scanAllDBContent(supabase) {
         console.log(`[VivoTV] 🚀 Escaneo completo. Disponibles para híbrido: ${availableIds.size} títulos.`);
         
         // --- SINCRONIZACIÓN DE METADATOS FALTANTES ---
-        syncMissingMetadata();
+        await syncMissingMetadata();
 
         // Notificar que hay nuevos IDs disponibles
         window.dispatchEvent(new CustomEvent('scanCompleted', { detail: { count: availableIds.size } }));
@@ -225,44 +231,80 @@ export async function scanAllDBContent(supabase) {
 }
 
 /**
- * Recupera metadatos de TMDB para IDs que están en la base de datos pero no en el catálogo local
+ * Recupera metadatos de TMDB con un Pool de trabajadores de alta concurrencia (Turbo Sync)
  */
 async function syncMissingMetadata() {
     if (!window.DB_CATALOG) window.DB_CATALOG = [];
     const knownIds = new Set(window.DB_CATALOG.map(i => i.tmdb_id?.toString()));
-    const missingIds = Array.from(availableIds).filter(id => !knownIds.has(id));
+    const allIds = Array.from(availableIds).filter(id => !knownIds.has(id));
 
-    if (missingIds.length === 0) return;
+    if (allIds.length === 0) return;
 
-    console.log(`[VivoTV] 🔄 Sincronizando metadatos para ${missingIds.length} títulos nuevos...`);
+    console.log(`[VivoTV] 🚀 Turbo Sync: Procesando ${allIds.length} títulos de forma progresiva...`);
 
-    // Procesar en tandas pequeñas para no saturar
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < missingIds.length; i += BATCH_SIZE) {
-        const batch = missingIds.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async (id) => {
-            try {
-                // Determinar tipo probable
-                const type = availableSeries.has(id) ? 'tv' : 'movie';
-                const details = await TMDB_SERVICE.getDetails(id, type);
-                if (details && details.id) {
-                    window.DB_CATALOG.push(details);
-                }
-            } catch (e) {
-                // Si falla como uno, intentar como el otro (en caso de error en la detección de tabla)
-                try {
-                    const altType = availableSeries.has(id) ? 'movie' : 'tv';
-                    const details = await TMDB_SERVICE.getDetails(id, altType);
-                    if (details && details.id) window.DB_CATALOG.push(details);
-                } catch (err) {}
+    // --- FASE 1: BLOQUE PRIORITARIO (Para Renderizado Instantáneo) ---
+    // Tomamos los primeros 100 para llenar la pantalla de inmediato
+    const priorityBlock = allIds.slice(0, 100);
+    const backgroundBlock = allIds.slice(100);
+
+    const processItem = async (id) => {
+        try {
+            const type = availableSeries.has(id) ? 'tv' : 'movie';
+            let details = await TMDB_SERVICE.getDetails(id, type);
+            if (!details || !details.id) {
+                // Segundo intento por si el tipo estaba mal detectado
+                const altType = type === 'tv' ? 'movie' : 'tv';
+                details = await TMDB_SERVICE.getDetails(id, altType);
             }
-        }));
+            if (details && details.id) {
+                window.DB_CATALOG.push(details);
+            }
+        } catch (e) {
+            // Error silencioso para no bloquear el pool
+        }
+    };
+
+    // Lanzar Bloque Prioritario con alta concurrencia (15 hilos)
+    const CONCURRENCY = 15;
+    const workerPool = async (ids) => {
+        const queue = [...ids];
+        const workers = Array(CONCURRENCY).fill(null).map(async () => {
+            while (queue.length > 0) {
+                const id = queue.shift();
+                if (id) await processItem(id);
+            }
+        });
+        await Promise.all(workers);
+    };
+
+    // 1. Procesar Prioridad
+    await workerPool(priorityBlock);
+    console.log('[VivoTV] ⚡ Bloque prioritario listo. Renderizando UI...');
+    
+    // Notificar para renderizado inmediato de los primeros 100
+    window.dispatchEvent(new CustomEvent('metadataBatchSynced'));
+    if (window.renderDBCategoryRows) window.renderDBCategoryRows();
+
+    // 2. Procesar el resto en Segundo Plano (Sin bloquear la UI)
+    if (backgroundBlock.length > 0) {
+        console.log(`[VivoTV] 📥 Procesando resto del catálogo (${backgroundBlock.length} items)...`);
         
-        // Notificar lote cargado para que UI pueda reaccionar
-        window.dispatchEvent(new CustomEvent('metadataBatchSynced'));
-        await new Promise(r => setTimeout(r, 200)); // Delay entre tandas
+        // Dividimos en bloques de 100 para refrescos parciales de la UI
+        const CHUNK_SIZE = 100;
+        for (let i = 0; i < backgroundBlock.length; i += CHUNK_SIZE) {
+            const chunk = backgroundBlock.slice(i, i + CHUNK_SIZE);
+            await workerPool(chunk);
+            
+            // Actualizar UI cada 100 items nuevos
+            window.dispatchEvent(new CustomEvent('metadataBatchSynced'));
+            if (window.renderDBCategoryRows) window.renderDBCategoryRows();
+            
+            // Pequeño respiro para el hilo principal (100ms)
+            await new Promise(r => setTimeout(r, 100));
+        }
     }
-    console.log('[VivoTV] ✅ Sincronización de metadatos completa.');
+
+    console.log('[VivoTV] ✅ Turbo Sync Completo. Catálogo sincronizado al 100%.');
 }
 
 function dispatchBatchEvent(items) {
@@ -449,13 +491,28 @@ export async function renderDBCatalog(containerId, filterType = 'all', isAnime =
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // LIMPIEZA PREVENTIVA: Eliminar skeletons de carga antes de validar
+    // LIMPIEZA PREVENTIVA
     container.innerHTML = '';
 
-    if (!window.DB_CATALOG || window.DB_CATALOG.length === 0) {
-        console.warn(`[VivoTV] renderDBCatalog: El catálogo está vacío. Ocultando carrusel ${containerId}`);
+    // MODO CARGA: Si el catálogo global está en proceso y no hay nada local aún, mostrar skeletons
+    const isCatalogFetching = window.isCatalogSyncing || (window.DB_CATALOG && window.DB_CATALOG.length === 0);
+
+    if (isCatalogFetching && (!window.DB_CATALOG || window.DB_CATALOG.length === 0)) {
+        console.log(`[VivoTV] renderDBCatalog: Sincronización en curso. Mostrando esqueletos en ${containerId}`);
         const section = container.closest('.catalog-row');
-        if (section) section.classList.add('hidden');
+        if (section) section.classList.remove('hidden');
+        
+        // Crear 6 esqueletos
+        for (let i = 0; i < 6; i++) {
+            const sk = document.createElement('div');
+            sk.className = 'skeleton-card';
+            container.appendChild(sk);
+        }
+        return;
+    }
+
+    if (!window.DB_CATALOG || window.DB_CATALOG.length === 0) {
+        hideRow(containerId);
         return;
     }
     

@@ -767,17 +767,24 @@ async function startHeartbeat() {
     if (!supabase || !currentProfile) return;
     if (heartbeatTimer) clearInterval(heartbeatTimer);
 
+    let lastSavedStatusJson = '';
+
     const sendPulse = async () => {
         try {
             // 1. Latido base de seguridad (Mantiene viva la sesión)
             await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
 
             // 2. Sincronización de Telemetría (¿Qué está viendo exactamente?)
-            // Actualizamos la columna now_playing en vivotv_profiles
-            await supabase
-                .from('vivotv_profiles')
-                .update({ now_playing: window.VIVOTV_VIEWING_STATUS })
-                .eq('id', currentProfile.id);
+            // Solo actualizamos si el estado ha cambiado para reducir tráfico y carga en DB
+            const currentStatusJson = JSON.stringify(window.VIVOTV_VIEWING_STATUS);
+            if (currentStatusJson !== lastSavedStatusJson) {
+                await supabase
+                    .from('vivotv_profiles')
+                    .update({ now_playing: window.VIVOTV_VIEWING_STATUS })
+                    .eq('id', currentProfile.id);
+                
+                lastSavedStatusJson = currentStatusJson;
+            }
 
         } catch(e) { console.warn('[VivoTV] Heartbeat/Telemetry error:', e); }
     };
@@ -907,10 +914,10 @@ function subscribeToSessionChanges() {
             table: 'vivotv_profiles',
             filter: `id=eq.${currentProfile.id}`
         }, (payload) => {
-            console.log('[Realtime] Cambio detectado en perfil via Postgres:', payload);
             const { last_heartbeat } = payload.new;
+            // Solo loggeamos y actuamos si la sesión fue invalidada (last_heartbeat es null)
             if (last_heartbeat === null) {
-                console.warn('[Realtime] Sesión invalidada por base de datos.');
+                console.warn('[Realtime] Sesión invalidada por liberación remota.');
                 handleRemoteLogout();
             }
         })
