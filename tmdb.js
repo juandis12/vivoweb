@@ -16,7 +16,7 @@ function _escapeHTML(str) {
  */
 export const TMDB_SERVICE = {
     async fetchFromTMDB(endpoint, params = {}) {
-        const currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         const isKids = currentProfile?.is_kids === true;
 
         let url;

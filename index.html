@@ -501,7 +501,7 @@
             if (userProfile) userProfile.classList.remove('hidden');
             if (mainNav) mainNav.classList.remove('hidden');
             if (mobileNav) mobileNav.classList.remove('hidden');
-            const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+            const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
             const userNameEl = document.getElementById('userName');
             const userAvatar = document.getElementById('userAvatar');
             if (profile && userNameEl) userNameEl.textContent = profile.name;
@@ -540,7 +540,7 @@
         // Verificar estado al cargar
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                const profileSaved = sessionStorage.getItem('vivotv_current_profile');
+                const profileSaved = localStorage.getItem('vivotv_current_profile');
                 if (profileSaved) {
                     showDashboard();
                     console.log('[Auth] Usuario y perfil detectados. app.js se encargará del catálogo.');
@@ -556,7 +556,7 @@
         // Escuchar cierre de sesión
         supabase.auth.onAuthStateChange((event) => {
             if (event === 'SIGNED_OUT') {
-                sessionStorage.clear();
+                localStorage.removeItem('vivotv_current_profile');
                 showLogin();
             }
         });
@@ -594,8 +594,11 @@
         });
     </script>
 
+    <!-- SDKs de Video (Fase 2: Usabilidad) -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="https://player.vimeo.com/api/player.js"></script>
+
     <!-- App principal (catálogo, carruseles, búsqueda) -->
     <script src="app.js" type="module"></script>
 </body>
-
 </html>

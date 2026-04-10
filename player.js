@@ -19,6 +19,8 @@ export const PLAYER_LOGIC = {
     trailerTimer: null,
     marathonTimer: null,
     currentPlaybackTitle: null,
+    ytPlayer: null,
+    vimeoPlayer: null,
 
     // Helper para formatear segundos a HH:MM:SS o MM:SS
     formatTime(seconds) {
@@ -497,7 +499,7 @@ export const PLAYER_LOGIC = {
         // 1. YouTube
         if (cleanUrl.includes('youtube.com/watch?v=') || cleanUrl.includes('youtube.com/v/')) {
             const id = cleanUrl.split(/v\/|v=/)[1].split(/[?&]/)[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
         if (cleanUrl.includes('youtu.be/')) {
             const id = cleanUrl.split('youtu.be/')[1].split(/[?&]/)[0];
@@ -631,39 +633,75 @@ export const PLAYER_LOGIC = {
     _startIframeTracking(seekSeconds = 0) {
         this._stopProgressTimer();
         
-        // --- PULSO INICIAL (Fase 6) ---
-        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, seekSeconds, _supabase);
-
+        const iframe = document.getElementById('videoIframe');
+        const url = iframe.src;
         let elapsed = seekSeconds;
         let lastSavedElapsed = -1;
 
-        const doSaveIframe = () => {
-            if (elapsed !== lastSavedElapsed) {
-                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, elapsed, _supabase);
-                lastSavedElapsed = elapsed;
+        const doSaveProgress = (currentSecs) => {
+            if (currentSecs > 0 && Math.abs(currentSecs - lastSavedElapsed) >= 10) {
+                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(currentSecs), _supabase);
+                lastSavedElapsed = currentSecs;
 
-                // Telemetría para Iframes (Aproximada)
                 if (window.updateGlobalPlaybackStatus) {
                     window.updateGlobalPlaybackStatus({
                         title: this.currentPlaybackTitle,
                         type: this.currentType,
                         season: this.currentSeason,
                         episode: this.currentEpisode,
-                        seconds: elapsed,
-                        formattedTime: this.formatTime(elapsed)
+                        seconds: Math.floor(currentSecs),
+                        formattedTime: this.formatTime(currentSecs)
                     });
                 }
             }
         };
 
-        // Tick local interno simulando el video (Guardado cada 15s)
-        this.progressTimer = setInterval(() => {
-            elapsed += 15;
-            doSaveIframe();
-        }, 15000);
+        // --- OPCIÓN A: YOUTUBE SDK ---
+        if (url.includes('youtube.com')) {
+            const initYT = () => {
+                this.ytPlayer = new YT.Player('videoIframe', {
+                    events: {
+                        'onStateChange': (event) => {
+                            if (event.data === YT.PlayerState.PAUSED) {
+                                doSaveProgress(this.ytPlayer.getCurrentTime());
+                            }
+                        }
+                    }
+                });
+                this.progressTimer = setInterval(() => {
+                    if (this.ytPlayer && this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                        elapsed = this.ytPlayer.getCurrentTime();
+                        doSaveProgress(elapsed);
+                    }
+                }, 10000);
+            };
+            if (typeof YT !== 'undefined' && YT.Player) initYT();
+            else window.onYouTubeIframeAPIReady = initYT;
+        } 
+        // --- OPCIÓN B: VIMEO SDK ---
+        else if (url.includes('vimeo.com')) {
+            this.vimeoPlayer = new Vimeo.Player(iframe);
+            this.vimeoPlayer.on('pause', (data) => doSaveProgress(data.seconds));
+            this.progressTimer = setInterval(() => {
+                this.vimeoPlayer.getCurrentTime().then(secs => {
+                    elapsed = secs;
+                    doSaveProgress(elapsed);
+                });
+            }, 10000);
+        }
+        // --- OPCIÓN C: CRONÓMETRO INTELIGENTE (Goodstream y otros) ---
+        else {
+            this.progressTimer = setInterval(() => {
+                // Solo avanzar si la pestaña es visible (Evita conteo falso)
+                if (document.visibilityState === 'visible') {
+                    elapsed += 10;
+                    doSaveProgress(elapsed);
+                }
+            }, 10000);
+        }
 
-        this._currentVisHandler = () => { if (document.hidden) doSaveIframe(); };
-        this._currentBeforeUnloadHandler = () => { doSaveIframe(); };
+        this._currentVisHandler = () => { if (document.hidden) doSaveProgress(elapsed); };
+        this._currentBeforeUnloadHandler = () => { doSaveProgress(elapsed); };
         document.addEventListener('visibilitychange', this._currentVisHandler);
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
     },
@@ -692,7 +730,7 @@ export const PLAYER_LOGIC = {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) return;
         
-        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         if (!profile) return;
 
         await supabaseClient.from('watch_history').upsert({
@@ -709,7 +747,7 @@ export const PLAYER_LOGIC = {
 
     async _getProgress(tmdbId, type, season, episode, supabaseClient) {
         if (!supabaseClient || !this.currentUserId) return null;
-        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         if (!profile) return null;
 
         let query = supabaseClient.from('watch_history')
@@ -727,7 +765,7 @@ export const PLAYER_LOGIC = {
 
     async detectGlobalSeriesProgress(tmdbId, supabaseClient) {
         if (!this.currentUserId) return;
-        const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         if (!profile) return;
 
         const { data } = await supabaseClient.from('watch_history')

@@ -10,17 +10,31 @@
  * @param {number} duration - Duración en ms (default 3000)
  */
 export function showToast(message, type = 'info', duration = 3000) {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
     
-    toast.textContent = message;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-premium toast-${type}`;
     
-    // Quitar clases previas
-    toast.className = 'toast show';
-    if (type !== 'info') toast.classList.add(`toast-${type}`);
-
-    clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => {
-        toast.className = 'toast hidden';
+    const icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : (type === 'warning' ? '⚠️' : 'ℹ️'));
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span class="toast-message">${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Trigger animation
+    requestAnimationFrame(() => toast.classList.add('show'));
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 500);
     }, duration);
 }

@@ -1231,9 +1231,9 @@
                 }
             }
 
-            // --- SESIÓN TEMPORAL (Fase 8) ---
-            sessionStorage.removeItem('vivotv_current_profile');
-            sessionStorage.setItem('vivotv_current_profile', JSON.stringify(p));
+            // --- SESIÓN PERSISTENTE (Fase 2: Usabilidad) ---
+            localStorage.removeItem('vivotv_current_profile');
+            localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
             window.location.href = 'index.html';
         };
 

@@ -243,7 +243,7 @@ async function initAuth() {
                     if (authSection) authSection.classList.add('hidden');
                     
                     if (!currentProfile) {
-                        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+                        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
                         if (!currentProfile && !window.location.pathname.includes('profiles.html')) {
                             window.location.href = 'profiles.html';
                             return;
@@ -297,7 +297,7 @@ async function toDashboard(user) {
     if (userProfile) userProfile.classList.remove('hidden');
 
     // --- GESTIÓN DE PERFILES (Fase 8: Sesión Temporal) ---
-    currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+    currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
 
     if (!currentProfile) {
         console.warn('[VivoTV] No hay perfil en sesión. Redirigiendo...');
@@ -589,6 +589,7 @@ async function renderDBCategoryRows() {
         console.error('[DB Render] Error renderizando filas nativas:', e);
     }
 }
+window.renderDBCategoryRows = renderDBCategoryRows;
 
 function toAuth() {
     // Ya no hacemos sessionStorage.clear() aquí para evitar borrar el perfil al cargar.
@@ -1143,7 +1144,7 @@ async function loadPersonalizedRows() {
     if (!section || !carousel || !supabase) return;
 
     if (!currentProfile) {
-        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
     }
     if (!currentProfile) return;
 
@@ -1200,7 +1201,7 @@ async function loadRecentlyWatched() {
     if (!section || !carousel || !supabase) return;
 
     if (!currentProfile) {
-        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
     }
     if (!currentProfile) return;
 
@@ -1285,21 +1286,29 @@ async function loadRecommendedItems() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Obtener últimas visualizaciones únicas
-        const { data: history } = await supabase.from('watch_history')
-            .select('tmdb_id, type')
-            .eq('user_id', user.id)
-            .eq('profile_id', currentProfile.id)
-            .order('last_watched', { ascending: false })
-            .limit(5);
+        // 1. Obtener base para recomendaciones (Historial + Favoritos)
+        const [{ data: history }, { data: favs }] = await Promise.all([
+            supabase.from('watch_history').select('tmdb_id, type').eq('profile_id', currentProfile.id).order('last_watched', { ascending: false }).limit(5),
+            supabase.from('user_favorites').select('tmdb_id, type').eq('profile_id', currentProfile.id).order('created_at', { ascending: false }).limit(5)
+        ]);
+        
+        const baseItems = [];
+        const seenInBase = new Set();
+        [...(history || []), ...(favs || [])].forEach(item => {
+            const key = `${item.type}:${item.tmdb_id}`;
+            if (!seenInBase.has(key)) {
+                baseItems.push(item);
+                seenInBase.add(key);
+            }
+        });
 
-        if (!history || history.length === 0) {
+        if (baseItems.length === 0) {
             section.classList.add('hidden');
             return;
         }
 
-        // 2. Obtener recomendaciones de TMDB para cada uno
-        const recommendationPromises = history.map(h => 
+        // 2. Obtener recomendaciones de TMDB para la base combinada
+        const recommendationPromises = baseItems.map(h => 
             TMDB_SERVICE.getRecommendations(h.tmdb_id, h.type).catch(() => ({ results: [] }))
         );
         
@@ -1343,7 +1352,7 @@ async function loadFullHistory() {
     if (!grid || !supabase) return;
 
     if (!currentProfile) {
-        currentProfile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
+        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
     }
     if (!currentProfile) return;
 
