@@ -276,6 +276,25 @@
             border-radius: 20px;
         }
 
+        .lock-btn, .bio-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 140px;
+            transition: all 0.3s;
+        }
+
+        .lock-btn:hover, .bio-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
         /* Buttons */
         .actions-container {
             margin-top: 70px;
@@ -927,6 +946,9 @@
                             <button class="lock-btn" onclick="manageProfilePin('${p.id}')">
                                 🔒 ${p.pin ? 'Cambiar PIN' : 'Poner PIN'}
                             </button>
+                            <button class="bio-btn" onclick="setupBiometrics('${p.id}')" title="Configurar Huella/FaceID">
+                                🧬 ${p.biometric_key ? 'Actualizar Bio' : 'Activar Bio'}
+                            </button>
                         </div>
                     </div>
                     <input type="text" class="profile-name-input" value="${p.name}" 
@@ -1219,8 +1241,35 @@
                 if (dbP) p = dbP;
             }
 
-            // 2. Validar PIN si existe usando el nuevo sistema iOS
-            if (p.pin) {
+            // 2. Validar Biometría si existe (Prioridad sobre PIN)
+            if (p.biometric_key && window.PublicKeyCredential) {
+                try {
+                    const challenge = new Uint8Array(32);
+                    window.crypto.getRandomValues(challenge);
+                    
+                    const assertion = await navigator.credentials.get({
+                        publicKey: {
+                            challenge: challenge,
+                            timeout: 60000,
+                            userVerification: "required"
+                        }
+                    });
+
+                    if (assertion) {
+                        console.log('[Biometría] Acceso concedido');
+                    }
+                } catch (e) {
+                    console.warn('[Biometría] Falló o cancelado, pidiendo PIN si existe.');
+                    if (p.pin) {
+                         const entered = await showPinPad(`🔒 Perfil Protegido`);
+                         if (entered === null) return;
+                         if (entered !== p.pin) { shakePinPad(); showToast("PIN incorrecto", "error"); return; }
+                    } else if (p.biometric_key) {
+                        return; // Si solo tenía biometría y falló, no entra.
+                    }
+                }
+            } else if (p.pin) {
+                // 3. Validar PIN si existe usando el nuevo sistema iOS
                 const entered = await showPinPad(`🔒 Perfil Protegido`);
                 if (entered === null) return; // Cancelado
 
@@ -1273,6 +1322,57 @@
                 }
             } else {
                 showToast("Los PINs no coinciden.", "warning");
+            }
+        };
+
+        // --- FASE 4: BIOMETRÍA (WEB_AUTHN) ---
+        window.setupBiometrics = async (profileId) => {
+            const p = profiles.find(x => x.id === profileId);
+            if (!p) return;
+
+            if (!window.PublicKeyCredential) {
+                showToast("Tu navegador no soporta biometría", "error");
+                return;
+            }
+
+            try {
+                showToast("Prepara tu sensor de huella o FaceID...", "info");
+                
+                // Generar desafío local (Simple para esta versión)
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: challenge,
+                        rp: { name: "VivoTV" },
+                        user: {
+                            id: new Uint8Array(p.id.split('-').map(x => parseInt(x, 16)).slice(0, 16)),
+                            name: p.name,
+                            displayName: p.name
+                        },
+                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                        timeout: 60000,
+                        attestation: "direct"
+                    }
+                });
+
+                if (credential) {
+                    const keyString = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+                    const { error } = await supabase
+                        .from('vivotv_profiles')
+                        .update({ biometric_key: keyString })
+                        .eq('id', profileId);
+                    
+                    if (!error) {
+                        showToast("¡Biometría configurada con éxito!", "success");
+                        p.biometric_key = keyString;
+                        renderProfiles();
+                    }
+                }
+            } catch (e) {
+                console.error('Biometric error:', e);
+                showToast("Cancelado o error en sensor", "warning");
             }
         };
 

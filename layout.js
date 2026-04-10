@@ -88,6 +88,7 @@ export const LAYOUT = {
                     <a href="peliculas.html" id="navPeliculas">Películas</a>
                     <a href="series.html" id="navSeries">Series</a>
                     <a href="anime.html" id="navAnime">Anime</a>
+                    <a href="live.html" id="navLive">En Vivo</a>
                     <a href="milista.html" id="linkMyList">Mi Lista</a>
                 </nav>
                 <div class="user-actions">
@@ -129,6 +130,10 @@ export const LAYOUT = {
                 <a href="series.html" class="mobile-nav-item" id="mNavSeries">
                     <svg viewBox="0 0 24 24" width="24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
                     <span>Series</span>
+                </a>
+                <a href="live.html" class="mobile-nav-item" id="mNavLive">
+                    <svg viewBox="0 0 24 24" width="24"><path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .89-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.11-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z"/></svg>
+                    <span>Vivo</span>
                 </a>
                 <a href="milista.html" class="mobile-nav-item" id="mNavLista">
                     <svg viewBox="0 0 24 24" width="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>

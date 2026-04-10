@@ -624,3 +624,25 @@ export async function loadRecommendedItems(supabase, currentProfile, availableId
         return [];
     }
 }
+
+/**
+ * FASE 4: Búsqueda por "Vibras" (IA Semántica Local)
+ */
+export const MOOD_MAP = {
+    'oscuro': [27, 80, 53, 9648], // Terror, Crimen, Suspenso, Misterio
+    'epico': [12, 10752, 14, 36], // Aventura, Guerra, Fantasía, Historia
+    'relax': [35, 10751, 10402, 10749], // Comedia, Familia, Música, Romance
+    'nostalgico': [16, 18, 99], // Animación, Drama, Documental
+    'intrigante': [9648, 80, 53], // Misterio, Crimen, Suspenso
+    'heroico': [28, 12, 878] // Acción, Aventura, Ciencia Ficción
+};
+
+export function filterByMood(items, moodKey) {
+    const genreIds = MOOD_MAP[moodKey.toLowerCase()];
+    if (!genreIds) return items;
+
+    return items.filter(item => {
+        const itemGenres = item.genre_ids || [];
+        return itemGenres.some(id => genreIds.includes(Number(id)));
+    });
+}

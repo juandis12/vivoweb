@@ -57,6 +57,7 @@ let currentFilter     = 'all';
 let currentProfile    = null;
 let heartbeatTimer    = null;
 let sessionChannel    = null;
+let pendingPartyId    = new URLSearchParams(window.location.search).get('party'); // FASE 4: Capturar invitación
 window.VIVOTV_VIEWING_STATUS = null; // Global para telemetría en vivo
 
 // El estado y validaciones ahora se importan de catalog.js para consistencia SPA
@@ -375,12 +376,22 @@ async function toDashboard(user) {
     try {
         // 2. Sincronizar Catálogo Personal (Esperar para asegurar filtrado en grilla)
         await syncCatalog(supabase); 
-
-
-        // 3. NUEVO: Renderizado impulsado por DB (Prioridad Máxima)
+            // 3. NUEVO: Renderizado impulsado por DB (Prioridad Máxima)
         renderDBCategoryRows();
 
-        
+        // 4. FASE 4: Verificar Invitación a Watch Party
+        if (pendingPartyId) {
+            console.log('[WatchParty] Invitación detectada:', pendingPartyId);
+            const { joinPartyFromUrl } = await import('./watch-party-ui.js');
+            joinPartyFromUrl(pendingPartyId);
+            pendingPartyId = null; // Limpiar para evitar re-uniones
+            // Limpiar URL sin recargar
+            const url = new URL(window.location);
+            url.searchParams.delete('party');
+            window.history.replaceState({}, '', url);
+        }
+
+        // --- Carga en Segundo Plano (Sin bloqueo) ---
         // 4. Cargar Historiales y resto de filas (TMDB adaptado)
         loadPersonalizedRows();
         logDebug(`IDs cargados en DB: ${availableIds.size}`);
@@ -1592,6 +1603,41 @@ function initAppForPage() {
                     window.location.href = `busqueda.html?q=${encodeURIComponent(q)}`;
                 }
             }
+        });
+    }
+
+    // FASE 4: Búsqueda por Vibras
+    const moodChips = document.getElementById('moodChips');
+    if (moodChips) {
+        moodChips.querySelectorAll('.mood-chip').forEach(chip => {
+            chip.onclick = async () => {
+                const mood = chip.dataset.mood;
+                const { filterByMood, MOOD_MAP } = await import('./catalog.js');
+                
+                // UI feedback
+                moodChips.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+
+                // Filtrar el catálogo disponible basado en la vibra
+                const results = filterByMood(window.DB_CATALOG || [], mood);
+                const targetId = 'searchResultsGrid'; // En busqueda.html
+                const grid = document.getElementById(targetId);
+                
+                if (grid) {
+                    grid.innerHTML = '';
+                    if (results.length === 0) {
+                        document.getElementById('noResultsState')?.classList.remove('hidden');
+                    } else {
+                        document.getElementById('noResultsState')?.classList.add('hidden');
+                        results.forEach(item => {
+                            const card = CATALOG_UI.createMovieCard(item, item.media_type || 'movie', true, null, null);
+                            grid.appendChild(card);
+                        });
+                    }
+                }
+                
+                document.getElementById('searchHeader').textContent = `Vibra: ${chip.textContent}`;
+            };
         });
     }
 

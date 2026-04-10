@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>En Vivo | VivoTV</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="module">
+        import { LAYOUT } from './layout.js';
+        LAYOUT.init();
+    </script>
+</head>
+<body class="page-live">
+    <main id="dashboardSection" class="main-content">
+        <div class="section-padding">
+            <div class="section-header">
+                <h1 class="section-title">Canales <span>En Vivo</span></h1>
+                <p class="section-subtitle">Programación simultánea para todos los usuarios. Disfruta de una experiencia de TV tradicional.</p>
+            </div>
+
+            <div class="live-grid-container">
+                <!-- Sidebar de Canales -->
+                <aside class="live-sidebar">
+                    <div id="channelsList" class="channels-list">
+                        <!-- Inyectado por JS -->
+                    </div>
+                </aside>
+
+                <!-- Área del Reproductor -->
+                <div class="live-player-area">
+                    <div id="livePlayerWrapper" class="live-player-wrapper">
+                        <div id="livePlaceholder" class="live-placeholder">
+                            <div class="loader-wave"><span></span><span></span><span></span></div>
+                            <p>Sintonizando Canal...</p>
+                        </div>
+                        <div id="livePlayerContainer" class="player-container hidden">
+                            <video id="liveVideoPlayer" class="video-player" playsinline></video>
+                            <iframe id="liveVideoIframe" class="video-iframe hidden" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                    
+                    <div id="liveInfo" class="live-now-info hidden">
+                        <div class="live-badge">EN DIRECTO</div>
+                        <h2 id="liveTitle">Título de la Película</h2>
+                        <p id="liveNext">A continuación: El Caballero de la Noche (22:00)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="app.js"></script>
+    <script type="module" src="live-ui.js"></script>
+</body>
+</html>

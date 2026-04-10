@@ -147,6 +147,15 @@ export const PLAYER_LOGIC = {
                     await this._loadMovieSource(tmdbId, supabaseClient);
                 }
             };
+            
+            // FASE 4: Evento de Watch Party
+            const btnWP = document.getElementById('btnWatchParty');
+            if (btnWP) {
+                btnWP.onclick = async () => {
+                    const { createPartyUI } = await import('./watch-party-ui.js');
+                    createPartyUI(tmdbId, type);
+                };
+            }
 
             const btnExit = document.getElementById('btnExitPlayer');
             btnExit.onclick = () => {
@@ -434,13 +443,27 @@ export const PLAYER_LOGIC = {
         this._playSource(ep.stream_url, seekSeconds);
     },
 
-    _playSource(url, seekSeconds = 0) {
+    async _playSource(url, seekSeconds = 0) {
         const video = document.getElementById('videoPlayer');
         const iframe = document.getElementById('videoIframe');
         const container = document.getElementById('playerContainer');
         const loader = document.getElementById('playerLoader');
 
-        // Reset listeners previos para evitar duplicados
+        // FASE 4: Notificar inicio de reproducción al Sync Loop (Solo Host)
+        import('./watch-party-ui.js').then(m => m.startHostSyncLoop());
+
+        this._playSourceInElement(url, seekSeconds, 'videoPlayer', 'videoIframe');
+    },
+
+    /**
+     * Versión genérica de _playSource para inyectar en cualquier elemento
+     */
+    _playSourceInElement(url, seekSeconds, videoId, iframeId) {
+        const video = document.getElementById(videoId);
+        const iframe = document.getElementById(iframeId);
+        if (!video || !iframe) return;
+
+        // Reset listeners previos
         video.onended = null;
 
         container.classList.remove('hidden');
@@ -532,7 +555,7 @@ export const PLAYER_LOGIC = {
         // --- SALTO INTELIGENTE (Auto-Resume) ---
         // Fase 10X UX: Delay reducido para fluidez
         if (seek > 0) {
-            const delay = isDirectStream ? 2000 : 10000; // Iframe necesita más tiempo por anuncios
+            const delay = 2000; // Iframe necesita más tiempo por anuncios
             console.log(`[VivoTV] Programando salto de progreso (${seek}s) en ${delay/1000}s...`);
             setTimeout(() => {
                 if (video && (video.readyState >= 1 || !video.paused)) {
@@ -882,6 +905,17 @@ export const PLAYER_LOGIC = {
         const nextOverlay = document.createElement('div');
         nextOverlay.className = 'next-episode-overlay';
         nextOverlay.innerHTML = `
+            <div class="modal-actions-wrapper">
+                <button class="btn btn-play" id="btnModalPlay">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Reproducir ahora
+                </button>
+                <button class="btn btn-secondary" id="btnWatchParty">
+                    <span>🎉</span> Watch Party
+                </button>
+                <button class="btn btn-circle" id="btnFavModal">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.78-8.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                </button>
+            </div>
             <button class="next-btn-premium" id="btnSkipToNext">
                 <span>Siguiente Episodio</span>
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
