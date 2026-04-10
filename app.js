@@ -554,66 +554,89 @@ async function loadGridData(type, page, append = false) {
         const isSeriesPage = document.body.classList.contains('page-series');
         const isAnimePage  = document.body.classList.contains('page-anime');
 
-        // MODO FILTRADO PROVINCIAL (Búsqueda en profundidad hasta encontrar items en DB)
+        // --- LÓGICA DE BIBLIOTECA (PELÍCULAS / SERIES / ANIME) ---
+        // Prioridad: Tu Base de Datos, Ordenada por Popularidad de TMDB
         if (isMoviesPage || isSeriesPage || isAnimePage) {
-            logDebug(`[Grid] Iniciando búsqueda profunda (Página base: ${page})...`);
+            logDebug(`[Library] Construyendo biblioteca para ${type}...`);
             
-            let accumulatedItems = [];
-            let tmdbPage = page;
-            const currentIds = window.availableIds || new Set();
-            const MAX_PAGES_TO_SCAN = 4; // Escanear hasta 4 páginas de TMDB por cada click en "Cargar más"
+            // 1. Obtener TODO lo que tienes en la base de datos para esta categoría
+            const localCatalog = window.DB_CATALOG || [];
+            let myItems = localCatalog.filter(item => {
+                const itemType = item.content_type === 'series' ? 'tv' : (item.content_type === 'anime' ? 'tv' : 'movie');
+                
+                // Si estamos en anime.html, filtrar por anime
+                if (isAnimePage) return validateContentType(item, 'tv');
+                // Si estamos en movies.html, solo películas
+                if (isMoviesPage) return itemType === 'movie';
+                // Si estamos en series.html, solo series (que no sean anime)
+                if (isSeriesPage) return itemType === 'tv' && !validateContentType(item, 'tv');
+                
+                return false;
+            });
 
-            for (let i = 0; i < MAX_PAGES_TO_SCAN; i++) {
-                const data = type === 'tv' 
-                    ? await TMDB_SERVICE.getPopularTV(tmdbPage)
-                    : await TMDB_SERVICE.getPopularMovies(tmdbPage);
-
-                if (!data.results?.length) break;
-
-                const filtered = data.results.filter(item => {
-                    const idStr = item.id.toString();
-                    return currentIds.has(idStr) && validateContentType(item, type);
-                });
-
-                accumulatedItems = [...accumulatedItems, ...filtered];
-                tmdbPage++;
-
-                // Si ya encontramos suficientes para llenar la vista actual, paramos
-                if (accumulatedItems.length >= 10) break;
-                if (tmdbPage > data.total_pages) break;
+            if (myItems.length === 0) {
+                if (loader) loader.classList.add('hidden');
+                container.innerHTML = '<p class="no-results-msg">No tienes contenido en esta sección todavía.</p>';
+                return;
             }
+
+            // 2. OBTENER RANKING DE POPULARIDAD (Páginas de TMDB para ordenar)
+            const getPopularBatch = async () => {
+                let allPopular = [];
+                for (let p = 1; p <= 3; p++) {
+                    let data;
+                    if (isAnimePage) {
+                        data = await TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc', page: p });
+                    } else if (isMoviesPage) {
+                        data = await TMDB_SERVICE.getPopularMovies(p);
+                    } else {
+                        data = await TMDB_SERVICE.getPopularTV(p);
+                    }
+                    if (data.results) allPopular = [...allPopular, ...data.results];
+                }
+                return allPopular;
+            };
+
+            const popularTrends = await getPopularBatch();
+            
+            // 3. ASIGNAR RANGO Y ORDENAR
+            myItems.forEach(item => {
+                const match = popularTrends.find(p => p.id.toString() === item.tmdb_id?.toString());
+                item._tempRank = match ? popularTrends.indexOf(match) : 9999;
+            });
+
+            myItems.sort((a, b) => a._tempRank - b._tempRank);
+
+            // 4. PAGINACIÓN LOCAL (Renderizar por lotes de 20 en 20)
+            const perPage = 20;
+            const startIdx = (page - 1) * perPage;
+            const endIdx = startIdx + perPage;
+            const pageItems = myItems.slice(startIdx, endIdx);
 
             if (loader) loader.classList.add('hidden');
 
-            if (accumulatedItems.length > 0) {
+            if (pageItems.length > 0) {
                 const fragment = document.createDocumentFragment();
-                accumulatedItems.forEach(item => {
+                pageItems.forEach(item => {
+                    // Estos items son SEGURO disponibles (vienen de DB)
                     const card = CATALOG_UI.createMovieCard(item, type, true);
                     fragment.appendChild(card);
                 });
                 container.appendChild(fragment);
             }
 
-            // Paginación: Actualizar el dataset para la próxima llamada
+            // Gestionar botón Cargar Más
             if (btnLoadMore) {
-                btnLoadMore.dataset.nextPage = tmdbPage;
-                btnLoadMore.classList.toggle('hidden', tmdbPage > 50); // Límite de seguridad
-                
-                // Si tras el escaneo profundo no hay NADA, y hay más páginas, re-intentar una vez más
-                if (accumulatedItems.length === 0 && tmdbPage < 20) {
-                     return loadGridData(type, tmdbPage, true);
-                }
+                btnLoadMore.classList.toggle('hidden', endIdx >= myItems.length);
+                btnLoadMore.dataset.nextPage = page + 1;
+                btnLoadMore.onclick = () => loadGridData(type, page + 1, true);
             }
             return;
         }
 
-        // ---- MODO NORMAL (Dashboard / Búsqueda) ----
-        const data = type === 'tv' 
-            ? await TMDB_SERVICE.getPopularTV(page)
-            : await TMDB_SERVICE.getPopularMovies(page);
-
+        // --- MODO DESCUBRIMIENTO (Inicio / Búsqueda) ---
+        const data = type === 'tv' ? await TMDB_SERVICE.getPopularTV(page) : await TMDB_SERVICE.getPopularMovies(page);
         if (loader) loader.classList.add('hidden');
-        
         if (data.results?.length) {
             const currentIds = window.availableIds || new Set();
             const fragment = document.createDocumentFragment();
@@ -624,8 +647,11 @@ async function loadGridData(type, page, append = false) {
                 fragment.appendChild(card);
             });
             container.appendChild(fragment);
-            
-            if (btnLoadMore) btnLoadMore.classList.toggle('hidden', data.page >= data.total_pages);
+            if (btnLoadMore) {
+                btnLoadMore.classList.toggle('hidden', data.page >= data.total_pages);
+                btnLoadMore.dataset.nextPage = page + 1;
+                btnLoadMore.onclick = () => loadGridData(type, page + 1, true);
+            }
         }
     } catch (e) {
         console.error('Error cargando grid:', e);
