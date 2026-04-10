@@ -115,20 +115,64 @@
         }
         .occupied-badge {
             position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 10px;
+            right: 10px;
             background: #ef4444;
             color: white;
-            padding: 4px 12px;
+            padding: 4px 8px;
             border-radius: 4px;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 900;
             text-transform: uppercase;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-            white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+            z-index: 10;
+        }
+
+        /* --- ESTILOS TELEMETRÍA EN VIVO --- */
+        .playback-status-card {
+            position: absolute;
+            bottom: 0px;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 5px;
+            text-align: center;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            z-index: 5;
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .playback-status-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 2px;
+        }
+        .playback-icon { font-size: 10px; }
+        .playback-label {
+            font-size: 8px;
+            font-weight: 800;
             letter-spacing: 0.5px;
-            z-index: 6;
+            color: #ef4444;
+        }
+        .playback-title {
+            font-size: 10px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .playback-time {
+            font-size: 9px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 1px;
         }
         .release-btn {
             position: absolute;
@@ -668,7 +712,17 @@
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
                         ${_isOccupied(p) ? `
                             <div class="occupied-badge">EN USO</div>
-                            <button class="release-btn" onclick="forceRelease('${p.id}')">LIBERAR</button>
+                            ${p.now_playing ? `
+                                <div class="playback-status-card">
+                                    <div class="playback-status-header">
+                                        <span class="playback-icon">🎥</span>
+                                        <span class="playback-label">VIENDO AHORA</span>
+                                    </div>
+                                    <div class="playback-title">${p.now_playing.title}</div>
+                                    <div class="playback-time">${p.now_playing.formattedTime}</div>
+                                </div>
+                            ` : ''}
+                            <button class="release-btn" onclick="forceRelease('${p.id}', ${p.now_playing ? JSON.stringify(p.now_playing).replace(/"/g, '&quot;') : 'null'})">LIBERAR</button>
                         ` : ''}
                         <div class="edit-overlay">
                             <span class="edit-icon">✏️</span>
@@ -754,14 +808,19 @@
             return diff < 30; 
         }
 
-        window.forceRelease = async (id) => {
+        window.forceRelease = async (id, nowPlaying = null) => {
+            // RESTRICCIÓN SOLICITADA: No permitir liberar si está viendo algo activamente
+            if (nowPlaying) {
+                showToast(`No es posible liberar este perfil: está viendo "${nowPlaying.title}" en este momento.`, 'error', 5000);
+                return;
+            }
+
             if (!confirm('¿Deseas liberar este perfil a la fuerza? Se cerrará la sesión en el otro dispositivo.')) return;
             
             // 1. Liberar en DB para persistencia
             const { error } = await supabase.rpc('vivotv_release_session', { pid: id });
             
             // 2. Enviar señal de expulsión inmediata por Broadcast (Fase 10X)
-            // Esto es mucho más rápido que esperar a que el dispositivo remoto lea la DB
             const channel = supabase.channel(`kickout-${id}`);
             channel.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
@@ -770,7 +829,6 @@
                         event: 'FORCE_EXIT',
                         payload: { profileId: id }
                     });
-                    // Limpiar canal después de enviar
                     setTimeout(() => supabase.removeChannel(channel), 2000);
                 }
             });

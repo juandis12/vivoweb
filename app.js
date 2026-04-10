@@ -57,6 +57,7 @@ let currentFilter     = 'all';
 let currentProfile    = null;
 let heartbeatTimer    = null;
 let sessionChannel    = null;
+window.VIVOTV_VIEWING_STATUS = null; // Global para telemetría en vivo
 
 // El estado y validaciones ahora se importan de catalog.js para consistencia SPA
 const getAvailableIds = () => window.availableIds || new Set();
@@ -768,8 +769,17 @@ async function startHeartbeat() {
 
     const sendPulse = async () => {
         try {
+            // 1. Latido base de seguridad (Mantiene viva la sesión)
             await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
-        } catch(e) { console.warn('[VivoTV] Heartbeat error:', e); }
+
+            // 2. Sincronización de Telemetría (¿Qué está viendo exactamente?)
+            // Actualizamos la columna now_playing en vivotv_profiles
+            await supabase
+                .from('vivotv_profiles')
+                .update({ now_playing: window.VIVOTV_VIEWING_STATUS })
+                .eq('id', currentProfile.id);
+
+        } catch(e) { console.warn('[VivoTV] Heartbeat/Telemetry error:', e); }
     };
 
     sendPulse();
@@ -781,6 +791,12 @@ async function startHeartbeat() {
     // Iniciar chequeo de concurrencia regular (cada 1 min)
     setInterval(checkConcurrentSessions, 60000);
 }
+
+// Expone una función global para que player.js actualice el estado
+window.updateGlobalPlaybackStatus = (status) => {
+    window.VIVOTV_VIEWING_STATUS = status;
+    console.log('[Telemetry] Estado actualizado:', status?.title || 'Limpiando...');
+};
 
 // ================================================
 // SEGURIDAD: CONTROL DE SESIONES CONCURRENTES (Fase 3)

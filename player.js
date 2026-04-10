@@ -407,8 +407,11 @@ export const PLAYER_LOGIC = {
         this._cancelMarathon();
         this.currentSeason = seasonNum;
         this.currentEpisode = ep.episode_number;
+
+        // Guardar nombre para telemetría
+        this.currentPlaybackTitle = `${this.seriesData?.name || 'Serie'} (T${seasonNum}:E${ep.episode_number})`;
+
         this._playSource(ep.stream_url, seekSeconds);
-        // El guardado de progreso se iniciará automáticamente mediante el timer del reproductor
     },
 
     _playSource(url, seekSeconds = 0) {
@@ -427,6 +430,11 @@ export const PLAYER_LOGIC = {
         const smartUrl = this._getSmartUrl(url, seekSeconds);
         const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
         
+        // Determinar título para telemetría si es película
+        if (this.currentType === 'movie') {
+            this.currentPlaybackTitle = this.movieData?.title || 'Película';
+        }
+
         // Listener para fin de video (Solo streams directos)
         if (isDirectStream && this.currentType === 'tv') {
             video.onended = () => {
@@ -519,19 +527,31 @@ export const PLAYER_LOGIC = {
         
         this._stopProgressTimer();
 
-        // DEBOUNCED SAVE (Telemetría eficiente)
+        // DEBOUNCED SAVE (Telemetría eficiente - Alta Precisión: 15s)
         const doSave = () => {
             if (video && hasJumped) {
                 const cur = Math.floor(video.currentTime);
                 if (cur !== lastSavedTime && cur > 0) {
                     this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
                     lastSavedTime = cur;
+
+                    // Actualizar Telemetría en Vivo vía app.js
+                    if (window.updateGlobalPlaybackStatus) {
+                        window.updateGlobalPlaybackStatus({
+                            title: this.currentPlaybackTitle,
+                            type: this.currentType,
+                            season: this.currentSeason,
+                            episode: this.currentEpisode,
+                            seconds: cur,
+                            formattedTime: this.formatTime(cur)
+                        });
+                    }
                 }
             }
         };
 
-        // Backup de salvado cada 60s (reduciendo un 75% las peticiones a Supabase)
-        this.progressTimer = setInterval(() => { if (!video.paused) doSave(); }, 60000);
+        // Backup de salvado cada 15s (Alta Precisión solicitada por usuario)
+        this.progressTimer = setInterval(() => { if (!video.paused) doSave(); }, 15000);
 
         // Visibility & Unload Tracking (Asegura guardar telemetría si cierran ventana o minimizan)
         this._currentVisHandler = () => { if (document.hidden) doSave(); };
@@ -589,15 +609,25 @@ export const PLAYER_LOGIC = {
             if (elapsed !== lastSavedElapsed) {
                 this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, elapsed, _supabase);
                 lastSavedElapsed = elapsed;
+
+                // Telemetría para Iframes (Aproximada)
+                if (window.updateGlobalPlaybackStatus) {
+                    window.updateGlobalPlaybackStatus({
+                        title: this.currentPlaybackTitle,
+                        type: this.currentType,
+                        season: this.currentSeason,
+                        episode: this.currentEpisode,
+                        seconds: elapsed,
+                        formattedTime: this.formatTime(elapsed)
+                    });
+                }
             }
         };
 
-        // Tick local interno simulando el video, se envía a Supabase solo cada 60s
-        let ticks = 0;
+        // Tick local interno simulando el video (Guardado cada 15s)
         this.progressTimer = setInterval(() => {
             elapsed += 15;
-            ticks++;
-            if (ticks % 4 === 0) doSaveIframe(); // cada 60s envía
+            doSaveIframe();
         }, 15000);
 
         this._currentVisHandler = () => { if (document.hidden) doSaveIframe(); };
@@ -609,6 +639,12 @@ export const PLAYER_LOGIC = {
     _stopProgressTimer() {
         if (this.progressTimer) clearInterval(this.progressTimer);
         this.progressTimer = null;
+
+        // Limpiar Telemetría al detener
+        if (window.updateGlobalPlaybackStatus) {
+            window.updateGlobalPlaybackStatus(null);
+        }
+
         if (this._currentVisHandler) {
             document.removeEventListener('visibilitychange', this._currentVisHandler);
             this._currentVisHandler = null;
