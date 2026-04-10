@@ -19,13 +19,16 @@ export function validateContentType(item, expectedType) {
     const genres = item.genres || item.genre_ids || [];
     const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
     
-    // Definición de Anime: Género Animación (16) + Origen Japonés o Idioma Japonés
+    // Definición de Anime: Género Animación (16) + (Origen Japonés O Idioma Japonés O Nombre con caracteres Japoneses)
     const isAnim = genreIds.includes(16);
-    const isJapan = (item.origin_country && item.origin_country.includes('JP')) || 
+    const isJapan = (item.origin_country && (Array.isArray(item.origin_country) ? item.origin_country.includes('JP') : item.origin_country === 'JP')) || 
                     item.original_language === 'ja' || 
                     (item.name && /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/.test(item.name));
 
-    const isAnime = isAnim && isJapan;
+    // Si es Anime en la DB, confiamos en la etiqueta local. Si es de TMDB, combinamos Animación + Japón.
+    const isManuallyMarkedAnime = (item.content_type || '').toLowerCase() === 'anime';
+
+    const isAnime = isManuallyMarkedAnime || (isAnim && isJapan);
 
     const isMoviesPage = document.body.classList.contains('page-movies');
     const isSeriesPage = document.body.classList.contains('page-series');
@@ -314,7 +317,7 @@ export async function loadGridData(type, page, append = false, currentProfile) {
  * RENDERIZADO HÍBRIDO (DB + TMDB)
  * Muestra contenido de TMDB que el usuario TIENE en su DB (Intersección)
  */
-export async function renderHybridRow(containerId, tmdbFunc, type) {
+export async function renderHybridRow(containerId, tmdbFunc, type, secondTmdbFunc = null) {
     try {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -322,35 +325,31 @@ export async function renderHybridRow(containerId, tmdbFunc, type) {
         // Limpiar para mostrar loaders o refresh
         container.innerHTML = '';
         
-        // 1. Obtener datos de TMDB (Descubrimiento)
-        const data = await tmdbFunc();
-        if (!data || !data.results || data.results.length === 0) {
-            hideRow(containerId);
-            return;
+        let allMatches = [];
+        const currentIds = window.availableIds || availableIds;
+
+        // 1. Intento de búsqueda en profundidad (Página 1 y Página 2 si es necesario)
+        const fetchAndFilter = async (func) => {
+            const data = await func();
+            if (!data || !data.results) return [];
+            return data.results.filter(item => currentIds.has(item.id.toString()));
+        };
+
+        allMatches = await fetchAndFilter(tmdbFunc);
+
+        // Si tenemos menos de 5 resultados y la función permite paginación (simulada aquí con fetch adicional)
+        if (allMatches.length < 5 && secondTmdbFunc) {
+            const extraMatches = await fetchAndFilter(secondTmdbFunc);
+            allMatches = [...allMatches, ...extraMatches];
         }
 
-        // 2. CRUCE DE DATOS: Quedarse solo con lo que existe en DB (disponibleIds)
-        // Usamos window.availableIds para que use la version mas fresca del escaneo
-        const currentIds = window.availableIds || availableIds;
-        const filtered = data.results.filter(item => {
-            const idStr = item.id.toString();
-            return currentIds.has(idStr);
-        });
-
         // 3. Renderizado
-        if (filtered.length > 0) {
-            CATALOG_UI.renderCarousel(containerId, filtered, type, currentIds);
+        if (allMatches.length > 0) {
+            CATALOG_UI.renderCarousel(containerId, allMatches.slice(0, 20), type, currentIds);
             const section = container.closest('.catalog-row');
             if (section) section.classList.remove('hidden');
-            
-            // Si la fila tiene flechas, actualizarlas
-            const carousel = document.getElementById(containerId);
-            if (carousel) {
-                // Notificar redimensionamiento para flechas
-                window.dispatchEvent(new Event('resize'));
-            }
+            window.dispatchEvent(new Event('resize'));
         } else {
-            // Si no hay intersección, ocultamos la fila para no mostrar carruseles vacios
             hideRow(containerId);
         }
     } catch (e) {
@@ -384,11 +383,7 @@ export async function renderDBCatalog(containerId, filterType = 'all', isAnime =
     // 1. Filtrado Estricto DB-Only
     if (isAnime) {
         items = items.filter(item => {
-            const genres = item.genres || item.genre_ids || [];
-            const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
-            const tmdbIsAnime = genreIds.includes(16) || (item.origin_country && item.origin_country.includes('JP'));
-            const localIsAnime = (item.content_type || '').toLowerCase() === 'anime';
-            return tmdbIsAnime || localIsAnime;
+            return validateContentType(item, 'tv');
         });
     } else if (filterType !== 'all') {
         items = items.filter(item => {

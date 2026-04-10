@@ -370,9 +370,8 @@ async function toDashboard(user) {
     if (gridContainer) gridContainer.innerHTML = '';
 
     try {
-        // 2. Sincronizar Catálogo Personal (En segundo plano)
-        // Ya no bloqueamos la app esperando miles de registros
-        syncCatalog(supabase); 
+        // 2. Sincronizar Catálogo Personal (Esperar para asegurar filtrado en grilla)
+        await syncCatalog(supabase); 
 
 
         // 3. NUEVO: Renderizado impulsado por DB (Prioridad Máxima)
@@ -400,7 +399,7 @@ async function toDashboard(user) {
         // 4. Cargar Hero (Mezcla de Tendencias TMDB y Catálogo Propio)
         let heroData;
         if (isAnimePage) {
-            heroData = await TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, sort_by: 'popularity.desc' });
+            heroData = await TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' });
         } else if (pageType === 'tv') {
             heroData = await TMDB_SERVICE.fetchFromTMDB('/trending/tv/day');
         } else if (pageType === 'movie') {
@@ -486,12 +485,20 @@ async function toDashboard(user) {
                 renderRow('scifiCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 878 }), 'movie')
             ]);
         } else if (isAnimePage) {
-            // MODO HÍBRIDO: Llamamos a TMDB para descubrir, pero filtramos por lo que hay en tu DB
+            // MODO HÍBRIDO PROFUNDO: Buscamos en las primeras 2 páginas de TMDB para llenar los carruseles
+            const animeParamsP1 = { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc', page: 1 };
+            const animeParamsP2 = { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc', page: 2 };
+
             await Promise.all([
-                renderHybridRow('popularCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' }), 'tv'),
-                renderHybridRow('topRatedCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'vote_average.desc', 'vote_count.gte': 50 }), 'tv'),
-                renderHybridRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', with_original_language: 'ja' }), 'tv'),
-                renderHybridRow('genre2Carousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', with_original_language: 'ja' }), 'tv'),
+                renderHybridRow('popularCarousel', 
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', animeParamsP1), 'tv', 
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', animeParamsP2)),
+                renderHybridRow('topRatedCarousel', 
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { ...animeParamsP1, sort_by: 'vote_average.desc', 'vote_count.gte': 50 }), 'tv'),
+                renderHybridRow('genre1Carousel', 
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', with_original_language: 'ja' }), 'tv'),
+                renderHybridRow('genre2Carousel', 
+                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', with_original_language: 'ja' }), 'tv'),
             ]);
 
 
@@ -514,7 +521,6 @@ async function toDashboard(user) {
             ]);
         }
         // 6. Cargar Grilla
-        const gridContainer = document.getElementById('gridContainer');
         if (gridContainer) {
             await loadGridData(pageType, 1);
             const btnLoadMore = document.getElementById('btnLoadMore');
@@ -544,40 +550,64 @@ async function loadGridData(type, page, append = false) {
     if (loader) loader.classList.remove('hidden');
 
     try {
-        // ---- FILTRO: SOLO DISPONIBLES ----
-        // Si estamos en peliculas.html o series.html, cargamos solo de Supabase
         const isMoviesPage = document.body.classList.contains('page-movies');
         const isSeriesPage = document.body.classList.contains('page-series');
         const isAnimePage  = document.body.classList.contains('page-anime');
 
+        // MODO FILTRADO PROVINCIAL (Búsqueda en profundidad hasta encontrar items en DB)
         if (isMoviesPage || isSeriesPage || isAnimePage) {
-            // Cargar de TMDB para mostrar todo
-            const data = type === 'tv' 
-                ? await TMDB_SERVICE.getPopularTV(page)
-                : await TMDB_SERVICE.getPopularMovies(page);
+            logDebug(`[Grid] Iniciando búsqueda profunda (Página base: ${page})...`);
+            
+            let accumulatedItems = [];
+            let tmdbPage = page;
+            const currentIds = window.availableIds || new Set();
+            const MAX_PAGES_TO_SCAN = 4; // Escanear hasta 4 páginas de TMDB por cada click en "Cargar más"
+
+            for (let i = 0; i < MAX_PAGES_TO_SCAN; i++) {
+                const data = type === 'tv' 
+                    ? await TMDB_SERVICE.getPopularTV(tmdbPage)
+                    : await TMDB_SERVICE.getPopularMovies(tmdbPage);
+
+                if (!data.results?.length) break;
+
+                const filtered = data.results.filter(item => {
+                    const idStr = item.id.toString();
+                    return currentIds.has(idStr) && validateContentType(item, type);
+                });
+
+                accumulatedItems = [...accumulatedItems, ...filtered];
+                tmdbPage++;
+
+                // Si ya encontramos suficientes para llenar la vista actual, paramos
+                if (accumulatedItems.length >= 10) break;
+                if (tmdbPage > data.total_pages) break;
+            }
 
             if (loader) loader.classList.add('hidden');
 
-            let filteredItems = (data.results || []);
-            filteredItems = filterItemsByProfile(filteredItems);
-
-            // Para anime, filtrar por género 16
-            if (isAnimePage) {
-                filteredItems = filteredItems.filter(item => (item.genre_ids || []).includes(16));
+            if (accumulatedItems.length > 0) {
+                const fragment = document.createDocumentFragment();
+                accumulatedItems.forEach(item => {
+                    const card = CATALOG_UI.createMovieCard(item, type, true);
+                    fragment.appendChild(card);
+                });
+                container.appendChild(fragment);
             }
 
-            const fragment = document.createDocumentFragment();
-            filteredItems.forEach(item => {
-                const card = CATALOG_UI.createMovieCard(item, type, true);
-                fragment.appendChild(card);
-            });
-            container.appendChild(fragment);
-
-            if (btnLoadMore) btnLoadMore.classList.toggle('hidden', filteredItems.length < 20); // Asumir 20 por página
+            // Paginación: Actualizar el dataset para la próxima llamada
+            if (btnLoadMore) {
+                btnLoadMore.dataset.nextPage = tmdbPage;
+                btnLoadMore.classList.toggle('hidden', tmdbPage > 50); // Límite de seguridad
+                
+                // Si tras el escaneo profundo no hay NADA, y hay más páginas, re-intentar una vez más
+                if (accumulatedItems.length === 0 && tmdbPage < 20) {
+                     return loadGridData(type, tmdbPage, true);
+                }
+            }
             return;
         }
 
-        // ---- MODO NORMAL: POPULARES TMDB ----
+        // ---- MODO NORMAL (Dashboard / Búsqueda) ----
         const data = type === 'tv' 
             ? await TMDB_SERVICE.getPopularTV(page)
             : await TMDB_SERVICE.getPopularMovies(page);
@@ -585,14 +615,17 @@ async function loadGridData(type, page, append = false) {
         if (loader) loader.classList.add('hidden');
         
         if (data.results?.length) {
+            const currentIds = window.availableIds || new Set();
             const fragment = document.createDocumentFragment();
             data.results.forEach(item => {
                 if (!item.poster_path) return;
-                const isAvail = window.availableIds?.has(item.id.toString());
+                const isAvail = currentIds.has(item.id.toString());
                 const card = CATALOG_UI.createMovieCard(item, type, isAvail);
                 fragment.appendChild(card);
             });
             container.appendChild(fragment);
+            
+            if (btnLoadMore) btnLoadMore.classList.toggle('hidden', data.page >= data.total_pages);
         }
     } catch (e) {
         console.error('Error cargando grid:', e);
