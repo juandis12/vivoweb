@@ -474,7 +474,7 @@ async function toDashboard(user) {
                     const data = await TMDB_SERVICE.getTrending();
                     let filtered = (data.results || []);
                     filtered = filterItemsByProfile(filtered);
-                    CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds, DB_CATALOG);
+                    CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds, window.DB_CATALOG);
                 })(),
                 loadRecommendedItems(),
                 renderRow('actionCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 28 }), 'movie'),
@@ -483,22 +483,8 @@ async function toDashboard(user) {
                 renderRow('scifiCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 878 }), 'movie')
             ]);
         } else if (isAnimePage) {
-            const animeParamsP1 = { with_genres: 16, sort_by: 'popularity.desc', page: 1 };
-            const animeParamsP2 = { with_genres: 16, sort_by: 'popularity.desc', page: 2 };
-
-            await Promise.all([
-                renderHybridRow('popularCarousel', 
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', animeParamsP1), 'tv', 
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', animeParamsP2)),
-                renderHybridRow('topRatedCarousel', 
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { ...animeParamsP1, sort_by: 'vote_average.desc', 'vote_count.gte': 50 }), 'tv'),
-                renderHybridRow('genre1Carousel', 
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759' }), 'tv',
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759', page: 2 }), 10759),
-                renderHybridRow('genre2Carousel', 
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765' }), 'tv',
-                    () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765', page: 2 }), 10765),
-            ]);
+            await renderAnimeDashboardRows(availableIds);
+            window.addEventListener('metadataBatchSynced', () => renderAnimeDashboardRows(availableIds));
         } else {
             const fetchPopular = () => pageType === 'tv' 
                 ? TMDB_SERVICE.fetchFromTMDB('/discover/tv', { without_genres: 16, sort_by: 'popularity.desc' }) 
@@ -518,11 +504,9 @@ async function toDashboard(user) {
         }
 
         // 6. Cargar Grilla (Biblioteca Completa)
-        if (gridContainer) {
-            await loadGridData(pageType, 1, false, currentProfile);
-        }
-
-        // 7. Configurar Botones "Ver más" (Scroll a Grilla)
+        await loadGridData(pageType, 1, false, currentProfile);
+        
+        // 7. Configurar Botones "Ver más"
         setupVerMasButtons();
 
     } catch (e) {
@@ -550,10 +534,20 @@ function setupVerMasButtons() {
         btn.dataset.hasListener = "true";
     });
 }
-
-
-
-
+async function renderAnimeDashboardRows(availableIds) {
+    const animeParams = { with_genres: 16, sort_by: 'popularity.desc' };
+    await Promise.all([
+        renderHybridRow('popularCarousel', 
+            () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', animeParams), 'tv', 
+            () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { ...animeParams, page: 2 })),
+        renderHybridRow('topRatedCarousel', 
+            () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { ...animeParams, sort_by: 'vote_average.desc' }), 'tv'),
+        renderHybridRow('genre1Carousel', 
+            () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10759' }), 'tv', null, 10759),
+        renderHybridRow('genre2Carousel', 
+            () => TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: '16,10765' }), 'tv', null, 10765),
+    ]);
+}
 
 async function renderDBCategoryRows() {
     const isMainPage = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');

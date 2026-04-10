@@ -22,15 +22,8 @@ export function validateContentType(item, expectedType) {
     // Unificar tipo de item (TMDB o DB Local)
     const rawType = item.media_type || (item.content_type === 'series' ? 'tv' : (item.content_type === 'anime' ? 'tv' : (item.content_type === 'movie' ? 'movie' : expectedType)));
     
-    // Definición de Anime: Género Animación (16) + (Origen Japonés/Chino/Coreano O Idioma Japonés/Chino/Coreano O Nombre con caracteres Asiáticos)
-    const isAnim = genreIds.includes(16);
-    const isAsian = (item.origin_country && (Array.isArray(item.origin_country) ? (item.origin_country.includes('JP') || item.origin_country.includes('CN') || item.origin_country.includes('KR')) : ['JP','CN','KR'].includes(item.origin_country))) || 
-                    ['ja', 'zh', 'ko'].includes(item.original_language) || 
-                    (item.name && /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/.test(item.name));
-
-    // Si es Anime en la DB, confiamos en la etiqueta local. Si es de TMDB, combinamos Animación + Origen Asiático.
-    const isManuallyMarkedAnime = (item.content_type || '').toLowerCase() === 'anime';
-    const isAnime = isManuallyMarkedAnime || (isAnim && isAsian);
+    // Definición de Anime Inclusive: Género Animación (16)
+    const isAnime = genreIds.includes(16) || (item.content_type || '').toLowerCase() === 'anime';
 
     const isMoviesPage = document.body.classList.contains('page-movies');
     const isSeriesPage = document.body.classList.contains('page-series');
@@ -220,12 +213,56 @@ export async function scanAllDBContent(supabase) {
 
         console.log(`[VivoTV] 🚀 Escaneo completo. Disponibles para híbrido: ${availableIds.size} títulos.`);
         
-        // Notificar que hay nuevos IDs disponibles para habilitar badges o carruseles hibridos
+        // --- SINCRONIZACIÓN DE METADATOS FALTANTES ---
+        syncMissingMetadata();
+
+        // Notificar que hay nuevos IDs disponibles
         window.dispatchEvent(new CustomEvent('scanCompleted', { detail: { count: availableIds.size } }));
 
     } catch (e) {
         console.warn('[VivoTV] Error en escaneo de IDs:', e);
     }
+}
+
+/**
+ * Recupera metadatos de TMDB para IDs que están en la base de datos pero no en el catálogo local
+ */
+async function syncMissingMetadata() {
+    if (!window.DB_CATALOG) window.DB_CATALOG = [];
+    const knownIds = new Set(window.DB_CATALOG.map(i => i.tmdb_id?.toString()));
+    const missingIds = Array.from(availableIds).filter(id => !knownIds.has(id));
+
+    if (missingIds.length === 0) return;
+
+    console.log(`[VivoTV] 🔄 Sincronizando metadatos para ${missingIds.length} títulos nuevos...`);
+
+    // Procesar en tandas pequeñas para no saturar
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < missingIds.length; i += BATCH_SIZE) {
+        const batch = missingIds.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async (id) => {
+            try {
+                // Determinar tipo probable
+                const type = availableSeries.has(id) ? 'tv' : 'movie';
+                const details = await TMDB_SERVICE.getDetails(id, type);
+                if (details && details.id) {
+                    window.DB_CATALOG.push(details);
+                }
+            } catch (e) {
+                // Si falla como uno, intentar como el otro (en caso de error en la detección de tabla)
+                try {
+                    const altType = availableSeries.has(id) ? 'movie' : 'tv';
+                    const details = await TMDB_SERVICE.getDetails(id, altType);
+                    if (details && details.id) window.DB_CATALOG.push(details);
+                } catch (err) {}
+            }
+        }));
+        
+        // Notificar lote cargado para que UI pueda reaccionar
+        window.dispatchEvent(new CustomEvent('metadataBatchSynced'));
+        await new Promise(r => setTimeout(r, 200)); // Delay entre tandas
+    }
+    console.log('[VivoTV] ✅ Sincronización de metadatos completa.');
 }
 
 function dispatchBatchEvent(items) {
