@@ -184,17 +184,45 @@ export async function fetchAvailableIds(supabase) {
 }
 
 /**
- * ESCANEO MASIVO DE IDs (Para modo híbrido)
- * Recolecta todos los IDs de video_sources y series_episodes en el set global
+ * ESCANEO MASIVO DE IDs (Para modo híbrido) con soporte para tablas de 4000+ items (Fase Deep Scan)
  */
 export async function scanAllDBContent(supabase) {
     if (!supabase) return;
     try {
-        console.log('[VivoTV] 🔎 Escaneando fuentes de video para descubrimiento híbrido...');
+        console.log('[VivoTV] 🔎 Iniciando escaneo profundo del catálogo (Descubrimiento total)...');
         
-        // Escanear Películas (video_sources)
-        const { data: movies } = await supabase.from('video_sources').select('tmdb_id');
-        if (movies) movies.forEach(m => {
+        // Función interna para paginar tablas grandes en bloques de 1000
+        const fetchAllIdsFromTable = async (tableName, idColumn = 'tmdb_id') => {
+            let allResults = [];
+            let offset = 0;
+            const PAGE_SIZE = 1000;
+            let hasMore = true;
+
+            while (hasMore) {
+                const { data, error } = await supabase
+                    .from(tableName)
+                    .select(idColumn)
+                    .range(offset, offset + PAGE_SIZE - 1);
+                
+                if (error) {
+                    console.error(`[VivoTV] Error escaneando ${tableName}:`, error);
+                    break;
+                }
+                
+                if (data && data.length > 0) {
+                    allResults.push(...data);
+                    if (data.length < PAGE_SIZE) hasMore = false;
+                    else offset += PAGE_SIZE;
+                } else {
+                    hasMore = false;
+                }
+            }
+            return allResults;
+        };
+
+        // 1. Escanear Películas (video_sources) - DESBLOQUEADO PARA 4000+
+        const movies = await fetchAllIdsFromTable('video_sources');
+        movies.forEach(m => {
             const id = m.tmdb_id.toString();
             if (!availableIds.has(id)) {
                 availableIds.add(id);
@@ -202,9 +230,9 @@ export async function scanAllDBContent(supabase) {
             }
         });
 
-        // Escanear Series (series_episodes)
-        const { data: series } = await supabase.from('series_episodes').select('tmdb_id');
-        if (series) series.forEach(s => {
+        // 2. Escanear Series/Animes (series_episodes) - DESBLOQUEADO PARA 4000+
+        const series = await fetchAllIdsFromTable('series_episodes');
+        series.forEach(s => {
             const id = s.tmdb_id.toString();
             if (!availableIds.has(id)) {
                 availableIds.add(id);
@@ -219,8 +247,9 @@ export async function scanAllDBContent(supabase) {
 
         console.log(`[VivoTV] 🚀 Escaneo completo. Disponibles para híbrido: ${availableIds.size} títulos.`);
         
-        // --- SINCRONIZACIÓN DE METADATOS FALTANTES ---
-        await syncMissingMetadata();
+        // --- SINCRONIZACIÓN DE METADATOS FALTANTES (Background Turbo Sync) ---
+        // Eliminado el 'await' para que la app cargue al instante sin esperar
+        syncMissingMetadata();
 
         // Notificar que hay nuevos IDs disponibles
         window.dispatchEvent(new CustomEvent('scanCompleted', { detail: { count: availableIds.size } }));
@@ -242,10 +271,10 @@ async function syncMissingMetadata() {
 
     console.log(`[VivoTV] 🚀 Turbo Sync: Procesando ${allIds.length} títulos de forma progresiva...`);
 
-    // --- FASE 1: BLOQUE PRIORITARIO (Para Renderizado Instantáneo) ---
-    // Tomamos los primeros 100 para llenar la pantalla de inmediato
-    const priorityBlock = allIds.slice(0, 100);
-    const backgroundBlock = allIds.slice(100);
+    // --- FASE 1: MICRO-BLOQUE PRIORITARIO (Para Renderizado Instantáneo) ---
+    // Tomamos los primeros 20 para llenar el Hero y la primera fila de inmediato
+    const priorityBlock = allIds.slice(0, 20);
+    const backgroundBlock = allIds.slice(20);
 
     const processItem = async (id) => {
         try {
@@ -277,11 +306,11 @@ async function syncMissingMetadata() {
         await Promise.all(workers);
     };
 
-    // 1. Procesar Prioridad
+    // 1. Procesar Prioridad (Micro-Bloque)
     await workerPool(priorityBlock);
-    console.log('[VivoTV] ⚡ Bloque prioritario listo. Renderizando UI...');
+    console.log('[VivoTV] ⚡ Micro-bloque de inicio listo. Renderizando primeras filas...');
     
-    // Notificar para renderizado inmediato de los primeros 100
+    // Notificar para renderizado inmediato
     window.dispatchEvent(new CustomEvent('metadataBatchSynced'));
     if (window.renderDBCategoryRows) window.renderDBCategoryRows();
 

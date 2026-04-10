@@ -41,13 +41,17 @@ export const TMDB_SERVICE = {
 
         try {
             const res = await fetch(url.toString());
-            if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
+            if (!res.ok) {
+                if (res.status === 404) return { error: 404 }; // Silencio administrativo para 404
+                throw new Error(`TMDB HTTP ${res.status}`);
+            }
             const data = await res.json();
-
             return data;
         } catch (e) {
-            console.error(`TMDB fetch error (${endpoint}):`, e);
-            return { results: [] };
+            if (e.message !== 'TMDB HTTP 404') {
+                console.error(`TMDB fetch error (${endpoint}):`, e);
+            }
+            return { results: [], error: e.message };
         }
     },
 
