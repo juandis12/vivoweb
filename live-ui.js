@@ -66,12 +66,12 @@ export const LIVE_UI = {
             
             await this.switchChannel(activeChannelId);
             
-            // 5. Configurar Intervalo de Alta Precisión
+            // 5. Configurar Intervalo Agresivo (Monitor Anti-Ads: cada 2s)
             if (updateInterval) clearInterval(updateInterval);
             updateInterval = setInterval(() => {
                 this.updateCurrentInfo();
-                this.checkSyncDrift(); // Auto-Corrector cada 10s
-            }, 10000); 
+                this.checkSyncDrift(); // Vigilante activo Anti-Ads
+            }, 2000); 
 
             // 6. Listener de Visibilidad (Auto-Resync al volver a la App)
             document.removeEventListener('visibilitychange', this.handleVisibility);
@@ -101,33 +101,35 @@ export const LIVE_UI = {
      */
     checkSyncDrift() {
         const video = document.querySelector('.active-tv-video');
-        if (!video || video.paused) return;
+        if (!video || video.paused || video.seeking) return;
 
         const channel = filteredChannels.find(c => c.id === activeChannelId);
         const status = this.getFilteredShow(channel);
         
         if (status?.currentShow) {
-            const expected = status.currentShow.offsetSeconds;
+            // BUFFER ANTI-ADS: Siempre intentamos ir 10s adelante si estamos al puro inicio
+            const adSkipBuffer = 10;
+            const expected = status.currentShow.offsetSeconds + adSkipBuffer;
             const actual = video.currentTime;
-            const diff = Math.abs(expected - actual);
+            const diff = expected - actual;
 
-            if (diff > 5) { // Tolerancia de 5 segundos para evitar tartamudeo constante
-                console.warn(`[Live] Detectado desajuste de ${diff.toFixed(1)}s. Corrigiendo...`);
+            // Si el video se atrasa más de 3s (por un anuncio o buffering), saltamos.
+            if (diff > 3) { 
+                console.warn(`[Live] Monitor Anti-Ads: Detectado retraso de ${diff.toFixed(1)}s. Saltando publicidad...`);
                 video.currentTime = expected;
-                // Mostrar breve aviso flash
-                this.showSyncFlash();
+                this.showSyncFlash('Anuncio Saltado / Sincronizando...');
             }
         }
     },
 
-    showSyncFlash() {
+    showSyncFlash(text = 'Sincronización Global...') {
         let flash = document.querySelector('.sync-flash');
         if (!flash) {
             flash = document.createElement('div');
             flash.className = 'sync-flash';
-            flash.textContent = 'Sincronización Global...';
             document.body.appendChild(flash);
         }
+        flash.textContent = text;
         flash.classList.add('visible');
         setTimeout(() => flash.classList.remove('visible'), 2000);
     },
