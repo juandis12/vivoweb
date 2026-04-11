@@ -3,9 +3,10 @@
  * REPARADO: Sincronización Global Maestra (NTP-Style)
  */
 
-import { LIVE_CHANNELS, getCurrentShow } from './live-engine.js';
+import { LIVE_CHANNELS, getCurrentShow, buildLiveCatalog } from './live-engine.js';
 import { supabase } from './config.js';
 import { PLAYER_LOGIC } from './player.js';
+import { DB_CATALOG } from './catalog.js';
 
 let activeChannelId = 'action';
 let updateInterval = null;
@@ -14,27 +15,41 @@ let serverOffset = 0; // Milisegundos de desfase vs servidor
 
 export const LIVE_UI = {
     async init() {
-        console.log('[Live] Calibrando Reloj Maestro...');
+        console.log('[Live] Iniciando Motor de Programación 24/7...');
         
         try {
             // 1. Fase de Calibración (NTP-Lite)
             await this.syncClock();
 
-            // 2. Obtener IDs disponibles en video_sources
-            const { data: dbItems, error: dbError } = await supabase
-                .from('video_sources')
-                .select('tmdb_id');
-            
-            if (dbError) throw dbError;
+            // 1.1 Esperar a que el catálogo esté listo si es necesario
+            if (!DB_CATALOG || DB_CATALOG.length === 0) {
+                console.log('[Live] Catálogo vacío, esperando sincronización...');
+                await new Promise(resolve => {
+                    const check = setInterval(() => {
+                        if (DB_CATALOG && DB_CATALOG.length > 0) {
+                            clearInterval(check);
+                            resolve();
+                        }
+                    }, 500);
+                    setTimeout(() => { clearInterval(check); resolve(); }, 5000); // Timeout 5s
+                });
+            }
 
+            // 2. Construir Catálogo Dinámico 24/7 con los datos locales
+            // Filtramos las películas que realmente están en video_sources
+            const { data: dbItems } = await supabase.from('video_sources').select('tmdb_id');
             const availableSet = new Set((dbItems || []).map(item => String(item.tmdb_id)));
-            console.log(`[Live] Disponibles en DB: ${availableSet.size}. Desfase Reloj: ${serverOffset}ms`);
+            
+            const liveReadyCatalog = DB_CATALOG.filter(item => availableSet.has(String(item.id || item.tmdb_id)));
+            
+            console.log(`[Live] Generando parrilla con ${liveReadyCatalog.length} títulos disponibles.`);
+            await buildLiveCatalog(liveReadyCatalog);
 
-            // 3. Filtrar Programación
-            filteredChannels = LIVE_CHANNELS.map(ch => {
-                const validSchedule = ch.schedule.filter(item => availableSet.has(String(item.tmdb_id)));
-                return { ...ch, schedule: validSchedule };
-            }).filter(ch => ch.schedule.length > 0);
+            // 3. Filtrar Canales Activos (solo los que tienen programación)
+            filteredChannels = LIVE_CHANNELS.filter(ch => {
+                const status = getCurrentShow(ch.id);
+                return status !== null;
+            });
 
             const list = document.getElementById('channelsList');
             if (filteredChannels.length === 0) {
@@ -231,29 +246,12 @@ export const LIVE_UI = {
     },
 
     getFilteredShow(channel) {
-        if (!channel || !channel.schedule || channel.schedule.length === 0) return null;
+        if (!channel) return null;
 
         // AQUÍ ESTÁ EL TRUCO: Usamos la hora corregida del Reloj Maestro
         const now = this.getCorrectedNow();
-        const currentTimeInSeconds = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-
-        let currentShow = channel.schedule[0];
-        let nextShow = channel.schedule[1] || channel.schedule[0];
-
-        for (let i = 0; i < channel.schedule.length; i++) {
-            const item = channel.schedule[i];
-            const [h, m] = item.time.split(':').map(Number);
-            const showTimeSeconds = (h * 3600) + (m * 60);
-
-            if (showTimeSeconds <= currentTimeInSeconds) {
-                currentShow = { ...item };
-                nextShow = channel.schedule[i+1] || channel.schedule[0];
-                currentShow.offsetSeconds = currentTimeInSeconds - showTimeSeconds;
-            } else {
-                break;
-            }
-        }
-        return { currentShow, nextShow };
+        // Usar la función de live-engine para obtener el show actual de la playlist dinámica
+        return getCurrentShow(channel.id);
     },
 
     updateCurrentInfo() {
@@ -273,6 +271,7 @@ export const LIVE_UI = {
         const titleEl = document.getElementById('liveTitle');
         
         if (titleEl && currentStatus?.currentShow && titleEl.textContent !== currentStatus.currentShow.title) {
+            console.log(`[Live] Cambio de programa detectado: ${titleEl.textContent} -> ${currentStatus.currentShow.title}`);
             this.switchChannel(activeChannelId);
         }
     }
