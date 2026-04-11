@@ -461,10 +461,11 @@ export const PLAYER_LOGIC = {
     _playSourceInElement(url, seekSeconds, videoId, iframeId) {
         const video = document.getElementById(videoId);
         const iframe = document.getElementById(iframeId);
-        const container = document.getElementById('playerContainer');
-        const loader = document.getElementById('playerLoader');
+        // Intentar encontrar el contenedor principal o el de Live para feedback visual
+        const container = document.getElementById('playerContainer') || document.getElementById('livePlayerContainer');
+        const loader = document.getElementById('playerLoader') || document.getElementById('livePlaceholder');
 
-        if (!video || !iframe || !container) return;
+        if (!video || !iframe) return;
 
         // Reset listeners previos y estado HLS
         video.onended = null;
@@ -514,7 +515,7 @@ export const PLAYER_LOGIC = {
 
             iframe.src = smartUrl;
             this.currentIsIframe = true;
-            this._startIframeTracking(seekSeconds);
+            this._startIframeTracking(seekSeconds, iframe);
             if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
         } else {
             iframe.classList.add('hidden');
@@ -555,6 +556,7 @@ export const PLAYER_LOGIC = {
             } else {
                 video.src = smartUrl;
                 video.load();
+                video.muted = true; // Forzar mute para garantizar el Autoplay (Regla de Navegadores)
                 if (seekSeconds > 0) video.currentTime = seekSeconds;
                 video.play().catch(e => console.warn("Autoplay block:", e));
                 if (loader) setTimeout(() => loader.classList.add('hidden'), 1000);
@@ -567,24 +569,24 @@ export const PLAYER_LOGIC = {
         if (!url) return '';
         let cleanUrl = url.trim();
 
-        // 1. YouTube
+        // 1. YouTube (Ocultando controles para modo TV)
         if (cleanUrl.includes('youtube.com/watch?v=') || cleanUrl.includes('youtube.com/v/')) {
             const id = cleanUrl.split(/v\/|v=/)[1].split(/[?&]/)[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
         if (cleanUrl.includes('youtu.be/')) {
             const id = cleanUrl.split('youtu.be/')[1].split(/[?&]/)[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
-        // 2. Vimeo (Fix para soportar subdominios y parámetros extra)
+        // 2. Vimeo (Ocultando UI)
         if (cleanUrl.includes('vimeo.com/') && !cleanUrl.includes('player.vimeo.com')) {
             const parts = cleanUrl.split('vimeo.com/')[1].split(/[?&]/);
             const id = parts[0];
-            return `https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
+            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&background=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
         }
         // 3. Facebook
         if (cleanUrl.includes('facebook.com/') && !cleanUrl.includes('plugins/video.php')) {
-            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=0&width=1280${seekSeconds > 0 ? '&t=' + seekSeconds : ''}`;
+            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&autoplay=true&mute=true&show_text=0&width=1280${seekSeconds > 0 ? '&t=' + seekSeconds : ''}`;
         }
         
         // 4. Intentar inyectar tiempo en reproductores genéricos
@@ -701,10 +703,17 @@ export const PLAYER_LOGIC = {
         };
     },
 
-    _startIframeTracking(seekSeconds = 0) {
+    _startIframeTracking(seekSeconds = 0, targetIframe = null) {
         this._stopProgressTimer();
         
-        const iframe = document.getElementById('videoIframe');
+        // Intentar usar el parámetro, de lo contrario buscar el de cine o el de TV
+        const iframe = targetIframe || document.getElementById('videoIframe') || document.getElementById('liveVideoIframe');
+        
+        if (!iframe) {
+            console.warn('[Player] Tracking abortado: No se encontró un iframe activo.');
+            return;
+        }
+
         const url = iframe.src;
         let elapsed = seekSeconds;
         let lastSavedElapsed = -1;

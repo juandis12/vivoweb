@@ -1,6 +1,6 @@
 /**
  * live-ui.js — Controlador de Interfaz para Canales en Vivo (Simulcast)
- * REPARADO: Mejor compatibilidad de tipos y manejo de errores.
+ * REPARADO: Sincronización Global Maestra (NTP-Style)
  */
 
 import { LIVE_CHANNELS, getCurrentShow } from './live-engine.js';
@@ -10,62 +10,97 @@ import { PLAYER_LOGIC } from './player.js';
 let activeChannelId = 'action';
 let updateInterval = null;
 let filteredChannels = []; 
+let serverOffset = 0; // Milisegundos de desfase vs servidor
 
 export const LIVE_UI = {
     async init() {
-        console.log('[Live] Iniciando validación estricta...');
+        console.log('[Live] Calibrando Reloj Maestro...');
         
         try {
-            // 1. Obtener IDs disponibles en video_sources (con manejo de errores)
+            // 1. Fase de Calibración (NTP-Lite)
+            await this.syncClock();
+
+            // 2. Obtener IDs disponibles en video_sources
             const { data: dbItems, error: dbError } = await supabase
                 .from('video_sources')
                 .select('tmdb_id');
             
             if (dbError) throw dbError;
 
-            // Normalizar a Set de Strings para comparación rápida
             const availableSet = new Set((dbItems || []).map(item => String(item.tmdb_id)));
-            console.log(`[Live] Disponibles en DB: ${availableSet.size} ítems.`);
+            console.log(`[Live] Disponibles en DB: ${availableSet.size}. Desfase Reloj: ${serverOffset}ms`);
 
-            // 2. Filtrar Programación
+            // 3. Filtrar Programación
             filteredChannels = LIVE_CHANNELS.map(ch => {
-                const validSchedule = ch.schedule.filter(item => {
-                    const isAvail = availableSet.has(String(item.tmdb_id));
-                    return isAvail;
-                });
+                const validSchedule = ch.schedule.filter(item => availableSet.has(String(item.tmdb_id)));
                 return { ...ch, schedule: validSchedule };
             }).filter(ch => ch.schedule.length > 0);
 
-            console.log(`[Live] Canales tras filtrado: ${filteredChannels.length}`);
-
             const list = document.getElementById('channelsList');
             if (filteredChannels.length === 0) {
-                if (list) list.innerHTML = `<div class="empty-state">
-                    <div class="empty-icon">📺</div>
-                    <h2>No hay canales listos</h2>
-                    <p>Agregue contenido a la base de datos para habilitar la TV en vivo.</p>
-                </div>`;
+                if (list) list.innerHTML = `<div class="empty-state"><h2>Próximamente</h2><p>Estamos preparando la señal.</p></div>`;
                 return;
             }
 
-            // 3. Renderizar Lista Inicial
+            // 4. Render y Sintonía Internacional
             this.renderChannelsList();
             
-            // 4. Sintonizar Primer Canal por defecto
             if (!filteredChannels.find(c => c.id === activeChannelId)) {
                 activeChannelId = filteredChannels[0].id;
             }
             
             await this.switchChannel(activeChannelId);
             
-            // 5. Configurar Intervalo de Sincronización
+            // 5. Configurar Intervalo de Alta Precisión
             if (updateInterval) clearInterval(updateInterval);
-            updateInterval = setInterval(() => this.updateCurrentInfo(), 15000); // 15s para mayor precisión
+            updateInterval = setInterval(() => this.updateCurrentInfo(), 10000); 
+
+            // 6. Listener de Visibilidad (Auto-Resync al volver a la App)
+            document.removeEventListener('visibilitychange', this.handleVisibility);
+            document.addEventListener('visibilitychange', () => this.handleVisibility());
 
         } catch (err) {
-            console.error('[Live] Error Crítico en init:', err);
-            const list = document.getElementById('channelsList');
-            if (list) list.innerHTML = '<p class="error-msg">Error de conexión con la base de datos.</p>';
+            console.error('[Live] Error Crítico:', err);
+        }
+    },
+
+    /**
+     * Sincroniza el reloj local con el servidor de Supabase
+     */
+    async syncClock() {
+        const start = Date.now();
+        // Usamos una llamada HEAD a la API de Supabase para leer el header 'date'
+        const response = await fetch(supabase.supabaseUrl + '/rest/v1/', {
+            method: 'HEAD',
+            headers: { 'apikey': supabase.supabaseKey }
+        });
+        const end = Date.now();
+        const serverDateStr = response.headers.get('date');
+        
+        if (serverDateStr) {
+            const serverTime = new Date(serverDateStr).getTime();
+            const rtt = end - start;
+            // El tiempo real del servidor es tiempoRecibido + (tiempoTransferencia / 2)
+            const estimatedServerTime = serverTime + (rtt / 2);
+            serverOffset = estimatedServerTime - end;
+            console.log(`[Live] Calibración completa. Skew detectado: ${serverOffset}ms`);
+        }
+    },
+
+    /**
+     * Obtiene la hora actual "Corregida" según la sincronización global
+     */
+    getCorrectedNow() {
+        return new Date(Date.now() + serverOffset);
+    },
+
+    handleVisibility() {
+        if (document.visibilityState === 'visible') {
+            console.log('[Live] Aplicación recuperada. Verificando sincronía global...');
+            this.syncClock().then(() => {
+                this.updateCurrentInfo();
+                this.switchChannel(activeChannelId); // Re-sintonizar forzosamente para saltar al punto exacto
+            });
         }
     },
 
@@ -82,7 +117,7 @@ export const LIVE_UI = {
                 <div class="channel-icon">${ch.icon}</div>
                 <div class="channel-meta">
                     <span class="channel-name">${ch.name}</span>
-                    <span class="channel-now" id="now-${ch.id}" data-channel="${ch.id}">Actualizando...</span>
+                    <span class="channel-now" id="now-${ch.id}">Actualizando...</span>
                 </div>
             `;
             item.onclick = () => this.switchChannel(ch.id);
@@ -95,15 +130,6 @@ export const LIVE_UI = {
         if (!id) return;
         activeChannelId = id;
         
-        console.log(`[Live] Intentando sintonizar: ${id}`);
-
-        // Marcar UI activa
-        document.querySelectorAll('.channel-item').forEach(el => {
-            // Un chequeo más simple de clase activa
-            const isTarget = el.querySelector('.channel-name')?.textContent.toLowerCase().includes(id.toLowerCase());
-            el.classList.toggle('active', isTarget);
-        });
-
         const channel = filteredChannels.find(c => c.id === id);
         if (!channel) return;
 
@@ -112,13 +138,15 @@ export const LIVE_UI = {
 
         const { currentShow } = status;
         
+        // UI Feedback
+        document.querySelectorAll('.channel-item').forEach(el => {
+            const name = el.querySelector('.channel-name')?.textContent;
+            el.classList.toggle('active', name === channel.name);
+        });
+
         const placeholder = document.getElementById('livePlaceholder');
         const playerCont = document.getElementById('livePlayerContainer');
         const info = document.getElementById('liveInfo');
-
-        if (placeholder) placeholder.classList.remove('hidden');
-        if (playerCont) playerCont.classList.add('hidden');
-        if (info) info.classList.add('hidden');
 
         try {
             const { data } = await supabase
@@ -128,8 +156,7 @@ export const LIVE_UI = {
                 .maybeSingle();
 
             if (data?.stream_url) {
-                console.log(`[Live] Fuente encontrada. Reproduciendo offset: ${currentShow.offsetSeconds}s`);
-                
+                // LLAMADA CRITICA: Pasar offset exacto basado en RELOJ MAESTRO
                 PLAYER_LOGIC._playSourceInElement(
                     data.stream_url, 
                     currentShow.offsetSeconds, 
@@ -141,24 +168,20 @@ export const LIVE_UI = {
                 if (playerCont) playerCont.classList.remove('hidden');
                 if (info) {
                     info.classList.remove('hidden');
-                    const titleEl = document.getElementById('liveTitle');
-                    const nextEl = document.getElementById('liveNext');
-                    if (titleEl) titleEl.textContent = currentShow.title;
-                    if (nextEl) nextEl.textContent = `A continuación: ${status.nextShow.title} (${status.nextShow.time})`;
+                    document.getElementById('liveTitle').textContent = currentShow.title;
+                    document.getElementById('liveNext').textContent = `A continuación: ${status.nextShow.title} (${status.nextShow.time})`;
                 }
-            } else {
-                console.error(`[Live] Sin fuente para TMDB: ${currentShow.tmdb_id}`);
-                if (placeholder) placeholder.innerHTML = `<p style="padding:20px;">⚠️ Contenido "${currentShow.title}" no disponible.</p>`;
             }
         } catch (e) {
-            console.error('[Live] Error en switchChannel:', e);
+            console.error('[Live] Fallo en sintonía:', e);
         }
     },
 
     getFilteredShow(channel) {
         if (!channel || !channel.schedule || channel.schedule.length === 0) return null;
 
-        const now = new Date();
+        // AQUÍ ESTÁ EL TRUCO: Usamos la hora corregida del Reloj Maestro
+        const now = this.getCorrectedNow();
         const currentTimeInSeconds = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
 
         let currentShow = channel.schedule[0];
@@ -170,7 +193,7 @@ export const LIVE_UI = {
             const showTimeSeconds = (h * 3600) + (m * 60);
 
             if (showTimeSeconds <= currentTimeInSeconds) {
-                currentShow = item;
+                currentShow = { ...item };
                 nextShow = channel.schedule[i+1] || channel.schedule[0];
                 currentShow.offsetSeconds = currentTimeInSeconds - showTimeSeconds;
             } else {
@@ -186,26 +209,22 @@ export const LIVE_UI = {
         filteredChannels.forEach(ch => {
             const status = this.getFilteredShow(ch);
             const el = document.getElementById(`now-${ch.id}`);
-            if (el && status && status.currentShow) {
+            if (el && status?.currentShow) {
                 el.textContent = status.currentShow.title;
-            } else if (el) {
-                el.textContent = 'Sin programación';
             }
         });
 
-        // Auto-salto de programa si terminó el actual
+        // Auto-salto de programa
         const activeCh = filteredChannels.find(c => c.id === activeChannelId);
         const currentStatus = this.getFilteredShow(activeCh);
         const titleEl = document.getElementById('liveTitle');
         
-        if (titleEl && currentStatus && currentStatus.currentShow && titleEl.textContent !== currentStatus.currentShow.title) {
-            console.log('[Live] Cambio de programa detectado automáticamente.');
+        if (titleEl && currentStatus?.currentShow && titleEl.textContent !== currentStatus.currentShow.title) {
             this.switchChannel(activeChannelId);
         }
     }
 };
 
-// Vinculación SPA
 window.addEventListener('vivotv:page-changed', (e) => {
     if (window.location.pathname.includes('live.html') || document.body.classList.contains('page-live')) {
         LIVE_UI.init();
@@ -218,5 +237,5 @@ window.addEventListener('vivotv:page-changed', (e) => {
 });
 
 if (window.location.pathname.includes('live.html')) {
-    setTimeout(() => LIVE_UI.init(), 200);
+    setTimeout(() => LIVE_UI.init(), 100);
 }
