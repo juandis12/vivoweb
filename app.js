@@ -17,6 +17,14 @@ import {
     loadGridData
 } from './catalog.js';
 
+import { 
+    initAuth, 
+    startHeartbeat, 
+    stopHeartbeat, 
+    checkConcurrentSessions, 
+    setCurrentProfile 
+} from './auth.js';
+
 // Usar instancia única centralizada
 if (supabase) {
     setSupabase(supabase);
@@ -54,11 +62,10 @@ let heroItems   = [];
 let searchTimeout   = null;
 let lastSearchResults = [];
 let currentFilter     = 'all';
-let currentProfile    = null;
-let heartbeatTimer    = null;
-let sessionChannel    = null;
 let pendingPartyId    = new URLSearchParams(window.location.search).get('party'); // FASE 4: Capturar invitación
-window.VIVOTV_VIEWING_STATUS = null; // Global para telemetría en vivo
+window.VIVOTV_VIEWING_STATUS = null; 
+let currentProfile = null;
+let heartbeatTimer = null;
 
 // El estado y validaciones ahora se importan de catalog.js para consistencia SPA
 const getAvailableIds = () => window.availableIds || new Set();
@@ -196,79 +203,54 @@ function initMagicSlide() {
     }
 }
 
-// Inicializar efectos al cargar
-document.addEventListener('DOMContentLoaded', () => {
-    initNavbarScroll();
-    initMagneticHover();
-    
-    // Solo inicializar navegación móvil si hay un perfil activo
-    if (mobileNav && currentProfile) {
-        initMobileNavIndicator();
-        initMagicSlide();
-    }
-    
-    if (typeof initAuth === 'function') initAuth();
-});
-
-// Actualizar posición si cambia el tamaño de pantalla
+// El motor de efectos se inicializa en initializeVivotvApp o bajo demanda
 window.addEventListener('resize', initMobileNavIndicator);
 window.addEventListener('orientationchange', () => setTimeout(initMobileNavIndicator, 200));
-
-
 
 // NUEVO: La sincronización del catálogo ahora se maneja centralmente en catalog.js
 async function fetchAvailableIds() {
     await syncCatalog(supabase);
 }
 
-// --- NUEVO: Scope Global de Auth para evitar duplicados en SPA ---
-let authStateListenerSet = false;
+let isDashboardInit = false;
+let isAuthInitializing = false;
+async function initializeVivotvApp() {
+    if (isAuthInitializing) return;
+    isAuthInitializing = true;
+    logDebug('[Auth] Iniciando motor de autenticación centralizada...');
+    
+    const { user, profile: authProfile } = await initAuth((event, session, newProfile) => {
+        logDebug(`[Auth Event] ${event}`);
+        currentProfile = newProfile;
+        
+        const isAuthPage = window.location.pathname.endsWith('index.html') || 
+                           window.location.pathname.endsWith('registro.html') ||
+                           window.location.pathname === '/';
 
-async function initAuth() {
-    if (!supabase) return;
-
-    if (!authStateListenerSet) {
-        logDebug('[Auth] Configurando listener global de estado...');
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            logDebug(`[Auth Event] ${event}`);
-            if (session?.user) {
-                const isAuthPage = window.location.pathname.endsWith('index.html') || 
-                                   window.location.pathname.endsWith('registro.html') ||
-                                   window.location.pathname === '/' ||
-                                   window.location.pathname.endsWith('vivoweb/');
-                
-                if (isAuthPage) {
-                    if (!isDashboardInit) toDashboard(session.user);
-                } else {
-                    if (dashSection) dashSection.classList.remove('hidden');
-                    if (authSection) authSection.classList.add('hidden');
-                    
-                    if (!currentProfile) {
-                        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
-                        if (!currentProfile && !window.location.pathname.includes('profiles.html')) {
-                            window.location.href = 'profiles.html';
-                            return;
-                        }
-                    }
-                    if (currentProfile && userNameEl) userNameEl.textContent = currentProfile.name;
-                }
-            } else {
-                toAuth();
+        if (session?.user) {
+            if (isAuthPage) {
+                if (!isDashboardInit) toDashboard(session.user);
+            } else if (currentProfile) {
+                // Actualizar UI si estamos en una subpágina
+                if (dashSection) dashSection.classList.remove('hidden');
+                if (authSection) authSection.classList.add('hidden');
+                if (userNameEl) userNameEl.textContent = currentProfile.name;
             }
-        });
-        authStateListenerSet = true;
-    }
+        } else if (event === 'SIGNED_OUT') {
+            toAuth();
+        }
+    });
 
-    // Verificación inmediata de sesión
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-        if (!isDashboardInit) toDashboard(user);
-    } else {
+    if (user && !isDashboardInit) {
+        toDashboard(user);
+    } else if (!user) {
         toAuth();
     }
+    isAuthInitializing = false;
 }
 
-let isDashboardInit = false;
+// La inicialización se maneja vía initAppForPage() al final del archivo
+
 async function toDashboard(user) {
     if (!user) return;
     
@@ -774,43 +756,6 @@ function mapError(msg) {
     return msg;
 }
 
-// --- MOTOR DE LATIDOS (Fase 12: Sesión Estricta por Servidor) ---
-async function startHeartbeat() {
-    if (!supabase || !currentProfile) return;
-    if (heartbeatTimer) clearInterval(heartbeatTimer);
-
-    let lastSavedStatusJson = '';
-
-    const sendPulse = async () => {
-        try {
-            // 1. Latido base de seguridad (Mantiene viva la sesión)
-            await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
-
-            // 2. Sincronización de Telemetría (¿Qué está viendo exactamente?)
-            // Solo actualizamos si el estado ha cambiado para reducir tráfico y carga en DB
-            const currentStatusJson = JSON.stringify(window.VIVOTV_VIEWING_STATUS);
-            if (currentStatusJson !== lastSavedStatusJson) {
-                await supabase
-                    .from('vivotv_profiles')
-                    .update({ now_playing: window.VIVOTV_VIEWING_STATUS })
-                    .eq('id', currentProfile.id);
-                
-                lastSavedStatusJson = currentStatusJson;
-            }
-
-        } catch(e) { console.warn('[VivoTV] Heartbeat/Telemetry error:', e); }
-    };
-
-    sendPulse();
-    heartbeatTimer = setInterval(sendPulse, 10000); // Latido cada 10s
-
-    // Suscripción Realtime para Detección de Expulsión (Fase Broadcast 10X)
-    subscribeToSessionChanges();
-
-    // Iniciar chequeo de concurrencia regular (cada 1 min)
-    setInterval(checkConcurrentSessions, 60000);
-}
-
 // Expone una función global para que player.js actualice el estado
 window.updateGlobalPlaybackStatus = async (status) => {
     const oldTitle = window.VIVOTV_VIEWING_STATUS?.title;
@@ -820,165 +765,24 @@ window.updateGlobalPlaybackStatus = async (status) => {
 
     // --- GUARDADO REACTIVO (Fase 16) ---
     // Si el título cambió, forzamos un guardado inmediato en la DB
-    if (status?.title && status.title !== oldTitle && supabase && currentProfile) {
+    const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    if (status?.title && status.title !== oldTitle && supabase && profile) {
         try {
             await supabase
                 .from('vivotv_profiles')
                 .update({ now_playing: status })
-                .eq('id', currentProfile.id);
+                .eq('id', profile.id);
             logDebug('[Telemetry] Guardado instantáneo exitoso.');
         } catch(e) { console.warn('Error en guardado instantáneo telemetry:', e); }
     }
 };
 
-// ================================================
-// SEGURIDAD: CONTROL DE SESIONES CONCURRENTES (Fase 3)
-// ================================================
-async function checkConcurrentSessions() {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        let deviceId = localStorage.getItem('vivotv_device_id');
-        if (!deviceId) {
-            deviceId = crypto.randomUUID();
-            localStorage.setItem('vivotv_device_id', deviceId);
-        }
-
-        // Registrar sesión actual (Silencioso) - Fase Fix: onConflict para evitar 409
-        const { error: upsertError } = await supabase.from('active_sessions').upsert(
-            {
-                user_id: user.id,
-                device_id: deviceId,
-                last_seen: new Date().toISOString() // Esquema usa last_seen
-            },
-            { onConflict: 'user_id, device_id' }
-        );
-
-        if (upsertError) {
-            if (upsertError.code === '42P01') {
-                console.warn('[VivoTV] Por favor, ejecuta el script SQL provisto en Supabase para habilitar el control de dispositivos.');
-            }
-            return; // No bloqueamos la app si falta la tabla
-        }
-
-        // Contar sesiones activas de los últimos 2 minutos
-        const twoMinAgo = new Date(Date.now() - 120000).toISOString();
-        const { data: sessions, error } = await supabase.from('active_sessions')
-            .select('*')
-            .eq('user_id', user.id)
-            .gt('last_seen', twoMinAgo)
-            .order('last_seen', { ascending: false });
-
-        if (error) return;
-
-        if (sessions && sessions.length > 2) {
-            const isAuthorized = sessions.slice(0, 2).some(s => s.device_id === deviceId);
-            if (!isAuthorized) {
-                showToast('Límite de 2 dispositivos alcanzado. Cerrando sesión.');
-                setTimeout(() => {
-                    supabase.auth.signOut();
-                    sessionStorage.clear();
-                    window.location.href = 'index.html';
-                }, 3000);
-            }
-        }
-    } catch (e) {
-        console.error('[Session Guard Error]:', e);
-    }
-}
-
-async function stopHeartbeat() {
-    if (heartbeatTimer) clearInterval(heartbeatTimer);
-    heartbeatTimer = null;
-    
-    if (sessionChannel) {
-        supabase.removeChannel(sessionChannel);
-        sessionChannel = null;
-    }
-
-    if (currentProfile && supabase) {
-        await supabase.rpc('vivotv_release_session', { pid: currentProfile.id });
-    }
-}
-
-// --- SISTEMA DE EXPULSIÓN (Fase 16: Realtime) ---
-function subscribeToSessionChanges() {
-    if (!supabase || !currentProfile) {
-        console.warn('[Realtime] No se puede suscribir: falta Supabase o Perfil.');
-        return;
-    }
-
-    const channelName = `kickout-${currentProfile.id}`;
-    if (sessionChannel) supabase.removeChannel(sessionChannel);
-
-    console.log(`[Realtime] Suscribiéndose a canal de expulsión: ${channelName}`);
-
-    sessionChannel = supabase
-        .channel(channelName, {
-            config: {
-                broadcast: { ack: true }
-            }
-        })
-        .on('postgres_changes', { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'vivotv_profiles',
-            filter: `id=eq.${currentProfile.id}`
-        }, (payload) => {
-            const { last_heartbeat } = payload.new;
-            // Solo loggeamos y actuamos si la sesión fue invalidada (last_heartbeat es null)
-            if (last_heartbeat === null) {
-                console.warn('[Realtime] Sesión invalidada por liberación remota.');
-                handleRemoteLogout();
-            }
-        })
-        .on('broadcast', { event: 'FORCE_EXIT' }, (payload) => {
-            console.log('[Realtime] Señal de expulsión recibida:', payload);
-            // --- FILTRO DE SEGURIDAD (Fase 18) ---
-            // Solo cerramos si el ID del mensaje coincide exactamente con nuestro perfil actual
-            if (payload && payload.payload && payload.payload.profileId === currentProfile.id) {
-                console.warn('[Realtime] Expulsión confirmada para este perfil.');
-                handleRemoteLogout();
-            } else {
-                console.log('[Realtime] Señal ignorada (pertenece a otro perfil).');
-            }
-        });
-
-    sessionChannel.subscribe((status) => {
-        console.log(`[Realtime] Estado del canal ${channelName}: ${status}`);
-        if (status === 'CHANNEL_ERROR') {
-            console.error('[Realtime] Error crítico en suscripción de canal.');
-        }
-    });
-}
-
-function handleRemoteLogout() {
+window.addEventListener('beforeunload', () => {
     stopHeartbeat();
-    showToast("⚠️ Tu sesión ha sido finalizada desde otro dispositivo.", "error", 5000);
-    setTimeout(() => {
-        window.location.href = 'profiles.html';
-    }, 2000);
-}
-
-// Re-verificar sesión al volver a la pestaña (por si Realtime se pausó)
-document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && currentProfile) {
-        const { data } = await supabase
-            .from('vivotv_profiles')
-            .select('last_heartbeat')
-            .eq('id', currentProfile.id)
-            .maybeSingle();
-        
-        if (data && data.last_heartbeat === null) {
-            handleRemoteLogout();
-        }
-    }
 });
-
-// Escuchar cierre de pestaña para liberar inmediatamente
-window.addEventListener('beforeunload', stopHeartbeat);
-window.addEventListener('pagehide', stopHeartbeat); // Más fiable en móviles
+window.addEventListener('pagehide', () => {
+    stopHeartbeat();
+});
 
 async function initSearchPage() {
     const params = new URLSearchParams(window.location.search);
@@ -1432,7 +1236,7 @@ if (btnHeroInfo) btnHeroInfo.addEventListener('click', (e) => {
 // El manejo de btnModalPlay y btnCloseModal ahora se gestiona directamente en PLAYER_LOGIC.openDetail
 // para una mayor reactividad y menor acoplamiento.
 
-document.addEventListener('DOMContentLoaded', () => initAuth());
+document.addEventListener('DOMContentLoaded', () => initializeVivotvApp());
 
 // ---- SISTEMA DE SCROLL PREMIUM (Fase Auditoria Scroll) ----
 let isDragging = false;
@@ -1485,7 +1289,7 @@ function initAppForPage() {
 
     // Detener rotaciones e intervalos previos para evitar desbordamiento de memoria
     stopHeroRotation();
-    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    stopHeartbeat();
 
     // Obtener referencias DOM dinámicamente (Esenciales en cada cambio de innerHTML)
     authSection = document.getElementById('authSection');
@@ -1520,7 +1324,7 @@ function initAppForPage() {
     try {
         // En cada cambio de página, re-asignamos listeners a elementos que podrían ser nuevos
         setupAuthListeners();
-        initAuth();
+        initializeVivotvApp();
     } catch(e) { fatalLog('Error crítico en inicialización SPA: ' + e.message); }
 
     // 3. Cargar lógica específica

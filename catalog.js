@@ -259,6 +259,8 @@ export async function scanAllDBContent(supabase) {
     }
 }
 
+const invalidIds = new Set();
+
 /**
  * Recupera metadatos de TMDB con un Pool de trabajadores de alta concurrencia (Turbo Sync)
  */
@@ -277,14 +279,29 @@ async function syncMissingMetadata() {
     const backgroundBlock = allIds.slice(20);
 
     const processItem = async (id) => {
+        if (invalidIds.has(id)) return;
+        
         try {
             const type = availableSeries.has(id) ? 'tv' : 'movie';
             let details = await TMDB_SERVICE.getDetails(id, type);
+            
+            // Si es 404 definitivo, lo marcamos y no intentamos el otro tipo
+            if (details && details.error === 404) {
+                invalidIds.add(id);
+                console.warn(`[Turbo Sync] ID ${id} no encontrado en TMDB como ${type}. Saltando...`);
+                return;
+            }
+
             if (!details || !details.id) {
-                // Segundo intento por si el tipo estaba mal detectado
+                // Segundo intento por si el tipo estaba mal detectado (solo si no fue 404)
                 const altType = type === 'tv' ? 'movie' : 'tv';
                 details = await TMDB_SERVICE.getDetails(id, altType);
+                
+                if (details && details.error === 404) {
+                    invalidIds.add(id);
+                }
             }
+
             if (details && details.id) {
                 window.DB_CATALOG.push(details);
             }

@@ -8,20 +8,28 @@ let heartbeatTimer = null;
 let sessionChannel = null;
 
 export async function initAuth(onAuthChange) {
-    try {
-        supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-            auth: {
-                persistSession: true,
-                storageKey: `sb-${CONFIG.SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`,
-                storage: window.localStorage,
-                autoRefreshToken: true,
-                detectSessionInUrl: true
-            }
-        });
-    } catch(e) { 
-        console.warn('Supabase no disponible:', e); 
-        return { user: null, profile: null };
+    if (!supabase) {
+        try {
+            supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+                auth: {
+                    persistSession: true,
+                    storageKey: `sb-${CONFIG.SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`,
+                    storage: window.localStorage,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true
+                }
+            });
+        } catch(e) { 
+            console.warn('Supabase no disponible:', e); 
+            return { user: null, profile: null };
+        }
     }
+
+    const safeCallback = (event, session, profile) => {
+        if (typeof onAuthChange === 'function') {
+            onAuthChange(event, session, profile);
+        }
+    };
 
     // Carga inicial inmediata del perfil (Fase Persistencia Robusta)
     const stored = localStorage.getItem('vivotv_current_profile');
@@ -50,7 +58,7 @@ export async function initAuth(onAuthChange) {
                 }
 
                 currentProfile = localP;
-                onAuthChange(event, session, currentProfile);
+                safeCallback(event, session, currentProfile);
                 
                 if (!resolved) {
                     resolved = true;
@@ -59,7 +67,7 @@ export async function initAuth(onAuthChange) {
             } else if (event === 'SIGNED_OUT') {
                 currentProfile = null;
                 localStorage.removeItem('vivotv_current_profile');
-                onAuthChange(event, null, null);
+                safeCallback(event, null, null);
                 if (!resolved) {
                     resolved = true;
                     resolve({ user: null, profile: null, supabase });
@@ -67,7 +75,7 @@ export async function initAuth(onAuthChange) {
             } else if (event === 'INITIAL_SESSION' && !session) {
                 // Si es el evento inicial y no hay sesión, esperamos un poco más 
                 // por si getUser() o el motor de recuperación logran rescatarla.
-                onAuthChange(event, null, null);
+                safeCallback(event, null, null);
             }
         });
 
@@ -98,22 +106,42 @@ export function setCurrentProfile(profile) {
 }
 
 /**
- * Motor de Latidos para Sesiones Concurrentes
+ * Motor de Latidos y Telemetría para Sesiones Concurrentes
+ * Sincroniza el estado de la sesión y lo que el usuario está viendo.
  */
 export async function startHeartbeat() {
     if (!supabase || !currentProfile) return;
     if (heartbeatTimer) clearInterval(heartbeatTimer);
 
+    let lastSavedStatusJson = '';
+
     const sendPulse = async () => {
         try {
+            // 1. Latido base de seguridad (RPC)
             await supabase.rpc('vivotv_heartbeat', { pid: currentProfile.id });
-        } catch(e) { console.warn('[VivoTV] Heartbeat error:', e); }
+
+            // 2. Sincronización de Telemetría (¿Qué está viendo exactamente?)
+            // Solo actualizamos si el estado ha cambiado para reducir tráfico y carga en DB
+            const currentStatus = window.VIVOTV_VIEWING_STATUS;
+            const currentStatusJson = JSON.stringify(currentStatus);
+            
+            if (currentStatusJson !== lastSavedStatusJson) {
+                await supabase
+                    .from('vivotv_profiles')
+                    .update({ now_playing: currentStatus || null })
+                    .eq('id', currentProfile.id);
+                
+                lastSavedStatusJson = currentStatusJson;
+            }
+        } catch(e) { 
+            console.warn('[VivoTV] Heartbeat/Telemetry error:', e); 
+        }
     };
 
     sendPulse();
     heartbeatTimer = setInterval(sendPulse, 10000); 
 
-    // Suscripción Realtime
+    // Suscripción Realtime para detectar expulsiones remotas
     subscribeToSessionChanges();
 }
 

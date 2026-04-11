@@ -42,7 +42,9 @@ export const TMDB_SERVICE = {
         try {
             const res = await fetch(url.toString());
             if (!res.ok) {
-                if (res.status === 404) return { error: 404 }; // Silencio administrativo para 404
+                if (res.status === 404) {
+                    return { error: 404, message: 'Not Found' };
+                }
                 throw new Error(`TMDB HTTP ${res.status}`);
             }
             const data = await res.json();
