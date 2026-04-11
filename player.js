@@ -535,9 +535,13 @@ export const PLAYER_LOGIC = {
             // --- SOPORTE HLS (Fase 26) ---
             if (smartUrl.toLowerCase().includes('.m3u8') && typeof Hls !== 'undefined') {
                 if (Hls.isSupported()) {
-                    this.hls = new Hls({ capLevelToPlayerSize: true, autoStartLoad: true });
-                    this.hls.loadSource(smartUrl);
-                    this.hls.attachMedia(video);
+                    this.hls = new Hls({
+                        enableSoftwareAES: true,
+                        autoStartLoad: true,
+                        // Ignorar errores menores de metadatos para evitar saltos al inicio
+                        ignoreDeviceStreamErrors: true,
+                        maxMaxBufferLength: 30
+                    });this.hls.attachMedia(video);
                     this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                         if (seekSeconds > 0) video.currentTime = seekSeconds;
                         video.play().catch(e => console.warn("Autoplay block:", e));
@@ -555,11 +559,24 @@ export const PLAYER_LOGIC = {
                 }
             } else {
                 video.src = smartUrl;
+                video.muted = true; // REGLA ORO: Muteado para Autoplay Global
+                video.setAttribute('autoplay', '');
+                video.classList.add('active-tv-video');
+                
+                video.onloadedmetadata = () => {
+                    if (seekSeconds > 0) {
+                        console.log(`[Player] Sincronización Inicial (Reloj Maestro): ${seekSeconds}s`);
+                        video.currentTime = seekSeconds;
+                    }
+                    video.play().catch(e => {
+                        console.warn("[Player] Autoplay bloqueado, requiere clic inicial", e);
+                        // Mostrar pista visual si el navegador bloquea el inicio
+                        if (loader) loader.innerHTML = '<div class="play-hint">▶ CARGANDO SEÑAL...</div>';
+                    });
+                    if (loader) setTimeout(() => loader.classList.add('hidden'), 1000);
+                };
+
                 video.load();
-                video.muted = true; // Forzar mute para garantizar el Autoplay (Regla de Navegadores)
-                if (seekSeconds > 0) video.currentTime = seekSeconds;
-                video.play().catch(e => console.warn("Autoplay block:", e));
-                if (loader) setTimeout(() => loader.classList.add('hidden'), 1000);
                 this._startVideoTracking(video, seekSeconds);
             }
         }

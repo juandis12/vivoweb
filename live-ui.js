@@ -53,15 +53,68 @@ export const LIVE_UI = {
             
             // 5. Configurar Intervalo de Alta Precisión
             if (updateInterval) clearInterval(updateInterval);
-            updateInterval = setInterval(() => this.updateCurrentInfo(), 10000); 
+            updateInterval = setInterval(() => {
+                this.updateCurrentInfo();
+                this.checkSyncDrift(); // Auto-Corrector cada 10s
+            }, 10000); 
 
             // 6. Listener de Visibilidad (Auto-Resync al volver a la App)
             document.removeEventListener('visibilitychange', this.handleVisibility);
             document.addEventListener('visibilitychange', () => this.handleVisibility());
 
+            // 7. Click para un-mute
+            const shield = document.getElementById('livePlayerShield');
+            if (shield) {
+                shield.onclick = () => {
+                    const video = document.querySelector('.active-tv-video');
+                    if (video) {
+                        video.muted = false;
+                        const hint = document.getElementById('unmuteHint');
+                        if (hint) hint.classList.add('hidden');
+                        console.log('[Live] Audio activado por usuario.');
+                    }
+                };
+            }
+
         } catch (err) {
             console.error('[Live] Error Crítico:', err);
         }
+    },
+
+    /**
+     * AUTO-CORRECTOR: Verifica si el video se ha atrasado y lo obliga a saltar.
+     */
+    checkSyncDrift() {
+        const video = document.querySelector('.active-tv-video');
+        if (!video || video.paused) return;
+
+        const channel = filteredChannels.find(c => c.id === activeChannelId);
+        const status = this.getFilteredShow(channel);
+        
+        if (status?.currentShow) {
+            const expected = status.currentShow.offsetSeconds;
+            const actual = video.currentTime;
+            const diff = Math.abs(expected - actual);
+
+            if (diff > 5) { // Tolerancia de 5 segundos para evitar tartamudeo constante
+                console.warn(`[Live] Detectado desajuste de ${diff.toFixed(1)}s. Corrigiendo...`);
+                video.currentTime = expected;
+                // Mostrar breve aviso flash
+                this.showSyncFlash();
+            }
+        }
+    },
+
+    showSyncFlash() {
+        let flash = document.querySelector('.sync-flash');
+        if (!flash) {
+            flash = document.createElement('div');
+            flash.className = 'sync-flash';
+            flash.textContent = 'Sincronización Global...';
+            document.body.appendChild(flash);
+        }
+        flash.classList.add('visible');
+        setTimeout(() => flash.classList.remove('visible'), 2000);
     },
 
     /**
