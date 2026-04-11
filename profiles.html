@@ -1696,7 +1696,7 @@
                 btnCreateFirst.textContent = "Empezar a disfrutar";
             } else {
                 // Seleccionar e ir al index
-                sessionStorage.setItem('vivotv_current_profile', JSON.stringify(data));
+                localStorage.setItem('vivotv_current_profile', JSON.stringify(data));
                 window.location.href = 'index.html';
             }
         };

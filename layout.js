@@ -77,7 +77,11 @@ export const LAYOUT = {
 
         // 2. Navbar si no existe
         if (!document.getElementById('navbar')) {
-            const isSearchPage = window.location.pathname.includes('busqueda.html');
+            const path = window.location.pathname;
+            const isAuthPage = path.endsWith('index.html') || path.endsWith('registro.html') || path === '/' || path.endsWith('vivoweb/');
+            const isSearchPage = path.includes('busqueda.html');
+            const showSearch = !isAuthPage || isSearchPage;
+
             const header = document.createElement('header');
             header.className = 'navbar';
             header.id = 'navbar';
@@ -92,7 +96,7 @@ export const LAYOUT = {
                     <a href="milista.html" id="linkMyList">Mi Lista</a>
                 </nav>
                 <div class="user-actions">
-                    <div class="search-box ${isSearchPage ? 'active' : 'hidden'}" id="searchBox">
+                    <div class="search-box ${showSearch ? '' : 'hidden'}" id="searchBox">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                         <input type="text" id="searchInput" placeholder="Buscar títulos...">
                         <button class="btn-clear-search hidden" id="btnClearSearch">&times;</button>

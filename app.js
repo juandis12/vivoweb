@@ -66,10 +66,14 @@ let pendingPartyId    = new URLSearchParams(window.location.search).get('party')
 window.VIVOTV_VIEWING_STATUS = null; 
 let currentProfile = null;
 let heartbeatTimer = null;
+let isPopulating = false; // Guard para evitar sobre-población SPA
 
 // El estado y validaciones ahora se importan de catalog.js para consistencia SPA
 const getAvailableIds = () => window.availableIds || new Set();
 const getDBCatalog    = () => window.DB_CATALOG || [];
+
+let isDashboardInit = false;
+let isAuthInitialized = false;
 
 // ================================================
 // INNOVACIÓN: UI INTERACTIVA
@@ -212,113 +216,63 @@ async function fetchAvailableIds() {
     await syncCatalog(supabase);
 }
 
-let isDashboardInit = false;
 let isAuthInitializing = false;
 async function initializeVivotvApp() {
+    // Protección global contra doble inicialización (Guerra de Instancias)
+    if (window.VIVOTV_AUTH_INITIALIZED) return;
     if (isAuthInitializing) return;
     isAuthInitializing = true;
-    logDebug('[Auth] Iniciando motor de autenticación centralizada...');
     
-    const { user, profile: authProfile } = await initAuth((event, session, newProfile) => {
-        logDebug(`[Auth Event] ${event}`);
-        currentProfile = newProfile;
-        
-        const isAuthPage = window.location.pathname.endsWith('index.html') || 
-                           window.location.pathname.endsWith('registro.html') ||
-                           window.location.pathname === '/';
+    console.log('[VivoTV] 🚀 Inicializando motor unificado...');
+    
+    // Configurar el listener de cambios
+    const { user, profile: authProfile } = await initAuth((event, session, profile) => {
+        // Solo reaccionar si ya terminó la carga inicial
+        if (!window.VIVOTV_AUTH_INITIALIZED) return;
 
-        if (session?.user) {
-            if (isAuthPage) {
-                if (!isDashboardInit) toDashboard(session.user);
-            } else if (currentProfile) {
-                // Actualizar UI si estamos en una subpágina
-                if (dashSection) dashSection.classList.remove('hidden');
-                if (authSection) authSection.classList.add('hidden');
-                if (userNameEl) userNameEl.textContent = currentProfile.name;
-            }
+        console.log(`[VivoTV] 📡 Cambio de estado detectado: ${event}`);
+        if (event === 'SIGNED_IN' && session) {
+            toDashboard(session.user, profile);
         } else if (event === 'SIGNED_OUT') {
             toAuth();
         }
     });
 
-    if (user && !isDashboardInit) {
-        toDashboard(user);
-    } else if (!user) {
+    // Manejar estado inicial
+    if (user) {
+        console.log('[VivoTV] ✅ Sesión recuperada.');
+        await toDashboard(user, authProfile);
+    } else {
+        console.log('[VivoTV] ℹ️ Sin sesión activa.');
         toAuth();
     }
+    
+    window.VIVOTV_AUTH_INITIALIZED = true;
     isAuthInitializing = false;
 }
 
-// La inicialización se maneja vía initAppForPage() al final del archivo
-
-async function toDashboard(user) {
-    if (!user) return;
+/**
+ * POBLACIÓN DE CONTENIDO (Core SPA)
+ * Se encarga de llenar la página actual con datos (Hero, Carruseles, Grillas)
+ * Se llama en el login inicial y en cada cambio de página SPA posterior.
+ */
+async function populatePageContent() {
+    updateProfileUI(); // Asegurar que el nombre/avatar aparezcan en la nueva sección
     
-    // Si ya se está inicializando, evitar duplicados
-    if (isDashboardInit) return;
-    isDashboardInit = true;
-    
-    logDebug(`[toDashboard] Iniciando para usuario: ${user.email} en ${window.location.pathname}`);
-    
-    // Obtener referencias DOM localmente
-    const authSection = document.getElementById('authSection');
-    const dashSection = document.getElementById('dashboardSection');
-    const userProfile = document.getElementById('userProfile');
-    const userNameEl = document.getElementById('userName');
-    const userAvatar = document.getElementById('userAvatar');
-    const mainNav = document.getElementById('mainNav');
-    const mobileNav = document.querySelector('.mobile-nav');
-
-    // Asegurar visibilidad del dashboard
-    if (authSection) authSection.classList.add('hidden');
-    if (dashSection) {
-        dashSection.classList.remove('hidden');
-        logDebug('[toDashboard] dashSection visible.');
-    } else {
-        console.error('[ERROR] dashSection no encontrado al iniciar dashboard.');
-    }
-    if (userProfile) userProfile.classList.remove('hidden');
-
-    // --- GESTIÓN DE PERFILES (Fase 8: Sesión Temporal) ---
-    currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
-
-    if (!currentProfile) {
-        console.warn('[VivoTV] No hay perfil en sesión. Redirigiendo...');
-        window.location.href = 'profiles.html';
+    // Evitar poblar contenido si estamos en la sección En Vivo (tiene su propio controlador)
+    if (document.body.classList.contains('page-live') || window.location.pathname.includes('live.html')) {
+        console.log('[SPA Engine] 📺 Sección En Vivo detectada, saltando población estándar.');
         return;
     }
 
-    if (userNameEl) {
-        userNameEl.textContent = currentProfile.name;
-    }
-    if (userAvatar) {
-        userAvatar.textContent = currentProfile.name[0];
-        userAvatar.style.backgroundImage = 'none';
-        userAvatar.className = `avatar ${currentProfile.color}`;
-        userAvatar.style.backgroundColor = ''; // Usar clase CSS
-        userAvatar.style.color = '#fff';
-        userAvatar.style.fontWeight = 'bold';
-    }
-
-    if (userProfile) {
-        userProfile.style.cursor = 'pointer';
-        userProfile.onclick = () => {
-            toAuth(); // Redirigir directo a la selección de cuentas
-        };
-    }
-
-    if (mainNav)     mainNav.classList.remove('hidden');
-    if (mobileNav)   mobileNav.classList.remove('hidden');
+    if (!currentProfile || isPopulating) return;
+    isPopulating = true;
     
-    logDebug('Iniciando Dashboard...');
-    
-    // --- NUEVO: CORAZÓN DE SESIÓN (Máx 2 Dispositivos - Fase 3) ---
-    startHeartbeat();
-    checkConcurrentSessions();
+    console.log('[SPA Engine] 🧬 Poblando contenido de la página...');
     
     if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
 
-    // --- LIMPIEZA: Limpiar carouseles residuales de páginas anteriores ---
+    // --- LIMPIEZA: Limpiar carouseles residuales ---
     const carouselIds = [
         'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
         'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
@@ -327,23 +281,21 @@ async function toDashboard(user) {
     ];
     carouselIds.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = ''; // Limpiar contenido residual
+        if (el) el.innerHTML = '';
     });
 
-    // 1. Limpieza absoluta: Ocultar todas las secciones antes de decidir qué mostrar (MODO SPA)
+    // 1. Ocultar secciones antes de repoblar
     const allSections = ['trendingSection', 'popularSection', 'topRatedSection', 'actionSection', 'comedySection', 'horrorSection', 'scifiSection', 'recommendedSection', 'recentSection', 'myListSection', 'popularMoviesSection', 'popularTVSection'];
     allSections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
 
-    // 2. Mostrar skeletons solo para los carruseles que EXISTEN en este HTML específico
+    // 2. Mostrar skeletons
     carouselIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.innerHTML = ''; // Limpiar contenido previo
             CATALOG_UI.showSkeletons(id);
-            // Asegurar que el padre del carrusel (la sección) sea visible si no es una sección especial
             const section = el.closest('.catalog-row');
             if (section && !['recentSection', 'recommendedSection', 'myListSection'].includes(section.id)) {
                 section.classList.remove('hidden');
@@ -351,48 +303,27 @@ async function toDashboard(user) {
         }
     });
 
-    // Limpiar grid si existe
     const gridContainer = document.getElementById('gridContainer');
     if (gridContainer) gridContainer.innerHTML = '';
 
     try {
-        // 2. Sincronizar Catálogo Personal (Esperar para asegurar filtrado en grilla)
+        // 2. Sincronizar catálogo personal
         await syncCatalog(supabase); 
-            // 3. NUEVO: Renderizado impulsado por DB (Prioridad Máxima)
         renderDBCategoryRows();
 
-        // 4. FASE 4: Verificar Invitación a Watch Party
-        if (pendingPartyId) {
-            console.log('[WatchParty] Invitación detectada:', pendingPartyId);
-            const { joinPartyFromUrl } = await import('./watch-party-ui.js');
-            joinPartyFromUrl(pendingPartyId);
-            pendingPartyId = null; // Limpiar para evitar re-uniones
-            // Limpiar URL sin recargar
-            const url = new URL(window.location);
-            url.searchParams.delete('party');
-            window.history.replaceState({}, '', url);
-        }
-
-        // --- Carga en Segundo Plano (Sin bloqueo) ---
-        // 4. Cargar Historiales y resto de filas (TMDB adaptado)
+        // 3. Cargar historiales y filas personalizadas
         loadPersonalizedRows();
-        logDebug(`IDs cargados en DB: ${availableIds.size}`);
         
-        // 3. Inicializar Páginas Específicas
-        if (document.getElementById('favoritesGrid')) {
-            loadMyList();
-        }
-        if (document.getElementById('searchResultsGrid')) {
-            initSearchPage();
-        }
+        if (document.getElementById('favoritesGrid')) loadMyList();
+        if (document.getElementById('searchResultsGrid')) initSearchPage();
 
-        // 4. Detectar tipo de página para rows
+        // 4. Detectar tipo de página
         const isMoviesPage = document.body.classList.contains('page-movies');
         const isSeriesPage = document.body.classList.contains('page-series');
         const isAnimePage  = document.body.classList.contains('page-anime');
         const pageType     = (isSeriesPage || isAnimePage) ? 'tv' : (isMoviesPage ? 'movie' : 'all');
 
-        // 4. Cargar Hero (Mezcla de Tendencias TMDB y Catálogo Propio)
+        // 5. Cargar Hero
         let heroData;
         if (isAnimePage) {
             heroData = await TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' });
@@ -404,61 +335,37 @@ async function toDashboard(user) {
             heroData = await TMDB_SERVICE.getTrending();
         }
 
-        // --- REVOLUCIÓN HERO: Mostrar tendencias de inmediato ---
-        // Durante el arranque, permitimos mostrar items aunque la sincronización masiva no haya terminado
         let availableHeroItems = (heroData.results || []).filter(m => {
             if (!m.backdrop_path) return false;
-            // Si ya terminó el sync, filtramos. Si no, mostramos los top para no dejar el Hero vacío.
             if (availableIds.size > 0 && !availableIds.has(m.id.toString())) return false;
-            
             const itemType = m.media_type || (pageType === 'all' ? 'movie' : pageType);
             return validateContentType(m, itemType);
         });
 
-        
-        // Añadir items del catálogo local que tengan backdrop_url (Prioridad Alta)
-        // Solo si coinciden con el tipo de la página
         const localHeroItems = (window.DB_CATALOG || []).filter(item => {
             if (!item.backdrop_url) return false;
             const itemType = item.content_type === 'series' ? 'tv' : 'movie';
             return validateContentType(item, itemType);
         }).slice(0, 5);
         
-        // Combinar (Locales primero para dar visibilidad a la DB propia)
         let combinedHero = [...localHeroItems, ...availableHeroItems];
         heroItems = filterItemsByProfile(combinedHero).slice(0, 10);
         
         if (heroItems.length && document.getElementById('heroBanner')) {
             CATALOG_UI.renderHero(heroItems[0], heroItems);
             startHeroRotation();
-            
-            // VALIDACIÓN POST-RENDER: Verificar disponibilidad solo de lo que mostramos en el Hero
-            validateBatchAvailability(supabase, heroItems.map(m => m.id));
-        } else if (document.getElementById('heroBanner')) {
-            // Si no hay nada, intentamos mostrar al menos un item de la DB sin backdrop_url
-            const catalog = window.DB_CATALOG || [];
-            if (catalog.length > 0) {
-                CATALOG_UI.renderHero(catalog[0]);
-            } else {
-                document.getElementById('heroBanner').classList.add('hidden');
-            }
         }
 
-        // 5. Cargar Filas (Progresivas)
+        // 6. Cargar Filas Progresivas
         const renderRow = async (containerId, fetchFn, type) => {
             const el = document.getElementById(containerId);
             if (!el) return;
             const data = await fetchFn();
-            
-            let filtered = (data.results || []);
-            filtered = filterItemsByProfile(filtered).slice(0, 20);
-
+            let filtered = filterItemsByProfile(data.results || []).slice(0, 20);
             if (filtered.length > 0) {
                 CATALOG_UI.renderCarousel(containerId, filtered, type, availableIds);
                 const section = el.closest('.catalog-row');
                 if (section) section.classList.remove('hidden');
-
-                validateBatchAvailability(supabase, filtered.map(m => m.id));
             }
         };
 
@@ -466,8 +373,7 @@ async function toDashboard(user) {
             await Promise.all([
                 (async () => {
                     const data = await TMDB_SERVICE.getTrending();
-                    let filtered = (data.results || []);
-                    filtered = filterItemsByProfile(filtered);
+                    let filtered = filterItemsByProfile(data.results || []);
                     CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds, window.DB_CATALOG);
                 })(),
                 loadRecommendedItems(),
@@ -478,15 +384,6 @@ async function toDashboard(user) {
             ]);
         } else if (isAnimePage) {
             await renderAnimeDashboardRows(availableIds);
-            
-            let syncTimer = null;
-            window.addEventListener('metadataBatchSynced', () => {
-                if (syncTimer) clearTimeout(syncTimer);
-                syncTimer = setTimeout(() => {
-                    console.log('[Dashboard] Sincronización completa o pausa detectada. Refrescando filas de anime...');
-                    renderAnimeDashboardRows(availableIds);
-                }, 1500);
-            });
         } else {
             const fetchPopular = () => pageType === 'tv' 
                 ? TMDB_SERVICE.fetchFromTMDB('/discover/tv', { without_genres: 16, sort_by: 'popularity.desc' }) 
@@ -504,19 +401,104 @@ async function toDashboard(user) {
                 renderRow('genre4Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10765:27, ...(pageType==='tv'?{without_genres:16}:{}) }), pageType),
             ]);
         }
-
+        
         // 6. Cargar Grilla (Biblioteca Completa)
         await loadGridData(pageType, 1, false, currentProfile);
         
         // 7. Configurar Botones "Ver más"
         setupVerMasButtons();
+        
+        await loadMyList();
+        await loadRecentlyWatched();
+    } catch (e) {
+        console.error('Error poblando contenido:', e);
+    } finally {
+        isPopulating = false;
+    }
+}
 
+/**
+ * Sincroniza el nombre y avatar en el Navbar (Accesible globalmente)
+ */
+function updateProfileUI() {
+    if (!currentProfile) {
+        currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    }
+    if (!currentProfile) return;
+
+    console.log(`[VivoTV] 👤 Actualizando UI para perfil: ${currentProfile.name}`);
+
+    // Mostrar el contenedor y actualizar datos
+    if (userProfile) userProfile.classList.remove('hidden');
+    if (userNameEl) userNameEl.textContent = currentProfile.name;
+    if (userAvatar) {
+        userAvatar.textContent = currentProfile.name[0];
+        userAvatar.className = `avatar ${currentProfile.color || 'color-1'}`;
+        userAvatar.style.backgroundColor = '';
+    }
+}
+
+async function toDashboard(user, profile) {
+    if (!user) return;
+    
+    console.log(`[VivoTV] ⚡ Preparando Dashboard para: ${user.email}`);
+    
+    // Referencias frescas para evitar fallos por SPA
+    const authS = document.getElementById('authSection');
+    const dashS = document.getElementById('dashboardSection');
+    const navM = document.getElementById('mainNav');
+    const mobN = document.querySelector('.mobile-nav');
+
+    // Ocultar Auth de inmediato para evitar que el botón siga girando
+    if (authS) authS.classList.add('hidden');
+    if (dashS) dashS.classList.remove('hidden');
+    if (navM) navM.classList.remove('hidden');
+    if (mobN) mobN.classList.remove('hidden');
+
+    // Sincronizar perfil
+    currentProfile = profile || JSON.parse(localStorage.getItem('vivotv_current_profile'));
+
+    if (!currentProfile) {
+        console.log('[VivoTV] 🔀 Redirigiendo a perfiles...');
+        window.location.href = 'profiles.html';
+        return;
+    }
+
+    updateProfileUI();
+
+
+
+
+    if (userProfile) {
+        userProfile.style.cursor = 'pointer';
+        userProfile.onclick = () => {
+            const exitModal = document.getElementById('exitModal');
+            if (exitModal) {
+                exitModal.classList.remove('hidden');
+                // Asegurar que los botones del modal estén conectados
+                setupExitModalListeners();
+            } else {
+                // Fallback si por alguna razón no existe el modal
+                toAuth();
+            }
+        };
+    }
+
+    if (mainNav)     mainNav.classList.remove('hidden');
+    if (mobileNav)   mobileNav.classList.remove('hidden');
+    
+    logDebug('Iniciando Dashboard...');
+    
+    try {
+        // --- NUEVO: CORAZÓN DE SESIÓN (Máx 2 Dispositivos - Fase 3) ---
+        startHeartbeat();
+        checkConcurrentSessions();
+        
+        // Poblar contenido inicial
+        await populatePageContent();
     } catch (e) {
         console.error('[Dashboard] Error en inicialización:', e);
     }
-
-    await loadMyList();
-    await loadRecentlyWatched();
 }
 
 function setupVerMasButtons() {
@@ -718,6 +700,40 @@ async function handleLogoutAction() {
     window.location.href = 'index.html';
 }
 
+function setupExitModalListeners() {
+    const exitModal = document.getElementById('exitModal');
+    const btnSwitchProfile = document.getElementById('btnSwitchProfile');
+    const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
+    const btnCancelExit = document.getElementById('btnCancelExit');
+
+    if (btnSwitchProfile) {
+        btnSwitchProfile.onclick = () => {
+            window.location.href = 'profiles.html';
+        };
+    }
+
+    if (btnLogoutConfirm) {
+        btnLogoutConfirm.onclick = async () => {
+            setLoadingLogout(true);
+            await handleLogoutAction();
+            setLoadingLogout(false);
+        };
+    }
+
+    if (btnCancelExit) {
+        btnCancelExit.onclick = () => {
+            if (exitModal) exitModal.classList.add('hidden');
+        };
+    }
+
+    // Cerrar al hacer clic fuera del contenido
+    if (exitModal) {
+        exitModal.onclick = (e) => {
+            if (e.target === exitModal) exitModal.classList.add('hidden');
+        };
+    }
+}
+
 function setLoadingLogout(loading) {
     const btnSwitchProfile = document.getElementById('btnSwitchProfile');
     const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
@@ -906,7 +922,8 @@ async function loadMyList() {
     const emptyState = document.getElementById('emptyListState');
     
     if (!supabase) return;
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     // Fetch favorites x Perfil (Expansión SQL Script)
@@ -963,7 +980,8 @@ async function loadPersonalizedRows() {
     }
     if (!currentProfile) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     logDebug('Cargando recomendaciones personalizadas...');
@@ -1020,7 +1038,8 @@ async function loadRecentlyWatched() {
     }
     if (!currentProfile) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
     
     const { data: history } = await supabase.from('watch_history')
@@ -1098,7 +1117,8 @@ async function loadRecommendedItems() {
     if (!section || !carousel || !supabase) return;
 
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
         if (!user) return;
 
         // 1. Obtener base para recomendaciones (Historial + Favoritos)
@@ -1284,9 +1304,6 @@ function initAppForPage() {
     const path = window.location.pathname;
     fatalLog(`[SPA Engine] Inicializando página: ${path}`);
 
-    // Resetear estado global de inicialización para permitir re-carga en SPA
-    isDashboardInit = false;
-
     // Detener rotaciones e intervalos previos para evitar desbordamiento de memoria
     stopHeroRotation();
     stopHeartbeat();
@@ -1322,9 +1339,14 @@ function initAppForPage() {
     btnCancelExit = document.getElementById('btnCancelExit');
 
     try {
-        // En cada cambio de página, re-asignamos listeners a elementos que podrían ser nuevos
         setupAuthListeners();
+        // 1. Asegurar Auth
         initializeVivotvApp();
+        
+        // 2. Si ya estamos inicializados, forzar recarga de contenido para la nueva "página"
+        if (window.VIVOTV_AUTH_INITIALIZED) {
+            populatePageContent();
+        }
     } catch(e) { fatalLog('Error crítico en inicialización SPA: ' + e.message); }
 
     // 3. Cargar lógica específica
@@ -1334,12 +1356,7 @@ function initAppForPage() {
 
     // Configurar event listeners que dependen de referencias DOM
     if (exitModal) {
-        window.addEventListener('click', (e) => {
-            if (e.target === exitModal) {
-                exitModal.classList.remove('active');
-                document.body.classList.remove('no-scroll');
-            }
-        });
+        setupExitModalListeners();
     }
 
     if (btnPass && passwordEl) {

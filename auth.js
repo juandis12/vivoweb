@@ -1,29 +1,15 @@
-import { CONFIG } from './config.js';
+import { CONFIG, supabase as globalSupabase } from './config.js';
 import { showToast } from './utils.js';
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-export let supabase = null;
+export let supabase = globalSupabase;
 export let currentProfile = null;
 let heartbeatTimer = null;
 let sessionChannel = null;
+let lastSessionCheck = 0; // Throttle: Evitar martilleo de sesiones
+const SESSION_CHECK_COOLDOWN = 15000; // 15 segundos entre chequeos de seguridad
 
 export async function initAuth(onAuthChange) {
-    if (!supabase) {
-        try {
-            supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-                auth: {
-                    persistSession: true,
-                    storageKey: `sb-${CONFIG.SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`,
-                    storage: window.localStorage,
-                    autoRefreshToken: true,
-                    detectSessionInUrl: true
-                }
-            });
-        } catch(e) { 
-            console.warn('Supabase no disponible:', e); 
-            return { user: null, profile: null };
-        }
-    }
+    if (!supabase) supabase = globalSupabase;
 
     const safeCallback = (event, session, profile) => {
         if (typeof onAuthChange === 'function') {
@@ -31,73 +17,37 @@ export async function initAuth(onAuthChange) {
         }
     };
 
-    // Carga inicial inmediata del perfil (Fase Persistencia Robusta)
+    // Carga inicial inmediata del perfil
     const stored = localStorage.getItem('vivotv_current_profile');
     if (stored) {
         try { currentProfile = JSON.parse(stored); } catch(e) { currentProfile = null; }
     }
 
-    return new Promise((resolve) => {
-        let resolved = false;
-
-        const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`[VivoTV] Auth Event: ${event}`);
-            
-            if (session?.user) {
-                const up = localStorage.getItem('vivotv_current_profile');
-                let localP = up ? JSON.parse(up) : null;
-                
-                // --- SEGURIDAD FASE 3: Verificación de Integridad ---
-                if (localP) {
-                    const { data: dbP } = await supabase.from('vivotv_profiles').select('is_kids').eq('id', localP.id).single();
-                    if (dbP && dbP.is_kids !== localP.is_kids) {
-                        console.warn('[VivoTV] 🛡️ Integridad de perfil restaurada (Filtro parental)');
-                        localP.is_kids = dbP.is_kids;
-                        localStorage.setItem('vivotv_current_profile', JSON.stringify(localP));
-                    }
-                }
-
-                currentProfile = localP;
-                safeCallback(event, session, currentProfile);
-                
-                if (!resolved) {
-                    resolved = true;
-                    resolve({ user: session.user, profile: currentProfile, supabase });
-                }
-            } else if (event === 'SIGNED_OUT') {
-                currentProfile = null;
-                localStorage.removeItem('vivotv_current_profile');
-                safeCallback(event, null, null);
-                if (!resolved) {
-                    resolved = true;
-                    resolve({ user: null, profile: null, supabase });
-                }
-            } else if (event === 'INITIAL_SESSION' && !session) {
-                // Si es el evento inicial y no hay sesión, esperamos un poco más 
-                // por si getUser() o el motor de recuperación logran rescatarla.
-                safeCallback(event, null, null);
-            }
-        });
-
-        // Timeout de seguridad progresivo
-        setTimeout(async () => {
-            if (resolved) return;
-            console.log('[VivoTV] Segundo intento de recuperación...');
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                resolved = true;
-                resolve({ user: user, profile: currentProfile, supabase });
-            } else {
-                // Última oportunidad (3.5s total)
-                setTimeout(async () => {
-                   if (resolved) return;
-                   const { data: { user: lastTry } } = await supabase.auth.getUser();
-                   resolved = true;
-                   resolve({ user: lastTry || null, profile: currentProfile, supabase });
-                }, 1000);
-            }
-        }, 2500);
+    // Configurar listener una sola vez
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`[VivoTV] 🔑 Auth Event: ${event}`);
+        
+        if (session?.user) {
+            // Sincronizar perfil local si existe
+            const up = localStorage.getItem('vivotv_current_profile');
+            currentProfile = up ? JSON.parse(up) : null;
+            safeCallback(event, session, currentProfile);
+        } else if (event === 'SIGNED_OUT') {
+            currentProfile = null;
+            localStorage.removeItem('vivotv_current_profile');
+            safeCallback(event, null, null);
+        } else {
+            safeCallback(event, null, null);
+        }
     });
+
+    // Retornar sesión actual inmediatamente
+    const { data: { session } } = await supabase.auth.getSession();
+    return { 
+        user: session?.user || null, 
+        profile: currentProfile, 
+        supabase 
+    };
 }
 
 export function setCurrentProfile(profile) {
@@ -198,8 +148,16 @@ function _getDeviceFingerprint() {
 }
 
 export async function checkConcurrentSessions() {
+    const now = Date.now();
+    if (now - lastSessionCheck < SESSION_CHECK_COOLDOWN) {
+        return; // Throttling: Ya se verificó hace poco
+    }
+    lastSessionCheck = now;
+
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        // OPTIMIZACIÓN: Usar getSession en lugar de getUser para evitar bloqueos de instancia (Lock 5000ms)
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         if (!user) return;
 
         // 1. Obtener o generar ID de dispositivo persistente
@@ -209,18 +167,23 @@ export async function checkConcurrentSessions() {
             localStorage.setItem('vivotv_device_id', deviceId);
         }
 
-        /**
-         * 2. Validar Límite vía RPC (Fase de Servidor)
-         * El script SQL que el usuario ejecutará crea esta función 'vivotv_check_session_limit'.
-         * Esto es mucho más seguro que contar en el cliente.
-         */
+        // VALIDACIÓN: Evitar error 400 si los parámetros no están listos
+        if (!user.id || !deviceId) {
+            console.warn('[Session Guard] UID o DID no detectado. Reintentando después...');
+            lastSessionCheck = 0; // Reset para que el siguiente intento no espere 15s
+            return;
+        }
+
+        console.log(`[Session Guard] Verificando concurrencia para: ${user.email} (DID: ${deviceId})`);
+
         const { data: sessionResult, error: rpcError } = await supabase.rpc('vivotv_check_session_limit', {
             uid: user.id,
             did: deviceId
         });
 
         if (rpcError) {
-            // Si la función aún no existe (antes del SQL), usamos el fallback manual (Legacy)
+            console.warn('[Session Guard] RPC Error:', rpcError.message);
+            // Si la función aún no existe, usamos el fallback manual (Legacy)
             if (rpcError.code === 'P0001' || rpcError.message.includes('vivotv_check_session_limit')) {
                 await _legacyCheckSessions(user.id, deviceId);
             }
