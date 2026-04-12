@@ -6,7 +6,7 @@
 import { LIVE_CHANNELS, getCurrentShow, buildLiveCatalog } from './live-engine.js';
 import { supabase } from './config.js';
 import { PLAYER_LOGIC } from './player.js';
-import { DB_CATALOG } from './catalog.js';
+import { DB_CATALOG, fetchAvailableIds } from './catalog.js';
 
 let activeChannelId = 'action';
 let updateInterval = null;
@@ -21,29 +21,35 @@ export const LIVE_UI = {
             // 1. Fase de Calibración (NTP-Lite)
             await this.syncClock();
 
-            // 1.1 Esperar a que el catálogo esté listo si es necesario
-            if (!DB_CATALOG || DB_CATALOG.length === 0) {
-                console.log('[Live] Catálogo vacío, esperando sincronización...');
+            // 1.1 Sincronización Forzada de Catálogo si está vacío
+            let catalog = window.DB_CATALOG || [];
+            if (catalog.length === 0) {
+                console.log('[Live] Catálogo no detectado, forzando sincronización...');
+                await fetchAvailableIds(supabase);
+                catalog = window.DB_CATALOG || [];
+            }
+            
+            // Reintento si sigue vacío (por latencia de red)
+            if (catalog.length === 0) {
                 await new Promise(resolve => {
                     const check = setInterval(() => {
-                        if (DB_CATALOG && DB_CATALOG.length > 0) {
+                        catalog = window.DB_CATALOG || [];
+                        if (catalog.length > 0) {
                             clearInterval(check);
                             resolve();
                         }
-                    }, 500);
-                    setTimeout(() => { clearInterval(check); resolve(); }, 5000); // Timeout 5s
+                    }, 1000);
+                    setTimeout(() => { clearInterval(check); resolve(); }, 10000);
                 });
             }
 
-            // 2. Construir Catálogo Dinámico 24/7 con los datos locales
-            // Filtramos las películas que realmente están en video_sources
-            const { data: dbItems } = await supabase.from('video_sources').select('tmdb_id');
-            const availableSet = new Set((dbItems || []).map(item => String(item.tmdb_id)));
-            
-            const liveReadyCatalog = DB_CATALOG.filter(item => availableSet.has(String(item.id || item.tmdb_id)));
-            
-            console.log(`[Live] Generando parrilla con ${liveReadyCatalog.length} títulos disponibles.`);
-            await buildLiveCatalog(liveReadyCatalog);
+            // 2. Construir Catálogo Dinámico 24/7
+            if (catalog.length === 0) {
+                console.warn('[Live] No se detectaron títulos en el catálogo global tras la espera.');
+            } else {
+                console.log(`[Live] Generando parrilla con ${catalog.length} títulos de la biblioteca.`);
+                await buildLiveCatalog(catalog);
+            }
 
             // 3. Filtrar Canales Activos (solo los que tienen programación)
             filteredChannels = LIVE_CHANNELS.filter(ch => {
@@ -138,22 +144,27 @@ export const LIVE_UI = {
      * Sincroniza el reloj local con el servidor de Supabase
      */
     async syncClock() {
-        const start = Date.now();
-        // Usamos una llamada HEAD a la API de Supabase para leer el header 'date'
-        const response = await fetch(supabase.supabaseUrl + '/rest/v1/', {
-            method: 'HEAD',
-            headers: { 'apikey': supabase.supabaseKey }
-        });
-        const end = Date.now();
-        const serverDateStr = response.headers.get('date');
-        
-        if (serverDateStr) {
-            const serverTime = new Date(serverDateStr).getTime();
-            const rtt = end - start;
-            // El tiempo real del servidor es tiempoRecibido + (tiempoTransferencia / 2)
-            const estimatedServerTime = serverTime + (rtt / 2);
-            serverOffset = estimatedServerTime - end;
-            console.log(`[Live] Calibración completa. Skew detectado: ${serverOffset}ms`);
+        try {
+            const start = Date.now();
+            // Intentamos obtener la hora del servidor vía cabecera HTTP
+            const response = await fetch(supabase.supabaseUrl + '/rest/v1/', {
+                method: 'HEAD',
+                headers: { 'apikey': supabase.supabaseKey }
+            });
+            
+            const end = Date.now();
+            const serverDateStr = response.headers.get('date');
+            
+            if (serverDateStr) {
+                const serverTime = new Date(serverDateStr).getTime();
+                const rtt = end - start;
+                const estimatedServerTime = serverTime + (rtt / 2);
+                serverOffset = estimatedServerTime - end;
+                console.log(`[Live] Calibración completa. Skew detectado: ${serverOffset}ms`);
+            }
+        } catch (e) {
+            console.warn('[Live] No se pudo sincronizar el reloj con el servidor. Usando hora local.', e);
+            serverOffset = 0;
         }
     },
 
