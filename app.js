@@ -1232,6 +1232,33 @@ async function loadFullHistory() {
         }
 
         const card = CATALOG_UI.createMovieCard(item, item.historyItem.type, true, null, progressPercent);
+        
+        // Inyectar Botón de Eliminación (1-Clic)
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-remove-history';
+        removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+        removeBtn.title = 'Eliminar del Historial';
+        
+        removeBtn.onclick = async (e) => {
+            e.stopPropagation();
+            removeBtn.innerHTML = '<div class="loader" style="width:16px;height:16px;"></div>';
+            
+            const { error } = await supabase.from('watch_history')
+                .delete()
+                .eq('id', item.historyItem.id);
+                
+            if (!error) {
+                card.style.transform = 'scale(0.8)';
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 300);
+            } else {
+                removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+            }
+        };
+        
+        const inner = card.querySelector('.movie-card-inner');
+        if (inner) inner.appendChild(removeBtn);
+
         grid.appendChild(card);
     });
 }
@@ -1382,11 +1409,16 @@ function initAppForPage() {
             searchInput.focus();
             e.stopPropagation();
         });
-        document.addEventListener('click', (e) => {
-            if (searchBox && !searchBox.contains(e.target)) {
-                searchBox.classList.remove('active');
-            }
-        });
+        
+        if (!window._searchBoxListenerBound) {
+            document.addEventListener('click', (e) => {
+                const currentSearchBox = document.getElementById('searchBox');
+                if (currentSearchBox && !currentSearchBox.contains(e.target)) {
+                    currentSearchBox.classList.remove('active');
+                }
+            });
+            window._searchBoxListenerBound = true;
+        }
     }
 
     if (searchInput && searchBox && btnClear) {
@@ -1468,6 +1500,60 @@ function initAppForPage() {
 
 // Escuchar cambios de página vía SPA (desde layout.js)
 window.addEventListener('vivotv:page-changed', initAppForPage);
+
+// ================================================
+// FASE 5: BINGE-WATCH UX (Auto-Next Episode)
+// ================================================
+window.addEventListener('vivotv:binge_prompt', (e) => {
+    const { season, episode } = e.detail;
+    
+    // Obtener catálogo de base de datos actual (para detalles)
+    // El PLAYER_LOGIC tiene el seriesData guardado si pasamos por renderSeriesInfo, 
+    // pero lo mejor es obtenerlo de CATALOG_UI que guarda temporales o pedir la info a TMDB en segundo plano.
+    // Usaremos el objeto series asumiendo que el usuario ya estaba en el modal Series.
+    
+    const promptEl = document.getElementById('bingePrompt');
+    if (!promptEl) return;
+    
+    // Mostramos el overlay UI
+    promptEl.classList.remove('hidden');
+    
+    let countdown = 5;
+    document.getElementById('bingeCountdown').textContent = countdown;
+    document.getElementById('bingeNextTitle').textContent = `Temporada ${season} - Episodio ${episode + 1}`;
+    
+    const interval = setInterval(() => {
+        countdown--;
+        document.getElementById('bingeCountdown').textContent = countdown;
+        if (countdown <= 0) {
+            clearInterval(interval);
+            executeNextEpisode();
+        }
+    }, 1000);
+    
+    const btnPlay = document.getElementById('btnBingePlay');
+    const btnCancel = document.getElementById('btnBingeCancel');
+    
+    const executeNextEpisode = () => {
+        clearInterval(interval);
+        promptEl.classList.add('hidden');
+        
+        // Usar la lógica nativa del reproductor para saltar de inmediato al próximo contenido en base de datos.
+        import('./player.js').then(({ PLAYER_LOGIC }) => {
+            PLAYER_LOGIC.playNextEpisodeFrom(season, episode, window._supabase || window.supabase || supabase);
+        }).catch(err => {
+            // Fallback en caso de lazy loading
+            if (window.PLAYER_LOGIC) window.PLAYER_LOGIC.playNextEpisodeFrom(season, episode, supabase);
+        });
+    };
+
+    btnPlay.onclick = executeNextEpisode;
+    btnCancel.onclick = () => {
+        clearInterval(interval);
+        promptEl.classList.add('hidden');
+        console.log('[VivoTV] Binge-Watch cancelado por el usuario.');
+    };
+});
 
 // Inicialización robusta para Módulos ESM
 if (document.readyState === 'loading') {

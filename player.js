@@ -595,7 +595,7 @@ export const PLAYER_LOGIC = {
         // --- SALTO INTELIGENTE (Auto-Resume) ---
         // Fase 10X UX: Delay reducido para fluidez
         if (seek > 0) {
-            const delay = 2000; // Iframe necesita más tiempo por anuncios
+            const delay = 2000; 
             console.log(`[VivoTV] Programando salto de progreso (${seek}s) en ${delay/1000}s...`);
             setTimeout(() => {
                 if (video && (video.readyState >= 1 || !video.paused)) {
@@ -605,6 +605,21 @@ export const PLAYER_LOGIC = {
                 }
             }, delay);
         }
+
+        // --- SISTEMA DE TELEMETRÍA GLOBAL (Para Watch Party) ---
+        window.PLAYER_GLOBAL_STATE = { currentTime: 0, isPlaying: false };
+        const updateTelemetry = () => {
+            if (!video.paused && !video.ended) {
+                window.PLAYER_GLOBAL_STATE.currentTime = video.currentTime;
+                window.PLAYER_GLOBAL_STATE.isPlaying = true;
+                this._checkBingeWatch(video.currentTime, video.duration);
+            } else {
+                window.PLAYER_GLOBAL_STATE.isPlaying = false;
+            }
+        };
+        video.addEventListener('timeupdate', updateTelemetry);
+        video.addEventListener('pause', updateTelemetry);
+        video.addEventListener('play', updateTelemetry);
 
         this._createSmartControls();
         video.play().catch(() => {});
@@ -739,11 +754,16 @@ export const PLAYER_LOGIC = {
                     }
                 });
                 this.progressTimer = setInterval(() => {
-                    if (this.ytPlayer && this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                        elapsed = this.ytPlayer.getCurrentTime();
-                        doSaveProgress(elapsed);
-                    }
-                }, 10000);
+            if (this.ytPlayer && this.ytPlayer.getPlayerState) {
+                if (this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                    elapsed = this.ytPlayer.getCurrentTime();
+                    doSaveProgress(elapsed);
+                    
+                    const duration = this.ytPlayer.getDuration();
+                    this._checkBingeWatch(elapsed, duration);
+                }
+            }
+        }, 10000);
             };
             if (typeof YT !== 'undefined' && YT.Player) initYT();
             else window.onYouTubeIframeAPIReady = initYT;
@@ -756,6 +776,10 @@ export const PLAYER_LOGIC = {
                 this.vimeoPlayer.getCurrentTime().then(secs => {
                     elapsed = secs;
                     doSaveProgress(elapsed);
+                    
+                    this.vimeoPlayer.getDuration().then(duration => {
+                        this._checkBingeWatch(elapsed, duration);
+                    });
                 });
             }, 10000);
         }
@@ -776,9 +800,100 @@ export const PLAYER_LOGIC = {
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
     },
 
+    /**
+     * Lógica de Auto-Play: Detecta el final del episodio (95%)
+     */
+    _checkBingeWatch(currentTime, totalTime) {
+        if (this.currentType !== 'tv' || !totalTime || totalTime < 60) return;
+        
+        // Evita disparar el prompt múltiples veces
+        if (this._bingePromptShown) return;
+
+        const progressPercent = currentTime / totalTime;
+        if (progressPercent >= 0.95) {
+            this._bingePromptShown = true;
+            console.log(`[VivoTV🎬] ¡Binge-Watch Detectado! ${Math.floor(progressPercent*100)}% Completado.`);
+            window.dispatchEvent(new CustomEvent('vivotv:binge_prompt', {
+                detail: {
+                    tmdbId: this.currentTmdbId,
+                    season: this.currentSeason,
+                    episode: this.currentEpisode
+                }
+            }));
+        }
+    },
+
+    /**
+     * Devuelve el estado actual de reproducción para Watch Party
+     */
+    getCurrentPlaybackState() {
+        // Native
+        const video = document.getElementById('videoPlayer');
+        if (video && !video.classList.contains('hidden')) {
+            return { currentTime: video.currentTime, isPlaying: !video.paused };
+        }
+        
+        // YouTube
+        if (this.ytPlayer && this.ytPlayer.getPlayerState) {
+            const state = this.ytPlayer.getPlayerState();
+            return { 
+                currentTime: this.ytPlayer.getCurrentTime() || 0, 
+                isPlaying: state === 1 // 1 = PLAYING
+            };
+        }
+        
+        // Vimeo
+        if (this.vimeoPlayer) {
+            // Guardamos localmente el progreso porque Vimeo es asíncrono
+            return { 
+                currentTime: window.PLAYER_GLOBAL_STATE?.currentTime || 0, 
+                isPlaying: window.PLAYER_GLOBAL_STATE?.isPlaying || false 
+            };
+        }
+
+        return null;
+    },
+
+    /**
+     * Aplica el estado remoto (Guest) del Watch Party
+     */
+    syncPlaybackState(payload) {
+        const { currentTime, isPlaying } = payload;
+        
+        // Native
+        const video = document.getElementById('videoPlayer');
+        if (video && !video.classList.contains('hidden')) {
+            const diff = Math.abs(video.currentTime - currentTime);
+            if (diff > 3) video.currentTime = currentTime;
+            if (isPlaying && video.paused) video.play().catch(() => {});
+            else if (!isPlaying && !video.paused) video.pause();
+            return;
+        }
+
+        // YouTube
+        if (this.ytPlayer && this.ytPlayer.seekTo) {
+            const ytTime = this.ytPlayer.getCurrentTime() || 0;
+            if (Math.abs(ytTime - currentTime) > 3) this.ytPlayer.seekTo(currentTime, true);
+            const state = this.ytPlayer.getPlayerState();
+            if (isPlaying && state !== 1) this.ytPlayer.playVideo();
+            else if (!isPlaying && state === 1) this.ytPlayer.pauseVideo();
+            return;
+        }
+
+        // Vimeo
+        if (this.vimeoPlayer) {
+            this.vimeoPlayer.getCurrentTime().then(vTime => {
+                if (Math.abs(vTime - currentTime) > 3) this.vimeoPlayer.setCurrentTime(currentTime);
+                if (isPlaying) this.vimeoPlayer.play().catch(() => {});
+                else this.vimeoPlayer.pause();
+            });
+        }
+    },
+
     _stopProgressTimer() {
         if (this.progressTimer) clearInterval(this.progressTimer);
         this.progressTimer = null;
+        this._bingePromptShown = false;
 
         // Limpiar Telemetría al detener
         if (window.updateGlobalPlaybackStatus) {

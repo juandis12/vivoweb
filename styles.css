@@ -2548,3 +2548,316 @@ nav a.active::after { width: 24px; }
     100% { transform: scale(1); }
 }
 
+/* ================================================
+   13. WATCH PARTY EMOTES
+================================================ */
+.floating-emote {
+    position: absolute;
+    bottom: 50px;
+    font-size: 3rem;
+    pointer-events: none;
+    z-index: 10000;
+    animation: floatUpAndFade 3s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+}
+
+.floating-emote span {
+    font-size: 0.9rem;
+    font-family: var(--font-premium);
+    background: rgba(0,0,0,0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    color: white;
+}
+
+@keyframes floatUpAndFade {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    10% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+    20% { transform: translateY(-30px) scale(1); opacity: 1; }
+    100% { transform: translateY(-300px) scale(1); opacity: 0; }
+}
+
+/* ================================================
+   14. BINGE-WATCH UX (PRÓXIMO EPISODIO)
+================================================ */
+.binge-prompt {
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    background: rgba(11, 18, 43, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 20px 25px;
+    z-index: 9000;
+    width: 350px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: bingeSlideIn 0.5s var(--ease-netflix) forwards;
+}
+
+@keyframes bingeSlideIn {
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.binge-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.binge-subtitle span {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.binge-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.epg-show-item:hover {
+    background: rgba(255,255,255,0.06);
+    transform: scale(1.02);
+}
+
+.epg-show-item.active {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+}
+
+.epg-time {
+    font-weight: 800;
+    color: var(--primary);
+    background: rgba(37, 99, 235, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+}
+
+.epg-name {
+    flex: 1;
+    margin-left: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 600px) {
+    .header-flex { flex-direction: column; align-items: flex-start; }
+    .epg-modal-content { padding: 25px 15px; width: 95%; max-height: 90vh; }
+    .epg-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .mood-chip {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+}
+
+/* --- OPTIMIZACIÓN IPHONE SE Y MÓVILES PEQUEÑOS (6 BOTONES) --- */
+@media (max-width: 400px) {
+    :root { 
+        --side-padding: 12px; 
+    }
+    .mobile-nav { 
+        padding: 5px 8px 15px; 
+        height: 62px; 
+        gap: 2px;
+    }
+    .mobile-nav-item {
+        min-width: 0;
+        flex: 1;
+    }
+    .mobile-nav-item svg { 
+        width: 18px; 
+        height: 18px; 
+        }
+    .mobile-nav-item span { 
+        font-size: 0.6rem; 
+        letter-spacing: -0.03em;
+        margin-top: 2px;
+    }
+    .mobile-nav-indicator {
+        width: 35px;
+    }
+
+    /* Grilla de Canales Pro */
+    .live-grid { 
+        grid-template-columns: 1fr !important; 
+        gap: 15px !important;
+    }
+    .channel-card { 
+        padding: 12px; 
+    }
+    .channel-icon {
+        font-size: 1.2rem;
+    }
+    .unmute-hint { 
+        font-size: 14px; 
+        padding: 10px 16px; 
+        top: 20px; 
+        right: 20px; 
+        background: rgba(0,0,0,0.8);
+        border: 1px solid var(--primary);
+    }
+}
+
+.unmute-hint {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    z-index: 20;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5), 0 0 15px var(--primary);
+    animation: bounceIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.05); opacity: 1; }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+/* ================================================
+   13. WATCH PARTY EMOTES
+================================================ */
+.floating-emote {
+    position: absolute;
+    bottom: 50px;
+    font-size: 3rem;
+    pointer-events: none;
+    z-index: 10000;
+    animation: floatUpAndFade 3s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+}
+
+.floating-emote span {
+    font-size: 0.9rem;
+    font-family: var(--font-premium);
+    background: rgba(0,0,0,0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    color: white;
+}
+
+@keyframes floatUpAndFade {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    10% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+    20% { transform: translateY(-30px) scale(1); opacity: 1; }
+    100% { transform: translateY(-300px) scale(1); opacity: 0; }
+}
+
+/* ================================================
+   14. BINGE-WATCH UX (PRÓXIMO EPISODIO)
+================================================ */
+.binge-prompt {
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    background: rgba(11, 18, 43, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 20px 25px;
+    z-index: 9000;
+    width: 350px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: bingeSlideIn 0.5s var(--ease-netflix) forwards;
+}
+
+@keyframes bingeSlideIn {
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.binge-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.binge-subtitle span {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.binge-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.binge-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.binge-prompt.hidden { display: none !important; }
+
+/* ================================================
+   15. CONTROLES DE HISTORIAL
+================================================ */
+.btn-remove-history {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 20;
+}
+
+.movie-card:hover .btn-remove-history {
+    opacity: 1;
+}
+
+.btn-remove-history:hover {
+    background: var(--danger, #ff3b30);
+    transform: scale(1.1);
+}
