@@ -4,13 +4,15 @@
  */
 
 const GENRE_MAP = {
-    action: [28],
-    horror: [27],
-    anime: [16],
-    family: [10751, 10762]
+    risa: [35], // Comedia
+    action: [28, 12], // Acción, Aventura
+    horror: [27, 53, 9648], // Terror, Suspenso, Misterio
+    anime: [16], // Animación (Anime se filtra por esto + origen en catalog.js)
+    family: [10751, 10762, 16] // Familia, Kids, Animación
 };
 
 export const LIVE_CHANNELS = [
+    { id: 'risa', name: 'Vivo Risa', icon: '😄', color: '#facc15', genreIds: GENRE_MAP.risa },
     { id: 'action', name: 'Vivo Acción', icon: '💥', color: '#ef4444', genreIds: GENRE_MAP.action },
     { id: 'horror', name: 'Vivo Terror', icon: '👻', color: '#7c3aed', genreIds: GENRE_MAP.horror },
     { id: 'anime', name: 'Anime 24/7', icon: '🍥', color: '#f97316', genreIds: GENRE_MAP.anime },
@@ -18,6 +20,7 @@ export const LIVE_CHANNELS = [
 ];
 
 let generatedSchedules = {};
+let cachedDbCatalog = [];
 
 /**
  * Genera una programación de 24 horas usando una lista de películas.
@@ -46,7 +49,8 @@ function generateDailySchedule(movies, dateSeed) {
             tmdb_id: String(item.id || item.tmdb_id),
             title: item.title || item.name,
             type: item.title ? 'movie' : 'tv',
-            duration: runtime
+            duration: runtime,
+            genreIds: item.genres || item.genre_ids || []
         });
         
         currentSeconds += runtime;
@@ -84,14 +88,11 @@ export function getCurrentShow(channelId) {
             const nextItem = schedule[i+1] || schedule[0];
             nextShow = { ...nextItem };
             
-            // Calculamos duración basada en el item
             const durationSeconds = item.duration || 7200;
-
             currentShow.offsetSeconds = currentTimeInSeconds - showTimeSeconds;
             currentShow.durationSeconds = durationSeconds;
             currentShow.progress = Math.min((currentShow.offsetSeconds / durationSeconds) * 100, 100);
         } else if (!currentShow) {
-            // Caso borde: antes de la primera función del día
             const lastItem = schedule[schedule.length - 1];
             currentShow = { ...lastItem };
             nextShow = { ...schedule[0] };
@@ -111,17 +112,53 @@ export function getCurrentShow(channelId) {
     return { currentShow, nextShow };
 }
 
+/**
+ * Busca contenido similar que SÍ esté en la base de datos si falla el original.
+ */
+export function findSimilarAvailable(genreIds) {
+    if (!cachedDbCatalog || cachedDbCatalog.length === 0) return null;
+
+    // Normalizar genreIds
+    const targetGenres = (genreIds || []).map(g => typeof g === 'object' ? g.id : g);
+    
+    // Buscar items con al menos un género en común
+    const similar = cachedDbCatalog.filter(item => {
+        const itemGenres = (item.genres || item.genre_ids || []).map(g => typeof g === 'object' ? g.id : g);
+        return targetGenres.some(id => itemGenres.includes(id));
+    });
+
+    if (similar.length > 0) {
+        return similar[Math.floor(Math.random() * similar.length)];
+    }
+
+    // Fallback absoluto: cualquier cosa
+    return cachedDbCatalog[Math.floor(Math.random() * cachedDbCatalog.length)];
+}
+
 export async function buildLiveCatalog(dbCatalog) {
-    console.log('[Live] Construyendo programación 24/7 dinámica...');
+    if (!dbCatalog || dbCatalog.length === 0) {
+        console.warn('[Live] buildLiveCatalog: Catálogo vacío, reintentando...');
+        return;
+    }
+
+    cachedDbCatalog = dbCatalog;
+    console.log(`[Live] Generando programación para ${LIVE_CHANNELS.length} canales...`);
+    
     const today = new Date().toISOString().split('T')[0];
     const dateSeed = parseInt(today.replace(/-/g, ''));
 
     LIVE_CHANNELS.forEach(channel => {
-        const matching = dbCatalog.filter(item => {
+        let matching = dbCatalog.filter(item => {
             const genres = item.genres || item.genre_ids || [];
             const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
             return channel.genreIds.some(id => genreIds.includes(id));
         });
+
+        // FALLBACK: Si no hay hits para este género, usar el catálogo completo (Sin señal -> Señal aleatoria)
+        if (matching.length === 0) {
+            console.log(`[Live] Canal '${channel.name}' sin contenido. Usando pool general.`);
+            matching = dbCatalog.slice(0, 50); // Tomar una muestra
+        }
         
         generatedSchedules[channel.id] = generateDailySchedule(matching, dateSeed);
     });

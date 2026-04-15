@@ -2,12 +2,12 @@
  * live-ui.js — Controlador de Interfaz para Canales en Vivo
  */
 
-import { LIVE_CHANNELS, getCurrentShow, buildLiveCatalog } from './live-engine.js';
+import { LIVE_CHANNELS, getCurrentShow, buildLiveCatalog, findSimilarAvailable } from './live-engine.js';
 import { supabase } from './config.js';
 import { PLAYER_LOGIC } from './player.js';
 import { fetchAvailableIds } from './catalog.js';
 
-let activeChannelId = 'action';
+let activeChannelId = 'risa'; // Iniciamos en Risa como novedad
 let streamsCache = {};
 let updateInterval = null;
 let serverOffset = 0;
@@ -28,12 +28,16 @@ window.addEventListener('vivotv:page-changed', (e) => {
 async function initLive() {
     console.log('[Live] Iniciando Motor de Programación...');
     
+    const wrapper = document.getElementById('livePlayerWrapper');
+    if (!wrapper) return; // No estamos en la página live
+
     // 1. Sincronizar Reloj con Servidor (Anti-Drift)
     await syncClock();
 
-    // 2. Asegurar Catálogo
+    // 2. Asegurar Catálogo (Esperar si es necesario)
     let catalog = window.DB_CATALOG || [];
     if (catalog.length === 0) {
+        console.log('[Live] Esperando sincronización de catálogo...');
         await fetchAvailableIds(supabase);
         catalog = window.DB_CATALOG || [];
     }
@@ -46,21 +50,34 @@ async function initLive() {
     await preloadStreams();
     switchChannel(activeChannelId);
     
-    // 5. Setup EPG Events
-    const btnOpen = document.getElementById('btnOpenEPG');
-    const btnClose = document.getElementById('btnCloseEPG');
-    const modal = document.getElementById('epgModal');
+    // 5. Setup EPG Events (Re-vincular siempre)
+    window.setupEPGHandlers();
 
-    if (btnOpen) btnOpen.onclick = () => { renderEPG(); modal.classList.remove('hidden'); };
-    if (btnClose) btnClose.onclick = () => modal.classList.add('hidden');
-
-    // 6. Monitor Activo (Cada 10s para UI, cada 2s para Anti-Ads)
+    // 6. Monitor Activo
     if (updateInterval) clearInterval(updateInterval);
     updateInterval = setInterval(() => {
         updateCurrentInfo();
         checkSyncDrift();
     }, 2000);
 }
+
+// Función global para manejar eventos de EPG (útil si la UI se refresca)
+window.setupEPGHandlers = () => {
+    const btnOpen = document.getElementById('btnOpenEPG');
+    const btnClose = document.getElementById('btnCloseEPG');
+    const modal = document.getElementById('epgModal');
+
+    if (btnOpen) btnOpen.onclick = () => { 
+        renderEPG(); 
+        modal.classList.remove('hidden'); 
+    };
+    if (btnClose) btnClose.onclick = () => modal.classList.add('hidden');
+    
+    // Cerrar al hacer clic fuera
+    if (modal) {
+        modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+    }
+};
 
 async function syncClock() {
     try {
@@ -89,11 +106,11 @@ function checkSyncDrift() {
     if (status?.currentShow) {
         const expected = status.currentShow.offsetSeconds;
         const actual = video.currentTime;
-        const diff = expected - actual;
+        const diff = Math.abs(expected - actual);
 
-        // Si hay un desfase mayor a 5s (publicidad o lag), resincronizamos
-        if (diff > 5) {
-            console.warn('[Live] Detectado desfase crítico. Resincronizando...');
+        // Si hay un desfase mayor a 10s, resincronizamos
+        if (diff > 10) {
+            console.warn('[Live] Detectado desfase. Resincronizando...');
             video.currentTime = expected;
         }
     }
@@ -140,24 +157,29 @@ function renderChannelsList() {
         item.onclick = () => switchChannel(ch.id);
         list.appendChild(item);
     });
-    updateCurrentInfo();
 }
 
 async function switchChannel(id) {
     activeChannelId = id;
     
     document.querySelectorAll('.channel-item').forEach((el, idx) => {
-        el.classList.toggle('active', LIVE_CHANNELS[idx].id === id);
+        const channel = LIVE_CHANNELS[idx];
+        if (channel) el.classList.toggle('active', channel.id === id);
     });
 
-    const status = getCurrentShow(id);
-    if (!status) return;
+    let status = getCurrentShow(id);
+    if (!status) {
+        console.warn(`[Live] No hay status para canal ${id}`);
+        return;
+    }
 
-    const { currentShow } = status;
+    let { currentShow } = status;
     const wrapper = document.getElementById('livePlayerWrapper');
     const placeholder = document.getElementById('livePlaceholder');
     const playerCont = document.getElementById('livePlayerContainer');
     const info = document.getElementById('liveInfo');
+
+    if (!wrapper) return;
 
     wrapper.classList.add('channel-glitch');
     setTimeout(() => wrapper.classList.remove('channel-glitch'), 400);
@@ -167,11 +189,27 @@ async function switchChannel(id) {
     info.classList.add('hidden');
 
     try {
+        // --- LÓGICA DE SUSTITUCIÓN INTELIGENTE ---
         let streamUrl = streamsCache[currentShow.tmdb_id];
         if (!streamUrl) {
             const { data } = await supabase.from('video_sources').select('stream_url').eq('tmdb_id', currentShow.tmdb_id).maybeSingle();
             streamUrl = data?.stream_url;
             if (streamUrl) streamsCache[currentShow.tmdb_id] = streamUrl;
+        }
+
+        // Si no hay stream, buscamos algo similar inmediatamente
+        if (!streamUrl) {
+            console.log(`[Live] '${currentShow.title}' no tiene fuente. Buscando similar...`);
+            const fallback = findSimilarAvailable(currentShow.genreIds);
+            if (fallback) {
+                console.log(`[Live] Sustituyendo por: ${fallback.title || fallback.name}`);
+                currentShow.tmdb_id = String(fallback.id || fallback.tmdb_id);
+                currentShow.title = fallback.title || fallback.name;
+                currentShow.offsetSeconds = Math.floor(Math.random() * 3000); // Iniciar en punto aleatorio
+                
+                const { data } = await supabase.from('video_sources').select('stream_url').eq('tmdb_id', currentShow.tmdb_id).maybeSingle();
+                streamUrl = data?.stream_url;
+            }
         }
 
         if (streamUrl) {
@@ -182,7 +220,9 @@ async function switchChannel(id) {
             document.getElementById('liveTitle').textContent = currentShow.title;
             document.getElementById('liveNext').textContent = `A continuación: ${status.nextShow.title} (${status.nextShow.time})`;
         } else {
-            placeholder.innerHTML = `<div class="no-signal">📡</div><p>Sin señal en ${currentShow.title}</p>`;
+            placeholder.innerHTML = `<div class="no-signal">📡</div><p>Sintonizando contenido alternativo...</p>`;
+            // Reintentar en 5s si de plano nada funcionó
+            setTimeout(() => switchChannel(id), 5000);
         }
     } catch (e) {
         console.error('[Live] Error al sintonizar:', e);
@@ -202,6 +242,7 @@ function updateCurrentInfo() {
 
     const currentStatus = getCurrentShow(activeChannelId);
     if (currentStatus && document.getElementById('liveTitle')?.textContent !== currentStatus.currentShow.title) {
+        // Solo switch si el título cambió (cambio de programa natural)
         switchChannel(activeChannelId);
     }
 }
@@ -214,18 +255,22 @@ function renderEPG() {
         const col = document.createElement('div');
         col.className = 'epg-channel-col';
         const currentShowInfo = getCurrentShow(ch.id);
+        
+        const shows = currentShowInfo ? [currentShowInfo.currentShow, currentShowInfo.nextShow] : [];
+        
         col.innerHTML = `
             <div class="epg-channel-header">
                 <div class="channel-icon" style="width:30px; height:30px; font-size:1rem; background:${ch.color}">${ch.icon}</div>
                 <span style="font-size:0.8rem; font-weight:800">${ch.name}</span>
             </div>
             <div class="epg-shows">
-                ${(currentShowInfo ? [currentShowInfo.currentShow, currentShowInfo.nextShow] : []).map(show => `
-                    <div class="epg-show-item">
+                ${shows.map(show => `
+                    <div class="epg-show-item ${show === currentShowInfo?.currentShow ? 'active' : ''}">
                         <span class="epg-time">${show.time}</span>
                         <span class="epg-name">${show.title}</span>
                     </div>
                 `).join('')}
+                ${shows.length === 0 ? '<p style="font-size:0.7rem; opacity:0.5; padding:10px;">Cargando...</p>' : ''}
             </div>
         `;
         grid.appendChild(col);
