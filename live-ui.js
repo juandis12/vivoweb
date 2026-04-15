@@ -7,7 +7,7 @@ import { supabase } from './config.js';
 import { PLAYER_LOGIC } from './player.js';
 import { fetchAvailableIds } from './catalog.js';
 
-let activeChannelId = 'risa'; // Iniciamos en Risa como novedad
+let activeChannelId = 'risa'; 
 let streamsCache = {};
 let updateInterval = null;
 let serverOffset = 0;
@@ -29,18 +29,13 @@ async function initLive() {
     console.log('[Live] Iniciando Motor de Programación...');
     
     const wrapper = document.getElementById('livePlayerWrapper');
-    if (!wrapper) return; // No estamos en la página live
+    if (!wrapper) return; 
 
     // 1. Sincronizar Reloj con Servidor (Anti-Drift)
     await syncClock();
 
-    // 2. Asegurar Catálogo (Esperar si es necesario)
-    let catalog = window.DB_CATALOG || [];
-    if (catalog.length === 0) {
-        console.log('[Live] Esperando sincronización de catálogo...');
-        await fetchAvailableIds(supabase);
-        catalog = window.DB_CATALOG || [];
-    }
+    // 2. Esperar Catálogo (Polling hasta que haya datos)
+    const catalog = await waitForCatalog();
     
     // 3. Generar Programación
     await buildLiveCatalog(catalog);
@@ -50,7 +45,7 @@ async function initLive() {
     await preloadStreams();
     switchChannel(activeChannelId);
     
-    // 5. Setup EPG Events (Re-vincular siempre)
+    // 5. Setup EPG Events
     window.setupEPGHandlers();
 
     // 6. Monitor Activo
@@ -61,7 +56,44 @@ async function initLive() {
     }, 2000);
 }
 
-// Función global para manejar eventos de EPG (útil si la UI se refresca)
+/**
+ * Espera pacientemente a que la base de datos entregue el catálogo.
+ * Evita la "Guerra de Instancias" entre app.js y live-ui.js.
+ */
+async function waitForCatalog() {
+    const placeholder = document.getElementById('livePlaceholder');
+    if (placeholder) {
+        placeholder.innerHTML = `
+            <div class="loader-wave"><span></span><span></span><span></span></div>
+            <p id="syncStatus">Sincronizando Base de Datos...</p>
+        `;
+    }
+
+    return new Promise((resolve) => {
+        const check = async () => {
+            const catalog = window.DB_CATALOG || [];
+            
+            if (catalog.length > 0) {
+                console.log(`[Live] Catálogo detectado (${catalog.length} items). Activando motor.`);
+                if (placeholder) placeholder.innerHTML = `
+                    <div class="loader-wave"><span></span><span></span><span></span></div>
+                    <p>Buscando Programación...</p>
+                `;
+                resolve(catalog);
+            } else {
+                // Si no hay catálogo, nos aseguramos de que al menos la sincronización esté lanzada
+                if (!window.isCatalogSyncing) {
+                    console.log('[Live] Lanzando sincronización de respaldo...');
+                    fetchAvailableIds(supabase);
+                }
+                setTimeout(check, 1000);
+            }
+        };
+        check();
+    });
+}
+
+// Función global para manejar eventos de EPG
 window.setupEPGHandlers = () => {
     const btnOpen = document.getElementById('btnOpenEPG');
     const btnClose = document.getElementById('btnCloseEPG');
@@ -73,7 +105,6 @@ window.setupEPGHandlers = () => {
     };
     if (btnClose) btnClose.onclick = () => modal.classList.add('hidden');
     
-    // Cerrar al hacer clic fuera
     if (modal) {
         modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
     }
@@ -87,12 +118,8 @@ async function syncClock() {
             headers: { 'apikey': supabase.supabaseKey }
         });
         const end = Date.now();
-        const serverDateStr = response.headers.get('date');
-        if (serverDateStr) {
-            const serverTime = new Date(serverDateStr).getTime();
-            serverOffset = (serverTime + (end - start)/2) - end;
-            console.log(`[Live] Reloj Calibrado. Offset: ${serverOffset}ms`);
-        }
+        const serverTime = new Date(response.headers.get('date')).getTime();
+        serverOffset = (serverTime + (end - start)/2) - end;
     } catch (e) {
         console.warn('[Live] Fallo sync clock, usando local.');
     }
@@ -108,9 +135,8 @@ function checkSyncDrift() {
         const actual = video.currentTime;
         const diff = Math.abs(expected - actual);
 
-        // Si hay un desfase mayor a 10s, resincronizamos
-        if (diff > 10) {
-            console.warn('[Live] Detectado desfase. Resincronizando...');
+        if (diff > 12) {
+            console.warn('[Live] Desfase detectado. Sincronizando flujo...');
             video.currentTime = expected;
         }
     }
@@ -124,11 +150,7 @@ async function preloadStreams() {
     const uniqueIds = [...new Set(tmdbIds)];
 
     try {
-        const { data } = await supabase
-            .from('video_sources')
-            .select('tmdb_id, stream_url')
-            .in('tmdb_id', uniqueIds);
-        
+        const { data } = await supabase.from('video_sources').select('tmdb_id, stream_url').in('tmdb_id', uniqueIds);
         if (data) {
             data.forEach(source => { streamsCache[source.tmdb_id] = source.stream_url; });
         }
@@ -148,7 +170,7 @@ function renderChannelsList() {
             <div class="channel-icon">${ch.icon}</div>
             <div class="channel-meta">
                 <span class="channel-name">${ch.name}</span>
-                <span class="channel-now" id="now-${ch.id}">Cargando...</span>
+                <span class="channel-now" id="now-${ch.id}">Sincronizando...</span>
                 <div class="channel-progress-container">
                     <div class="channel-progress-fill" id="prog-${ch.id}" style="width: 0%"></div>
                 </div>
@@ -160,6 +182,7 @@ function renderChannelsList() {
 }
 
 async function switchChannel(id) {
+    const prevId = activeChannelId;
     activeChannelId = id;
     
     document.querySelectorAll('.channel-item').forEach((el, idx) => {
@@ -168,10 +191,7 @@ async function switchChannel(id) {
     });
 
     let status = getCurrentShow(id);
-    if (!status) {
-        console.warn(`[Live] No hay status para canal ${id}`);
-        return;
-    }
+    if (!status) return;
 
     let { currentShow } = status;
     const wrapper = document.getElementById('livePlayerWrapper');
@@ -181,15 +201,21 @@ async function switchChannel(id) {
 
     if (!wrapper) return;
 
-    wrapper.classList.add('channel-glitch');
-    setTimeout(() => wrapper.classList.remove('channel-glitch'), 400);
+    // Solo glitch si cambiamos de canal manualmente
+    if (prevId !== id) {
+        wrapper.classList.add('channel-glitch');
+        setTimeout(() => wrapper.classList.remove('channel-glitch'), 400);
+    }
 
     placeholder.classList.remove('hidden');
+    placeholder.innerHTML = `
+        <div class="loader-wave"><span></span><span></span><span></span></div>
+        <p>Sintonizando ${currentShow.title}...</p>
+    `;
     playerCont.classList.add('hidden');
     info.classList.add('hidden');
 
     try {
-        // --- LÓGICA DE SUSTITUCIÓN INTELIGENTE ---
         let streamUrl = streamsCache[currentShow.tmdb_id];
         if (!streamUrl) {
             const { data } = await supabase.from('video_sources').select('stream_url').eq('tmdb_id', currentShow.tmdb_id).maybeSingle();
@@ -197,16 +223,12 @@ async function switchChannel(id) {
             if (streamUrl) streamsCache[currentShow.tmdb_id] = streamUrl;
         }
 
-        // Si no hay stream, buscamos algo similar inmediatamente
         if (!streamUrl) {
-            console.log(`[Live] '${currentShow.title}' no tiene fuente. Buscando similar...`);
             const fallback = findSimilarAvailable(currentShow.genreIds);
             if (fallback) {
-                console.log(`[Live] Sustituyendo por: ${fallback.title || fallback.name}`);
                 currentShow.tmdb_id = String(fallback.id || fallback.tmdb_id);
                 currentShow.title = fallback.title || fallback.name;
-                currentShow.offsetSeconds = Math.floor(Math.random() * 3000); // Iniciar en punto aleatorio
-                
+                currentShow.offsetSeconds = Math.floor(Math.random() * 2000); 
                 const { data } = await supabase.from('video_sources').select('stream_url').eq('tmdb_id', currentShow.tmdb_id).maybeSingle();
                 streamUrl = data?.stream_url;
             }
@@ -218,15 +240,12 @@ async function switchChannel(id) {
             playerCont.classList.remove('hidden');
             info.classList.remove('hidden');
             document.getElementById('liveTitle').textContent = currentShow.title;
-            document.getElementById('liveNext').textContent = `A continuación: ${status.nextShow.title} (${status.nextShow.time})`;
+            document.getElementById('liveNext').textContent = `Siguiente: ${status.nextShow.title} (${status.nextShow.time})`;
         } else {
-            placeholder.innerHTML = `<div class="no-signal">📡</div><p>Sintonizando contenido alternativo...</p>`;
-            // Reintentar en 5s si de plano nada funcionó
+            placeholder.innerHTML = `<div class="no-signal">📡</div><p>Buscando señal alternativa...</p>`;
             setTimeout(() => switchChannel(id), 5000);
         }
-    } catch (e) {
-        console.error('[Live] Error al sintonizar:', e);
-    }
+    } catch (e) { console.error('[Live] Error:', e); }
 }
 
 function updateCurrentInfo() {
@@ -234,7 +253,7 @@ function updateCurrentInfo() {
         const status = getCurrentShow(ch.id);
         const titleEl = document.getElementById(`now-${ch.id}`);
         const progEl = document.getElementById(`prog-${ch.id}`);
-        if (status) {
+        if (status && status.currentShow) {
             if (titleEl) titleEl.textContent = status.currentShow.title;
             if (progEl) progEl.style.width = `${status.currentShow.progress}%`;
         }
@@ -242,7 +261,6 @@ function updateCurrentInfo() {
 
     const currentStatus = getCurrentShow(activeChannelId);
     if (currentStatus && document.getElementById('liveTitle')?.textContent !== currentStatus.currentShow.title) {
-        // Solo switch si el título cambió (cambio de programa natural)
         switchChannel(activeChannelId);
     }
 }
@@ -255,7 +273,6 @@ function renderEPG() {
         const col = document.createElement('div');
         col.className = 'epg-channel-col';
         const currentShowInfo = getCurrentShow(ch.id);
-        
         const shows = currentShowInfo ? [currentShowInfo.currentShow, currentShowInfo.nextShow] : [];
         
         col.innerHTML = `
@@ -270,7 +287,7 @@ function renderEPG() {
                         <span class="epg-name">${show.title}</span>
                     </div>
                 `).join('')}
-                ${shows.length === 0 ? '<p style="font-size:0.7rem; opacity:0.5; padding:10px;">Cargando...</p>' : ''}
+                ${shows.length === 0 ? '<p style="font-size:0.7rem; opacity:0.5; padding:10px;">Sin datos</p>' : ''}
             </div>
         `;
         grid.appendChild(col);
