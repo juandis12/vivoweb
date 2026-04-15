@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { TMDB_SERVICE } from './tmdb.js';
-import { CATALOG_UI } from './ui.js';
 import { showToast } from './utils.js';
+import { CATALOG_UI } from './ui.js'; // Solo se usa en funciones, pero evitamos import preventivo si es posible
 
 let _supabase = null;
 export function setSupabase(client) { _supabase = client; }
@@ -207,49 +207,9 @@ export const PLAYER_LOGIC = {
         }
 
         // --- RELACIONADOS (More Like This) ---
-        this.renderSimilar(data.id, data.title ? 'movie' : 'tv', availableIds);
+        CATALOG_UI.renderSimilar(data.id, data.title ? 'movie' : 'tv', availableIds);
     },
 
-    async renderSimilar(id, type, availableIds) {
-        let similarSection = document.getElementById('similarTitlesSection');
-        if (!similarSection) {
-            similarSection = document.createElement('section');
-            similarSection.id = 'similarTitlesSection';
-            similarSection.className = 'details-section';
-            similarSection.innerHTML = `
-                <h3 class="section-label">Títulos Similares</h3>
-                <div class="similar-grid" id="similarGrid"></div>
-            `;
-            const mainCol = document.querySelector('.details-main-col');
-            if (mainCol) mainCol.appendChild(similarSection);
-        }
-
-        const grid = document.getElementById('similarGrid');
-        if (!grid) return;
-        
-        grid.innerHTML = '<div class="loader-wave"><span></span><span></span><span></span></div>';
-        
-        try {
-            const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/similar`);
-            grid.innerHTML = '';
-            
-            const results = (data.results || []).slice(0, 12);
-            if (results.length === 0) {
-                similarSection.classList.add('hidden');
-                return;
-            }
-
-            similarSection.classList.remove('hidden');
-            results.forEach(item => {
-                const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
-                const card = CATALOG_UI.createMovieCard(item, type, isAvail);
-                grid.appendChild(card);
-            });
-        } catch (e) { 
-            console.error('Error similar titles:', e);
-            similarSection.classList.add('hidden');
-        }
-    },
 
     async _checkMovieProgress(tmdbId, supabaseClient) {
         const progressObj = await this._getProgress(tmdbId, 'movie', 0, 0, supabaseClient);
@@ -595,18 +555,29 @@ export const PLAYER_LOGIC = {
             const id = cleanUrl.split('youtu.be/')[1].split(/[?&]/)[0];
             return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
-        // 2. Vimeo (Ocultando UI)
-        if (cleanUrl.includes('vimeo.com/') && !cleanUrl.includes('player.vimeo.com')) {
-            const parts = cleanUrl.split('vimeo.com/')[1].split(/[?&]/);
-            const id = parts[0];
-            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&background=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
+        // 2. Vimeo (Detección Ultra-Robusta con Regex)
+        const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+        const vimeoMatch = cleanUrl.match(vimeoRegex);
+        
+        if (vimeoMatch) {
+            const id = vimeoMatch[1];
+            // Forzamos parámetros estándar: autoplay, muted, playsinline (para móviles)
+            // Ya no usamos background=1 que a veces bloquea UI o scripts
+            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&playsinline=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
         }
+
         // 3. Facebook
         if (cleanUrl.includes('facebook.com/') && !cleanUrl.includes('plugins/video.php')) {
             return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&autoplay=true&mute=true&show_text=0&width=1280${seekSeconds > 0 ? '&t=' + seekSeconds : ''}`;
         }
         
-        // 4. Intentar inyectar tiempo en reproductores genéricos
+        // 4. Inyectar Autoplay Global en reproductores genéricos
+        if (!cleanUrl.includes('autoplay=') && !cleanUrl.includes('auto=') && !cleanUrl.includes('autostart=')) {
+            const sep = cleanUrl.includes('?') ? '&' : '?';
+            cleanUrl += `${sep}autoplay=1&muted=1&mute=1&auto=1`;
+        }
+        
+        // 5. Intentar inyectar tiempo en reproductores genéricos
         if (seekSeconds > 0 && !cleanUrl.includes('?t=') && !cleanUrl.includes('&t=') && !cleanUrl.includes('#t=')) {
             // Utilizamos el hash estándar HTML5 Media Fragment
             cleanUrl += `${cleanUrl.includes('#') ? '&' : '#'}t=${seekSeconds}`;

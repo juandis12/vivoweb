@@ -31,16 +31,19 @@ async function initLive() {
     const wrapper = document.getElementById('livePlayerWrapper');
     if (!wrapper) return; 
 
-    // 1. Sincronizar Reloj con Servidor (Anti-Drift)
+    // 1. Render UI Inicial (con placeholders)
+    renderChannelsList();
+
+    // 2. Sincronizar Reloj con Servidor (Anti-Drift)
     await syncClock();
 
-    // 2. Esperar Catálogo (Polling hasta que haya datos)
+    // 3. Esperar Catálogo (Polling hasta que haya datos)
     const catalog = await waitForCatalog();
     
-    // 3. Generar Programación
+    // 4. Generar Programación
     await buildLiveCatalog(catalog);
 
-    // 4. Render UI
+    // 5. Refrescar UI con datos reales
     renderChannelsList();
     await preloadStreams();
     switchChannel(activeChannelId);
@@ -69,8 +72,10 @@ async function waitForCatalog() {
         `;
     }
 
+    let attempts = 0;
     return new Promise((resolve) => {
         const check = async () => {
+            attempts++;
             const catalog = window.DB_CATALOG || [];
             
             if (catalog.length > 0) {
@@ -81,11 +86,19 @@ async function waitForCatalog() {
                 `;
                 resolve(catalog);
             } else {
-                // Si no hay catálogo, nos aseguramos de que al menos la sincronización esté lanzada
-                if (!window.isCatalogSyncing) {
-                    console.log('[Live] Lanzando sincronización de respaldo...');
+                // Si llevamos mucho tiempo, forzar una sincronización
+                if (attempts % 5 === 0) {
+                    console.log('[Live] Sincronización lenta, re-intentando fetch...');
                     fetchAvailableIds(supabase);
                 }
+
+                // Fallback de seguridad: si tras 30s no hay nada, usar catálogo vacío para no bloquear la UI
+                if (attempts > 30) {
+                    console.warn('[Live] Tiempo de espera de catálogo agotado. Iniciando modo degradado.');
+                    resolve([]);
+                    return;
+                }
+
                 setTimeout(check, 1000);
             }
         };
@@ -240,7 +253,13 @@ async function switchChannel(id) {
             playerCont.classList.remove('hidden');
             info.classList.remove('hidden');
             document.getElementById('liveTitle').textContent = currentShow.title;
-            document.getElementById('liveNext').textContent = `Siguiente: ${status.nextShow.title} (${status.nextShow.time})`;
+            
+            if (status.nextShow) {
+                const localNextTime = formatUTCToLocal(status.nextShow.time);
+                document.getElementById('liveNext').textContent = `Siguiente: ${status.nextShow.title} (${localNextTime})`;
+            } else {
+                document.getElementById('liveNext').textContent = 'Programación finalizada';
+            }
         } else {
             placeholder.innerHTML = `<div class="no-signal">📡</div><p>Buscando señal alternativa...</p>`;
             setTimeout(() => switchChannel(id), 5000);
@@ -281,15 +300,45 @@ function renderEPG() {
                 <span style="font-size:0.8rem; font-weight:800">${ch.name}</span>
             </div>
             <div class="epg-shows">
-                ${shows.map(show => `
-                    <div class="epg-show-item ${show === currentShowInfo?.currentShow ? 'active' : ''}">
-                        <span class="epg-time">${show.time}</span>
-                        <span class="epg-name">${show.title}</span>
-                    </div>
-                `).join('')}
+                ${shows.map(show => {
+                    if (!show) return '';
+                    return `
+                        <div class="epg-show-item ${show === currentShowInfo?.currentShow ? 'active' : ''}">
+                            <span class="epg-time">${formatUTCToLocal(show.time)}</span>
+                            <span class="epg-name">${show.title}</span>
+                        </div>
+                    `;
+                }).join('')}
                 ${shows.length === 0 ? '<p style="font-size:0.7rem; opacity:0.5; padding:10px;">Sin datos</p>' : ''}
             </div>
         `;
         grid.appendChild(col);
     });
+}
+
+/**
+ * Convierte un string de hora UTC (HH:MM) a la hora local del usuario.
+ * @param {string} utcTimeStr - Hora en formato "HH:MM" UTC.
+ */
+function formatUTCToLocal(utcTimeStr) {
+    if (!utcTimeStr || typeof utcTimeStr !== 'string') return '--:--';
+    const parts = utcTimeStr.split(':');
+    if (parts.length < 2) return '--:--';
+    
+    const h = parseInt(parts[0]);
+    const m = parseInt(parts[1]);
+    
+    if (isNaN(h) || isNaN(m)) return '--:--';
+    
+    // Crear objeto fecha hoy y ajustar a UTC h:m
+    const date = new Date();
+    date.setUTCHours(h);
+    date.setUTCMinutes(m);
+    date.setUTCSeconds(0);
+    date.setUTCMilliseconds(0);
+    
+    // Regresamos el string en hora local del navegador
+    const localH = date.getHours().toString().padStart(2, '0');
+    const localM = date.getMinutes().toString().padStart(2, '0');
+    return `${localH}:${localM}`;
 }
