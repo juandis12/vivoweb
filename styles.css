@@ -2113,7 +2113,7 @@ nav a.active::after { width: 24px; }
 ================================================ */
 .live-grid-container {
     display: grid;
-    grid-template-columns: 350px 1fr;
+    grid-template-columns: 310px 1fr;
     gap: 40px;
     margin-top: 40px;
     height: calc(100vh - 250px);
@@ -2257,6 +2257,13 @@ nav a.active::after { width: 24px; }
     box-shadow: 0 30px 60px rgba(0,0,0,0.7);
     position: relative;
     border: 1px solid rgba(255,255,255,0.05);
+}
+
+.player-container, .video-player, .video-iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+    background: #000;
 }
 
 .live-placeholder {
@@ -2509,10 +2516,35 @@ nav a.active::after { width: 24px; }
         font-size: 1.2rem;
     }
     .unmute-hint { 
-        font-size: 10px; 
-        padding: 6px 10px; 
-        top: 8px; 
-        right: 8px; 
+        font-size: 14px; 
+        padding: 10px 16px; 
+        top: 20px; 
+        right: 20px; 
+        background: rgba(0,0,0,0.8);
+        border: 1px solid var(--primary);
     }
+}
+
+.unmute-hint {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    z-index: 20;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5), 0 0 15px var(--primary);
+    animation: bounceIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.05); opacity: 1; }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
 }
 
