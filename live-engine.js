@@ -21,6 +21,15 @@ export const LIVE_CHANNELS = [
 
 let generatedSchedules = {};
 let cachedDbCatalog = [];
+let serverTimeOffset = 0; // Desfase en ms entre PC local y servidor
+
+/**
+ * Permite al UI inyectar el desfase de reloj para sincronía perfecta.
+ */
+export function setServerOffset(offsetMs) {
+    serverTimeOffset = offsetMs;
+    console.log(`[LiveEngine] Reloj sincronizado con servidor. Offset: ${offsetMs}ms`);
+}
 
 /**
  * Genera una programación de 24 horas usando una lista de películas.
@@ -28,8 +37,24 @@ let cachedDbCatalog = [];
 function generateDailySchedule(movies, dateSeed) {
     if (!movies || movies.length === 0) return [];
 
+    // 1. Asegurar un orden de entrada FIJO para que el PRNG produzca siempre lo mismo
+    // Ordenamos por ID de forma ascendente
+    let sortedMovies = [...movies].sort((a, b) => {
+        const idA = String(a.id || a.tmdb_id);
+        const idB = String(b.id || b.tmdb_id);
+        return idA.localeCompare(idB);
+    });
+
+    // 2. Usar un PRNG determinista
     const rng = seedRandom(dateSeed);
-    let shuffled = [...movies].sort(() => rng() - 0.5);
+    
+    // Barajado Fisher-Yates determinista
+    for (let i = sortedMovies.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [sortedMovies[i], sortedMovies[j]] = [sortedMovies[j], sortedMovies[i]];
+    }
+    
+    let shuffled = sortedMovies;
     
     let schedule = [];
     let currentSeconds = 0;
@@ -60,8 +85,13 @@ function generateDailySchedule(movies, dateSeed) {
 }
 
 function seedRandom(seed) {
-    const x = Math.sin(seed) * 10000;
-    return () => x - Math.floor(x);
+    // Generador Mulberry32 (Determinista y Robusto para JS)
+    return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
 }
 
 export function getCurrentShow(channelId) {
@@ -71,7 +101,8 @@ export function getCurrentShow(channelId) {
     const schedule = generatedSchedules[channelId] || [];
     if (schedule.length === 0) return null;
 
-    const now = new Date();
+    // APLICAR OFFSET: La hora real es (Ahora Local + Offset Servidor)
+    const now = new Date(Date.now() + serverTimeOffset);
     // Usamos UTC para síncronía global absoluta
     const currentTimeInSeconds = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
 
@@ -160,6 +191,10 @@ export async function buildLiveCatalog(dbCatalog) {
             matching = dbCatalog.slice(0, 50); // Tomar una muestra
         }
         
-        generatedSchedules[channel.id] = generateDailySchedule(matching, dateSeed);
+        
+        // Creamos un seed único por canal combinando fecha y un hash del ID del canal
+        const channelSeed = dateSeed + channel.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+        
+        generatedSchedules[channel.id] = generateDailySchedule(matching, channelSeed);
     });
 }

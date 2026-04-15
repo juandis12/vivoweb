@@ -2,7 +2,7 @@
  * live-ui.js — Controlador de Interfaz para Canales en Vivo
  */
 
-import { LIVE_CHANNELS, getCurrentShow, buildLiveCatalog, findSimilarAvailable } from './live-engine.js';
+import { LIVE_CHANNELS, getCurrentShow, buildLiveCatalog, findSimilarAvailable, setServerOffset } from './live-engine.js';
 import { supabase } from './config.js';
 import { PLAYER_LOGIC } from './player.js';
 import { fetchAvailableIds } from './catalog.js';
@@ -36,6 +36,7 @@ async function initLive() {
 
     // 2. Sincronizar Reloj con Servidor (Anti-Drift)
     await syncClock();
+    setServerOffset(serverOffset);
 
     // 3. Esperar Catálogo (Polling hasta que haya datos)
     const catalog = await waitForCatalog();
@@ -78,8 +79,9 @@ async function waitForCatalog() {
             attempts++;
             const catalog = window.DB_CATALOG || [];
             
-            if (catalog.length > 0) {
-                console.log(`[Live] Catálogo detectado (${catalog.length} items). Activando motor.`);
+            // Requisito crítico: Esperar a que el bloque prioritario de TMDB esté completamente cargado
+            if (catalog.length > 0 && window.isPriorityMetadataSynced) {
+                console.log(`[Live] Catálogo con metadatos detectado (${catalog.length} items). Activando motor.`);
                 if (placeholder) placeholder.innerHTML = `
                     <div class="loader-wave"><span></span><span></span><span></span></div>
                     <p>Buscando Programación...</p>

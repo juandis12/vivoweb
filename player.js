@@ -561,9 +561,9 @@ export const PLAYER_LOGIC = {
         
         if (vimeoMatch) {
             const id = vimeoMatch[1];
-            // Forzamos parámetros estándar: autoplay, muted, playsinline (para móviles)
-            // Ya no usamos background=1 que a veces bloquea UI o scripts
-            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&playsinline=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
+            const roundedSeek = Math.floor(seekSeconds);
+            // Prioridad: Query parameters (?t=) son más confiables para el primer inicio que el hash (#t)
+            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&playsinline=1&title=0&byline=0&portrait=0${roundedSeek > 0 ? '&t=' + roundedSeek + 's' : ''}`;
         }
 
         // 3. Facebook
@@ -578,9 +578,11 @@ export const PLAYER_LOGIC = {
         }
         
         // 5. Intentar inyectar tiempo en reproductores genéricos
-        if (seekSeconds > 0 && !cleanUrl.includes('?t=') && !cleanUrl.includes('&t=') && !cleanUrl.includes('#t=')) {
-            // Utilizamos el hash estándar HTML5 Media Fragment
-            cleanUrl += `${cleanUrl.includes('#') ? '&' : '#'}t=${seekSeconds}`;
+        if (seekSeconds > 0 && !cleanUrl.includes('?t=') && !cleanUrl.includes('&t=') && !cleanUrl.includes('#t=') && !cleanUrl.includes('start=')) {
+            const roundedSeek = Math.floor(seekSeconds);
+            // Intentamos query param primero, si no, hash como fallback HTML5
+            const sepTime = cleanUrl.includes('?') ? '&' : '?';
+            cleanUrl += `${sepTime}t=${roundedSeek}`;
         }
         
         return cleanUrl;
