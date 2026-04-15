@@ -2470,3 +2470,49 @@ nav a.active::after { width: 24px; }
     }
 }
 
+/* --- OPTIMIZACIÓN IPHONE SE Y MÓVILES PEQUEÑOS (6 BOTONES) --- */
+@media (max-width: 400px) {
+    :root { 
+        --side-padding: 12px; 
+    }
+    .mobile-nav { 
+        padding: 5px 8px 15px; 
+        height: 62px; 
+        gap: 2px;
+    }
+    .mobile-nav-item {
+        min-width: 0;
+        flex: 1;
+    }
+    .mobile-nav-item svg { 
+        width: 18px; 
+        height: 18px; 
+        }
+    .mobile-nav-item span { 
+        font-size: 0.6rem; 
+        letter-spacing: -0.03em;
+        margin-top: 2px;
+    }
+    .mobile-nav-indicator {
+        width: 35px;
+    }
+
+    /* Grilla de Canales Pro */
+    .live-grid { 
+        grid-template-columns: 1fr !important; 
+        gap: 15px !important;
+    }
+    .channel-card { 
+        padding: 12px; 
+    }
+    .channel-icon {
+        font-size: 1.2rem;
+    }
+    .unmute-hint { 
+        font-size: 10px; 
+        padding: 6px 10px; 
+        top: 8px; 
+        right: 8px; 
+    }
+}
+

@@ -410,49 +410,8 @@
     <!-- Toast de notificación -->
     <div class="toast hidden" id="toast"></div>
 
-    <!-- Navegación Móvil Inferior (Solo visible en pantallas pequeñas) -->
-    <nav class="mobile-nav">
-        <div class="mobile-nav-indicator" id="navIndicator"></div>
-        <a href="index.html" class="mobile-nav-item active">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
-        </a>
-        <a href="peliculas.html" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                <line x1="7" y1="2" x2="7" y2="22"></line>
-                <line x1="17" y1="2" x2="17" y2="22"></line>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <line x1="2" y1="7" x2="7" y2="7"></line>
-                <line x1="2" y1="17" x2="7" y2="17"></line>
-                <line x1="17" y1="17" x2="22" y2="17"></line>
-                <line x1="17" y1="7" x2="22" y2="7"></line>
-            </svg>
-        </a>
-        <a href="series.html" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
-                <polyline points="17 2 12 7 7 2"></polyline>
-            </svg>
-        </a>
-        <a href="anime.html" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-            </svg>
-        </a>
-        <a href="milista.html" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-            </svg>
-        </a>
-    </nav>
+    <!-- Navegación Móvil Inferior — Inyectada dinámicamente vía layout.js para sincronía y precisión -->
+
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -486,113 +445,7 @@
         </div>
     </div>
 
-    <!-- MOTOR DE AUTH AUTÓNOMO (No depende de app.js) -->
-    <script type="module">
-        import { CONFIG, supabase } from './config.js';
-
-        function showDashboard() {
-            const authSection = document.getElementById('authSection');
-            const dashSection = document.getElementById('dashboardSection');
-            const userProfile = document.getElementById('userProfile');
-            const mainNav = document.getElementById('mainNav');
-            const mobileNav = document.querySelector('.mobile-nav');
-            if (authSection) authSection.classList.add('hidden');
-            if (dashSection) dashSection.classList.remove('hidden');
-            if (userProfile) userProfile.classList.remove('hidden');
-            if (mainNav) mainNav.classList.remove('hidden');
-            if (mobileNav) mobileNav.classList.remove('hidden');
-            const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
-            const userNameEl = document.getElementById('userName');
-            const userAvatar = document.getElementById('userAvatar');
-            if (profile && userNameEl) userNameEl.textContent = profile.name;
-            if (profile && userAvatar) {
-                userAvatar.textContent = profile.name[0];
-                userAvatar.className = `avatar ${profile.color || 'color-1'}`;
-            }
-            console.log('[Auth] Dashboard activo ✅');
-        }
-
-        function showLogin() {
-            const authSection = document.getElementById('authSection');
-            const dashSection = document.getElementById('dashboardSection');
-            const mainNav = document.getElementById('mainNav');
-            const mobileNav = document.querySelector('.mobile-nav');
-            if (authSection) authSection.classList.remove('hidden');
-            if (dashSection) dashSection.classList.add('hidden');
-            if (mainNav) mainNav.classList.add('hidden');
-            if (mobileNav) mobileNav.classList.add('hidden');
-        }
-
-        function showAuthError(msg) {
-            const el = document.getElementById('authError');
-            if (el) { el.textContent = msg; el.classList.remove('hidden'); }
-        }
-
-        function setLoading(on) {
-            const btn = document.getElementById('btnSubmit');
-            const txt = document.getElementById('btnText');
-            const ldr = document.getElementById('btnLoader');
-            if (btn) btn.disabled = on;
-            if (txt) txt.style.opacity = on ? '0' : '1';
-            if (ldr) ldr.classList.toggle('hidden', !on);
-        }
-
-        // Verificar estado al cargar
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                const profileSaved = localStorage.getItem('vivotv_current_profile');
-                if (profileSaved) {
-                    showDashboard();
-                    console.log('[Auth] Usuario y perfil detectados. app.js se encargará del catálogo.');
-                } else {
-
-                    window.location.href = 'profiles.html';
-                }
-            } else {
-                showLogin();
-            }
-        });
-
-        // Escuchar cierre de sesión
-        supabase.auth.onAuthStateChange((event) => {
-            if (event === 'SIGNED_OUT') {
-                localStorage.removeItem('vivotv_current_profile');
-                showLogin();
-            }
-        });
-
-        // Listener del formulario de login
-        document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('loginForm');
-            if (!form) { console.error('[Auth] loginForm no encontrado'); return; }
-            console.log('[Auth] Motor autónomo listo ✅');
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const email = document.getElementById('email')?.value?.trim();
-                const password = document.getElementById('password')?.value;
-                const errEl = document.getElementById('authError');
-                if (errEl) errEl.classList.add('hidden');
-                if (!email || !password) { showAuthError('Completa todos los campos.'); return; }
-                setLoading(true);
-                try {
-                    const { error } = await supabase.auth.signInWithPassword({ email, password });
-                    if (error) throw error;
-                    window.location.href = 'profiles.html';
-                } catch (err) {
-                    const msgs = {
-                        'Invalid login credentials': 'Correo o contraseña incorrectos.',
-                        'Email not confirmed': 'Confirma tu correo primero.',
-                        'Too many requests': 'Demasiados intentos. Espera un momento.'
-                    };
-                    showAuthError(msgs[err.message] || err.message);
-                } finally {
-                    setLoading(false);
-                }
-            });
-        });
-    </script>
+    <!-- MOTOR DE AUTH UNIFICADO: Gestionado vía auth.js y app.js -->
 
     <!-- SDKs de Video (Fase 2: Usabilidad) -->
     <script src="https://www.youtube.com/iframe_api"></script>

@@ -461,82 +461,149 @@ export const PLAYER_LOGIC = {
     _playSourceInElement(url, seekSeconds, videoId, iframeId) {
         const video = document.getElementById(videoId);
         const iframe = document.getElementById(iframeId);
+        // Intentar encontrar el contenedor principal o el de Live para feedback visual
+        const container = document.getElementById('playerContainer') || document.getElementById('livePlayerContainer');
+        const loader = document.getElementById('playerLoader') || document.getElementById('livePlaceholder');
+
         if (!video || !iframe) return;
 
-        // Reset listeners previos
+        // Reset listeners previos y estado HLS
         video.onended = null;
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
+        }
 
         container.classList.remove('hidden');
-        loader.classList.remove('hidden');
+        if (loader) loader.classList.remove('hidden');
 
-        // --- CONVERSOR INTELIGENTE DE URLS ---
-        const smartUrl = this._getSmartUrl(url, seekSeconds);
-        const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
-        
-        // Determinar título para telemetría si es película
+        // Determinar título para telemetría
         if (this.currentType === 'movie') {
             this.currentPlaybackTitle = this.movieData?.title || 'Película';
-            if (window.updateGlobalPlaybackStatus) {
-                window.updateGlobalPlaybackStatus({ title: this.currentPlaybackTitle, type: 'movie' });
-            }
         }
 
-        // Listener para fin de video (Solo streams directos)
-        if (isDirectStream && this.currentType === 'tv') {
-            video.onended = () => {
-                const nextEp = this._getNextEpisode();
-                if (nextEp) this._showMarathonCountdown(nextEp, _supabase);
-            };
+        if (window.updateGlobalPlaybackStatus) {
+            window.updateGlobalPlaybackStatus({ 
+                title: this.currentPlaybackTitle, 
+                type: this.currentType,
+                season: this.currentSeason,
+                episode: this.currentEpisode
+            });
         }
-        const isFacebook = smartUrl.includes('facebook.com');
-        
-        setTimeout(() => {
-            loader.classList.add('hidden');
-            if (isDirectStream) {
-                iframe.classList.add('hidden');
-                video.classList.remove('hidden');
-                this._startVideoTracking(video, seekSeconds);
+
+        const smartUrl = this._getSmartUrl(url, seekSeconds);
+        const isIframe = smartUrl.includes('youtube.com') ||
+            smartUrl.includes('vimeo.com') ||
+            smartUrl.includes('facebook.com') ||
+            smartUrl.includes('ok.ru') ||
+            smartUrl.includes('upstream') ||
+            smartUrl.includes('mixdrop') ||
+            smartUrl.includes('embed');
+
+        const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
+
+        if (isIframe && !isDirectStream) {
+            video.classList.add('hidden');
+            iframe.classList.remove('hidden');
+            video.pause();
+
+            if (smartUrl.includes('facebook.com')) {
+                iframe.setAttribute('referrerpolicy', 'no-referrer');
             } else {
-                video.classList.add('hidden');
-                iframe.classList.remove('hidden');
-                
-                // --- AJUSTE DE SEGURIDAD (FASE 3) ---
-                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
-                if (isFacebook) {
-                    iframe.setAttribute('referrerpolicy', 'no-referrer');
-                } else {
-                    iframe.removeAttribute('referrerpolicy');
-                }
-                
-                iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen');
-                iframe.src = smartUrl;
-                this._startIframeTracking(seekSeconds);
+                iframe.removeAttribute('referrerpolicy');
             }
-        }, 1000);
+
+            iframe.src = smartUrl;
+            this.currentIsIframe = true;
+            this._startIframeTracking(seekSeconds, iframe);
+            if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
+        } else {
+            iframe.classList.add('hidden');
+            video.classList.remove('hidden');
+            iframe.src = '';
+            this.currentIsIframe = false;
+
+            // Listener para fin de video (Solo streams directos y si es TV)
+            if (isDirectStream && this.currentType === 'tv') {
+                video.onended = () => {
+                    this._getNextEpisode().then(nextEp => {
+                        if (nextEp) this._showMarathonCountdown(nextEp, _supabase);
+                    });
+                };
+            }
+
+            // --- SOPORTE HLS (Fase 26) ---
+            if (smartUrl.toLowerCase().includes('.m3u8') && typeof Hls !== 'undefined') {
+                if (Hls.isSupported()) {
+                    this.hls = new Hls({
+                        enableSoftwareAES: true,
+                        autoStartLoad: true,
+                        // Ignorar errores menores de metadatos para evitar saltos al inicio
+                        ignoreDeviceStreamErrors: true,
+                        maxMaxBufferLength: 30
+                    });this.hls.attachMedia(video);
+                    this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        if (seekSeconds > 0) video.currentTime = seekSeconds;
+                        video.play().catch(e => console.warn("Autoplay block:", e));
+                        if (loader) loader.classList.add('hidden');
+                        this._startVideoTracking(video, seekSeconds);
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = smartUrl;
+                    video.addEventListener('loadedmetadata', () => {
+                        if (seekSeconds > 0) video.currentTime = seekSeconds;
+                        video.play();
+                        if (loader) loader.classList.add('hidden');
+                        this._startVideoTracking(video, seekSeconds);
+                    }, { once: true });
+                }
+            } else {
+                video.src = smartUrl;
+                video.muted = true; // REGLA ORO: Muteado para Autoplay Global
+                video.setAttribute('autoplay', '');
+                video.classList.add('active-tv-video');
+                
+                video.onloadedmetadata = () => {
+                    if (seekSeconds > 0) {
+                        console.log(`[Player] Sincronización Inicial (Reloj Maestro): ${seekSeconds}s`);
+                        video.currentTime = seekSeconds;
+                    }
+                    video.play().catch(e => {
+                        console.warn("[Player] Autoplay bloqueado, requiere clic inicial", e);
+                        // Mostrar pista visual si el navegador bloquea el inicio
+                        if (loader) loader.innerHTML = '<div class="play-hint">▶ CARGANDO SEÑAL...</div>';
+                    });
+                    if (loader) setTimeout(() => loader.classList.add('hidden'), 1000);
+                };
+
+                video.load();
+                this._startVideoTracking(video, seekSeconds);
+            }
+        }
     },
 
     _getSmartUrl(url, seekSeconds = 0) {
         if (!url) return '';
         let cleanUrl = url.trim();
 
-        // 1. YouTube
+        // 1. YouTube (Ocultando controles para modo TV)
         if (cleanUrl.includes('youtube.com/watch?v=') || cleanUrl.includes('youtube.com/v/')) {
             const id = cleanUrl.split(/v\/|v=/)[1].split(/[?&]/)[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
         if (cleanUrl.includes('youtu.be/')) {
             const id = cleanUrl.split('youtu.be/')[1].split(/[?&]/)[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
-        // 2. Vimeo (Fix para soportar subdominios y parámetros extra)
+        // 2. Vimeo (Ocultando UI)
         if (cleanUrl.includes('vimeo.com/') && !cleanUrl.includes('player.vimeo.com')) {
             const parts = cleanUrl.split('vimeo.com/')[1].split(/[?&]/);
             const id = parts[0];
-            return `https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
+            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&background=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
         }
         // 3. Facebook
         if (cleanUrl.includes('facebook.com/') && !cleanUrl.includes('plugins/video.php')) {
-            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=0&width=1280${seekSeconds > 0 ? '&t=' + seekSeconds : ''}`;
+            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&autoplay=true&mute=true&show_text=0&width=1280${seekSeconds > 0 ? '&t=' + seekSeconds : ''}`;
         }
         
         // 4. Intentar inyectar tiempo en reproductores genéricos
@@ -653,10 +720,17 @@ export const PLAYER_LOGIC = {
         };
     },
 
-    _startIframeTracking(seekSeconds = 0) {
+    _startIframeTracking(seekSeconds = 0, targetIframe = null) {
         this._stopProgressTimer();
         
-        const iframe = document.getElementById('videoIframe');
+        // Intentar usar el parámetro, de lo contrario buscar el de cine o el de TV
+        const iframe = targetIframe || document.getElementById('videoIframe') || document.getElementById('liveVideoIframe');
+        
+        if (!iframe) {
+            console.warn('[Player] Tracking abortado: No se encontró un iframe activo.');
+            return;
+        }
+
         const url = iframe.src;
         let elapsed = seekSeconds;
         let lastSavedElapsed = -1;

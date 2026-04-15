@@ -77,7 +77,11 @@ export const LAYOUT = {
 
         // 2. Navbar si no existe
         if (!document.getElementById('navbar')) {
-            const isSearchPage = window.location.pathname.includes('busqueda.html');
+            const path = window.location.pathname;
+            const isAuthPage = path.endsWith('index.html') || path.endsWith('registro.html') || path === '/' || path.endsWith('vivoweb/');
+            const isSearchPage = path.includes('busqueda.html');
+            const showSearch = !isAuthPage || isSearchPage;
+
             const header = document.createElement('header');
             header.className = 'navbar';
             header.id = 'navbar';
@@ -92,7 +96,7 @@ export const LAYOUT = {
                     <a href="milista.html" id="linkMyList">Mi Lista</a>
                 </nav>
                 <div class="user-actions">
-                    <div class="search-box ${isSearchPage ? 'active' : 'hidden'}" id="searchBox">
+                    <div class="search-box ${showSearch ? '' : 'hidden'}" id="searchBox">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                         <input type="text" id="searchInput" placeholder="Buscar títulos...">
                         <button class="btn-clear-search hidden" id="btnClearSearch">&times;</button>
@@ -130,6 +134,12 @@ export const LAYOUT = {
                 <a href="series.html" class="mobile-nav-item" id="mNavSeries">
                     <svg viewBox="0 0 24 24" width="24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
                     <span>Series</span>
+                </a>
+                <a href="anime.html" class="mobile-nav-item" id="mNavAnime">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                    </svg>
+                    <span>Anime</span>
                 </a>
                 <a href="live.html" class="mobile-nav-item" id="mNavLive">
                     <svg viewBox="0 0 24 24" width="24"><path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .89-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.11-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z"/></svg>
