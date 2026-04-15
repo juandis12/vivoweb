@@ -153,11 +153,8 @@ export const LAYOUT = {
             body.appendChild(mNav);
         }
 
-        // Modal de Salida (Híbrido) — solo en páginas que NO son auth
-        const isAuthPage = window.location.pathname.endsWith('index.html') || 
-                           window.location.pathname.endsWith('registro.html') ||
-                           window.location.pathname === '/';
-        if (!document.getElementById('exitModal') && !isAuthPage) {
+        // Modal de Salida (Híbrido) — inyectado globalmente
+        if (!document.getElementById('exitModal')) {
             const exit = document.createElement('div');
             exit.id = 'exitModal';
             exit.className = 'exit-modal-overlay hidden';

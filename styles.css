@@ -2861,3 +2861,106 @@ nav a.active::after { width: 24px; }
     background: var(--danger, #ff3b30);
     transform: scale(1.1);
 }
+
+/* ================================================
+   16. EXIT MODAL / LOGOUT PROMPT
+================================================ */
+.exit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.exit-modal-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.exit-modal-content {
+    background: rgba(11, 18, 43, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    padding: 30px;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.exit-modal-overlay.hidden .exit-modal-content {
+    transform: translateY(30px);
+}
+
+.exit-modal-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.exit-modal-text {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 25px;
+}
+
+.exit-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.exit-modal-btn {
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-change-profile {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-change-profile:hover {
+    background: #1d4ed8;
+    transform: scale(1.02);
+}
+
+.btn-logout-final {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-logout-final:hover {
+    color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+.btn-cancel-exit {
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.btn-cancel-exit:hover {
+    color: white;
+    text-decoration: underline;
+}
