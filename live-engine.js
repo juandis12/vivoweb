@@ -83,10 +83,11 @@ export function getCurrentShow(channelId) {
     if (!channel) return null;
 
     const now = new Date();
-    const currentTimeInSeconds = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+    // Usamos UTC para síncronía global
+    const currentTimeInSeconds = (now.getUTCHours() * 3600) + (now.getUTCMinutes() * 60) + now.getUTCSeconds();
 
-    let currentShow = channel.schedule[0];
-    let nextShow = channel.schedule[1];
+    let currentShow = null;
+    let nextShow = null;
 
     for (let i = 0; i < channel.schedule.length; i++) {
         const item = channel.schedule[i];
@@ -94,9 +95,36 @@ export function getCurrentShow(channelId) {
         const showTimeSeconds = (h * 3600) + (m * 60);
 
         if (showTimeSeconds <= currentTimeInSeconds) {
-            currentShow = item;
-            nextShow = channel.schedule[i+1] || channel.schedule[0];
+            currentShow = { ...item };
+            const nextItem = channel.schedule[i+1] || channel.schedule[0];
+            nextShow = { ...nextItem };
+            
+            // Calculamos duración aproximada hasta el siguiente programa
+            let durationSeconds;
+            if (i === channel.schedule.length - 1) {
+                // Si es el último del día, dura hasta las 24:00 o reinicio
+                durationSeconds = (24 * 3600) - showTimeSeconds;
+            } else {
+                const [nh, nm] = nextItem.time.split(':').map(Number);
+                durationSeconds = ((nh * 3600) + (nm * 60)) - showTimeSeconds;
+            }
+
             currentShow.offsetSeconds = currentTimeInSeconds - showTimeSeconds;
+            currentShow.durationSeconds = durationSeconds;
+            currentShow.progress = Math.min((currentShow.offsetSeconds / durationSeconds) * 100, 100);
+        } else if (!currentShow) {
+            // Caso borde: antes de la primera función del día (usar el último del día anterior)
+            const lastItem = channel.schedule[channel.schedule.length - 1];
+            currentShow = { ...lastItem };
+            nextShow = { ...channel.schedule[0] };
+            
+            const [lh, lm] = lastItem.time.split(':').map(Number);
+            const lastTimeSeconds = (lh * 3600) + (lm * 60);
+            
+            currentShow.offsetSeconds = (currentTimeInSeconds + (24 * 3600)) - lastTimeSeconds;
+            currentShow.durationSeconds = (24 * 3600) - lastTimeSeconds + ( (channel.schedule[0].time.split(':').map(Number)[0] * 3600) + (channel.schedule[0].time.split(':').map(Number)[1] * 60) );
+            currentShow.progress = Math.min((currentShow.offsetSeconds / currentShow.durationSeconds) * 100, 100);
+            break;
         } else {
             break;
         }
