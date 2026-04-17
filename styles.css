@@ -869,6 +869,44 @@ nav a.active::after { width: 24px; }
     100% { background-position: -200% 0; }
 }
 
+.unmute-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Centrado perfecto */
+    background: rgba(139, 92, 246, 0.2); /* Tinted transition */
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 18px 32px;
+    border-radius: 50px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    animation: pulseGlow 2s infinite;
+}
+
+.unmute-hint:hover {
+    background: rgba(139, 92, 246, 0.4);
+    transform: translate(-50%, -50%) scale(1.1);
+    border-color: rgba(255,255,255,0.4);
+    box-shadow: 0 20px 45px rgba(139, 92, 246, 0.3);
+}
+
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 0 0 rgba(139, 92, 246, 0); }
+    50% { box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 20px 5px rgba(139, 92, 246, 0.3); }
+}
+
 .watched-badge {
     position: absolute;
     top: 10px;
@@ -2111,12 +2149,18 @@ nav a.active::after { width: 24px; }
 /* ================================================
    15. CANALES EN VIVO (SIMULCAST UI) 📺
 ================================================ */
+/* Estilos específicos para evitar solapamiento en Live */
+.page-live .main-content {
+    padding-top: 130px; /* Incrementado para evitar cualquier contacto con el logo */
+}
+
 .live-grid-container {
     display: grid;
     grid-template-columns: 320px 1fr;
     gap: 30px;
     margin-top: 40px;
-    height: 70vh;
+    height: 85vh; /* Ampliado para una experiencia cinematográfica en PC */
+    min-height: 600px;
 }
 
 .live-sidebar {
@@ -2126,6 +2170,16 @@ nav a.active::after { width: 24px; }
     border-radius: 24px;
     padding: 20px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+.live-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+.live-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
 }
 
 .channels-list {
@@ -2194,6 +2248,7 @@ nav a.active::after { width: 24px; }
     display: flex;
     flex-direction: column;
     gap: 20px;
+    height: 100%; /* Asegurar que el reproductor rellene el grid */
 }
 
 .live-player-wrapper {

@@ -513,7 +513,13 @@ export const PLAYER_LOGIC = {
                 iframe.removeAttribute('referrerpolicy');
             }
 
-            iframe.src = smartUrl;
+            // Forzar autoplay en iframes comunes si no lo tienen
+            let finalUrl = smartUrl;
+            if (!finalUrl.includes('autoplay=')) {
+                finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1&muted=1';
+            }
+
+            iframe.src = finalUrl;
             this.currentIsIframe = true;
             this._startIframeTracking(seekSeconds, iframe);
             if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
@@ -522,6 +528,9 @@ export const PLAYER_LOGIC = {
             video.classList.remove('hidden');
             iframe.src = '';
             this.currentIsIframe = false;
+            
+            // Forzar inicio automático silenciado (Muted Autoplay)
+            video.muted = true;
 
             // Listener para fin de video (Solo streams directos y si es TV)
             if (isDirectStream && this.currentType === 'tv') {
@@ -541,10 +550,11 @@ export const PLAYER_LOGIC = {
                         // Ignorar errores menores de metadatos para evitar saltos al inicio
                         ignoreDeviceStreamErrors: true,
                         maxMaxBufferLength: 30
-                    });this.hls.attachMedia(video);
+                    });
+                    this.hls.attachMedia(video);
                     this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                         if (seekSeconds > 0) video.currentTime = seekSeconds;
-                        video.play().catch(e => console.warn("Autoplay block:", e));
+                        video.play().catch(e => console.warn('[Player] Autoplay bloqueado:', e));
                         if (loader) loader.classList.add('hidden');
                         this._startVideoTracking(video, seekSeconds);
                     });
@@ -552,31 +562,25 @@ export const PLAYER_LOGIC = {
                     video.src = smartUrl;
                     video.addEventListener('loadedmetadata', () => {
                         if (seekSeconds > 0) video.currentTime = seekSeconds;
-                        video.play();
+                        video.play().catch(e => console.warn('[Player] Autoplay bloqueado:', e));
                         if (loader) loader.classList.add('hidden');
                         this._startVideoTracking(video, seekSeconds);
                     }, { once: true });
                 }
             } else {
                 video.src = smartUrl;
-                video.muted = true; // REGLA ORO: Muteado para Autoplay Global
-                video.setAttribute('autoplay', '');
-                video.classList.add('active-tv-video');
-                
-                video.onloadedmetadata = () => {
+                video.addEventListener('loadedmetadata', () => {
                     if (seekSeconds > 0) {
                         console.log(`[Player] Sincronización Inicial (Reloj Maestro): ${seekSeconds}s`);
                         video.currentTime = seekSeconds;
                     }
                     video.play().catch(e => {
                         console.warn("[Player] Autoplay bloqueado, requiere clic inicial", e);
-                        // Mostrar pista visual si el navegador bloquea el inicio
                         if (loader) loader.innerHTML = '<div class="play-hint">▶ CARGANDO SEÑAL...</div>';
                     });
-                    if (loader) setTimeout(() => loader.classList.add('hidden'), 1000);
-                };
+                }, { once: true });
 
-                video.load();
+                if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
                 this._startVideoTracking(video, seekSeconds);
             }
         }

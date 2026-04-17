@@ -432,9 +432,16 @@ function updateProfileUI() {
     if (userProfile) userProfile.classList.remove('hidden');
     if (userNameEl) userNameEl.textContent = currentProfile.name;
     if (userAvatar) {
-        userAvatar.textContent = currentProfile.name[0];
-        userAvatar.className = `avatar ${currentProfile.color || 'color-1'}`;
-        userAvatar.style.backgroundColor = '';
+        if (currentProfile.avatar_url) {
+            userAvatar.textContent = '';
+            userAvatar.className = 'avatar';
+            userAvatar.style.backgroundImage = `url('${currentProfile.avatar_url}')`;
+            userAvatar.style.backgroundSize = 'cover';
+        } else {
+            userAvatar.textContent = currentProfile.name[0];
+            userAvatar.className = `avatar ${currentProfile.color || 'color-1'}`;
+            userAvatar.style.backgroundImage = 'none';
+        }
     }
 }
 
