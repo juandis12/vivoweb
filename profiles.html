@@ -76,13 +76,23 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             transition: all 0.3s;
             overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.05); /* Fondo base sutil */
         }
 
         .profile-avatar img {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
+            z-index: 2;
+        }
+
+        .profile-avatar-initial {
+            position: relative;
+            z-index: 1;
         }
 
         .profile-item:hover .profile-avatar {
@@ -1188,10 +1198,9 @@
                 const item = document.createElement('div');
                 item.className = 'profile-item';
                 item.innerHTML = `
-                    <div class="profile-avatar ${p.avatar_url ? '' : p.color}">
-                        ${p.avatar_url 
-                            ? `<img src="${p.avatar_url}" alt="${p.name}" onerror="this.style.display='none'; this.parentElement.classList.add('${p.color}'); this.parentElement.insertAdjacentHTML('afterbegin', '<span class=\"fallback-letter\">${p.name[0]}</span>');">` 
-                            : p.name[0]}
+                    <div class="profile-avatar ${p.color || 'color-1'}">
+                        <span class="profile-avatar-initial">${p.name[0]}</span>
+                        ${p.avatar_url ? `<img src="${p.avatar_url}" alt="${p.name}" onerror="this.remove()">` : ''}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
                         ${_isOccupied(p) ? `
                             <div class="occupied-badge">EN USO</div>
