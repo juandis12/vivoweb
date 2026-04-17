@@ -43,6 +43,32 @@ export async function initAuth(onAuthChange) {
 
     // Retornar sesión actual inmediatamente
     const { data: { session } } = await supabase.auth.getSession();
+    
+    // --- SINCRONIZACIÓN AUTOMÁTICA (CROSS-DEVICE) ---
+    if (session?.user && session.user.user_metadata?.last_profile_id) {
+        const lastPid = session.user.user_metadata.last_profile_id;
+        
+        // Si el perfil local no coincide con el global, resincronizar
+        if (!currentProfile || currentProfile.id !== lastPid) {
+            console.log(`[Sync] Detectado cambio de perfil global (${lastPid}). Resincronizando...`);
+            try {
+                const { data: profileData, error } = await supabase
+                    .from('vivotv_profiles')
+                    .select('*')
+                    .eq('id', lastPid)
+                    .single();
+                
+                if (profileData && !error) {
+                    currentProfile = profileData;
+                    localStorage.setItem('vivotv_current_profile', JSON.stringify(profileData));
+                    console.log(`[Sync] Perfil actualizado: ${profileData.name}`);
+                }
+            } catch (e) {
+                console.warn('[Sync] Error al recuperar perfil global:', e);
+            }
+        }
+    }
+
     return { 
         user: session?.user || null, 
         profile: currentProfile, 

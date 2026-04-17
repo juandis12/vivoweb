@@ -426,21 +426,31 @@ function updateProfileUI() {
     }
     if (!currentProfile) return;
 
+    // Refrescar datos del perfil desde el storage periódicamente para asegurar el avatar más reciente
+    const freshProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+    if (freshProfile) currentProfile = freshProfile;
+
     console.log(`[VivoTV] 👤 Actualizando UI para perfil: ${currentProfile.name}`);
 
     // Mostrar el contenedor y actualizar datos
-    if (userProfile) userProfile.classList.remove('hidden');
-    if (userNameEl) userNameEl.textContent = currentProfile.name;
-    if (userAvatar) {
+    const profileContainer = document.getElementById('userProfile');
+    const userNameElement = document.getElementById('userName');
+    const userAvatarElement = document.getElementById('userAvatar');
+
+    if (profileContainer) profileContainer.classList.remove('hidden');
+    if (userNameElement) userNameElement.textContent = currentProfile.name;
+    if (userAvatarElement) {
         if (currentProfile.avatar_url) {
-            userAvatar.textContent = '';
-            userAvatar.className = 'avatar';
-            userAvatar.style.backgroundImage = `url('${currentProfile.avatar_url}')`;
-            userAvatar.style.backgroundSize = 'cover';
+            userAvatarElement.textContent = '';
+            userAvatarElement.className = 'avatar';
+            userAvatarElement.style.backgroundImage = `url('${currentProfile.avatar_url}')`;
+            userAvatarElement.style.backgroundSize = 'cover';
+            userAvatarElement.style.backgroundPosition = 'center';
+            userAvatarElement.style.backgroundColor = 'transparent';
         } else {
-            userAvatar.textContent = currentProfile.name[0];
-            userAvatar.className = `avatar ${currentProfile.color || 'color-1'}`;
-            userAvatar.style.backgroundImage = 'none';
+            userAvatarElement.textContent = currentProfile.name[0];
+            userAvatarElement.className = `avatar ${currentProfile.color || 'color-1'}`;
+            userAvatarElement.style.backgroundImage = 'none';
         }
     }
 }

@@ -1543,6 +1543,15 @@
                 }
             }
 
+            // --- SINCRONIZACIÓN GLOBAL (Fase 20) ---
+            try {
+                await supabase.auth.updateUser({
+                    data: { last_profile_id: p.id }
+                });
+            } catch (e) {
+                console.warn('[Sync] Falló la actualización de metadatos:', e);
+            }
+
             // --- SESIÓN PERSISTENTE (Fase 2: Usabilidad) ---
             localStorage.removeItem('vivotv_current_profile');
             localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
