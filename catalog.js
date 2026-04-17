@@ -135,6 +135,7 @@ export async function fetchAvailableIds(supabase) {
             const { data: batch, error } = await supabase
                 .from('content')
                 .select('*')
+                .order('tmdb_id', { ascending: true }) // ORDEN VITAL PARA En Vivo
                 .range(offset, offset + BATCH_SIZE - 1);
 
             if (error || !batch || batch.length === 0) {
@@ -269,14 +270,17 @@ async function syncMissingMetadata() {
     const knownIds = new Set(window.DB_CATALOG.map(i => i.tmdb_id?.toString()));
     const allIds = Array.from(availableIds).filter(id => !knownIds.has(id));
 
-    if (allIds.length === 0) return;
+    if (allIds.length === 0) {
+        window.isPriorityMetadataSynced = true;
+        return;
+    }
 
     console.log(`[VivoTV] 🚀 Turbo Sync: Procesando ${allIds.length} títulos de forma progresiva...`);
 
     // --- FASE 1: MICRO-BLOQUE PRIORITARIO (Para Renderizado Instantáneo) ---
-    // Tomamos los primeros 20 para llenar el Hero y la primera fila de inmediato
-    const priorityBlock = allIds.slice(0, 20);
-    const backgroundBlock = allIds.slice(20);
+    // Tomamos los primeros 100 para llenar el Hero y la primera fila de inmediato (y tener datos suficientes para En Vivo)
+    const priorityBlock = allIds.slice(0, 100);
+    const backgroundBlock = allIds.slice(100);
 
     const processItem = async (id) => {
         if (invalidIds.has(id)) return;
@@ -326,6 +330,7 @@ async function syncMissingMetadata() {
     // 1. Procesar Prioridad (Micro-Bloque)
     await workerPool(priorityBlock);
     console.log('[VivoTV] ⚡ Micro-bloque de inicio listo. Renderizando primeras filas...');
+    window.isPriorityMetadataSynced = true;
     
     // Notificar para renderizado inmediato
     window.dispatchEvent(new CustomEvent('metadataBatchSynced'));

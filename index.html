@@ -403,6 +403,23 @@
                 <video id="videoPlayer" class="hidden" controls crossorigin="anonymous" playsinline></video>
                 <iframe id="videoIframe" class="hidden" frameborder="0" allowfullscreen
                     allow="autoplay; encrypted-media"></iframe>
+                    
+                <!-- Binge-Watch Prompt UX -->
+                <div id="bingePrompt" class="binge-prompt hidden">
+                    <div class="binge-content">
+                        <p class="binge-subtitle">Siguiente Episodio en <span id="bingeCountdown">5</span>s</p>
+                        <h3 id="bingeNextTitle" class="binge-title">Cargando...</h3>
+                        <div class="binge-actions">
+                            <button class="btn btn-primary" id="btnBingePlay">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                                Reproducir Ahora
+                            </button>
+                            <button class="btn btn-secondary" id="btnBingeCancel">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

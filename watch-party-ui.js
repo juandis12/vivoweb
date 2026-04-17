@@ -81,11 +81,32 @@ function showPartyHUD(hostName, partyId = null) {
             <span class="floating-badge">WATCH PARTY</span>
             <h3>Sala de ${hostName}</h3>
             <p>${partyId ? 'Copia el link para invitar amigos' : 'Sincronizado con el anfitrión'}</p>
+            
+            <!-- Social Emotes UI -->
+            <div class="party-emotes" style="display:flex; gap:10px; margin: 15px 0; justify-content:center;">
+                <button class="btn-emote" data-emote="😂" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">😂</button>
+                <button class="btn-emote" data-emote="😱" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">😱</button>
+                <button class="btn-emote" data-emote="😍" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">😍</button>
+                <button class="btn-emote" data-emote="👀" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">👀</button>
+                <button class="btn-emote" data-emote="🍿" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">🍿</button>
+            </div>
+
             <div class="floating-card-actions">
                 <button class="float-btn float-btn-outline" id="btnLeaveParty">Salir</button>
             </div>
         </div>
     `;
+
+    // Eventos Emotes
+    hud.querySelectorAll('.btn-emote').forEach(btn => {
+        btn.onclick = () => {
+            btn.style.transform = 'scale(1.3)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 200);
+            
+            const manager = getManager();
+            if (manager) manager.broadcastEmote(btn.dataset.emote);
+        };
+    });
 
     document.getElementById('btnLeaveParty').onclick = () => {
         const manager = getManager();
@@ -99,19 +120,9 @@ function showPartyHUD(hostName, partyId = null) {
  * Maneja la sincronización recibida (Para invitados)
  */
 function handleReceivedSync(payload) {
-    const video = document.getElementById('videoPlayer');
-    if (!video || video.classList.contains('hidden')) return;
-
-    const diff = Math.abs(video.currentTime - payload.currentTime);
-    
-    // Si la diferencia es mayor a 3 segundos, forzar seek
-    if (diff > 3) {
-        video.currentTime = payload.currentTime;
+    if (PLAYER_LOGIC && PLAYER_LOGIC.syncPlaybackState) {
+        PLAYER_LOGIC.syncPlaybackState(payload);
     }
-
-    // Sincronizar estado Play/Pause
-    if (payload.isPlaying && video.paused) video.play().catch(() => {});
-    else if (!payload.isPlaying && !video.paused) video.pause();
 }
 
 /**
@@ -124,9 +135,36 @@ export function startHostSyncLoop() {
     if (syncInterval) clearInterval(syncInterval);
     
     syncInterval = setInterval(() => {
-        const video = document.getElementById('videoPlayer');
-        if (video && !video.classList.contains('hidden')) {
-            manager.broadcastSync(video.currentTime, !video.paused);
+        if (PLAYER_LOGIC && PLAYER_LOGIC.getCurrentPlaybackState) {
+            const state = PLAYER_LOGIC.getCurrentPlaybackState();
+            if (state) {
+                manager.broadcastSync(state.currentTime, state.isPlaying);
+            }
         }
     }, 2000); // Sincronizar cada 2 segundos
 }
+
+/**
+ * Escuchador Global de Emotes: Renderiza el globo flotante
+ */
+window.addEventListener('vivotv:party_emote', (e) => {
+    const { emote, sender } = e.detail;
+    
+    const container = document.getElementById('playerContainer');
+    if (!container || container.classList.contains('hidden')) return;
+
+    const el = document.createElement('div');
+    el.className = 'floating-emote';
+    el.innerHTML = `<span>${sender}</span> ${emote}`;
+    
+    // Posición aleatoria en el eje X (20% a 80% de la pantalla)
+    const randomX = Math.floor(Math.random() * 60) + 20;
+    el.style.left = `${randomX}%`;
+    
+    container.appendChild(el);
+    
+    // Auto destruir después de 3s
+    setTimeout(() => {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }, 3000);
+});

@@ -14,8 +14,16 @@
     <main id="dashboardSection" class="main-content">
         <div class="section-padding">
             <div class="section-header">
-                <h1 class="section-title">Canales <span>En Vivo</span></h1>
-                <p class="section-subtitle">Programación simultánea para todos los usuarios. Disfruta de una experiencia de TV tradicional.</p>
+                <div class="header-flex">
+                    <div>
+                        <h1 class="section-title">Canales <span>En Vivo</span></h1>
+                        <p class="section-subtitle">Programación simultánea para todos los usuarios. Disfruta de una experiencia de TV tradicional.</p>
+                    </div>
+                    <button id="btnOpenEPG" class="btn btn-outline btn-sm">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+                        Guía de TV
+                    </button>
+                </div>
             </div>
 
             <div class="live-grid-container">
@@ -35,7 +43,7 @@
                         </div>
                         <div id="livePlayerContainer" class="player-container hidden">
                             <video id="liveVideoPlayer" class="video-player" playsinline></video>
-                            <iframe id="liveVideoIframe" class="video-iframe hidden" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                            <iframe id="liveVideoIframe" class="video-iframe hidden" frameborder="0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
                             <div id="livePlayerShield" class="live-player-shield"></div>
                             <div id="unmuteHint" class="unmute-hint">
                                 <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
@@ -53,6 +61,20 @@
             </div>
         </div>
     </main>
+
+    <!-- Modal de Guía de TV (EPG) -->
+    <div id="epgModal" class="modal-overlay hidden">
+        <div class="modal-content epg-modal-content">
+            <button class="close-modal" id="btnCloseEPG">&times;</button>
+            <div class="modal-header">
+                <h2>Guía de <span>Programación</span></h2>
+                <p>Horario basado en tu zona local</p>
+            </div>
+            <div id="epgGrid" class="epg-grid">
+                <!-- Inyectado por JS -->
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="app.js"></script>
     <script type="module" src="live-ui.js"></script>

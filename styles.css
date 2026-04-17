@@ -2156,8 +2156,8 @@ nav a.active::after { width: 24px; }
 
 .live-grid-container {
     display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 30px;
+    grid-template-columns: 310px 1fr;
+    gap: 40px;
     margin-top: 40px;
     height: 85vh; /* Ampliado para una experiencia cinematográfica en PC */
     min-height: 600px;
@@ -2165,13 +2165,14 @@ nav a.active::after { width: 24px; }
 
 .live-sidebar {
     background: rgba(15, 20, 45, 0.4);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
-    padding: 20px;
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 32px;
+    padding: 24px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.2) transparent;
+    box-shadow: inset 0 0 20px rgba(255,255,255,0.02);
 }
 
 .live-sidebar::-webkit-scrollbar {
@@ -2185,79 +2186,130 @@ nav a.active::after { width: 24px; }
 .channels-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
 .channel-item {
     display: flex;
     align-items: center;
-    gap: 15px;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 16px;
+    gap: 18px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
+    transition: all 0.4s var(--ease-spring);
+    border: 1px solid rgba(255,255,255,0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.channel-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
 }
 
 .channel-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    transform: translateX(5px);
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(8px);
+    border-color: rgba(255,255,255,0.1);
+}
+
+.channel-item:hover::before {
+    transform: translateX(100%);
 }
 
 .channel-item.active {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-color: var(--ch-color, var(--primary));
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 15px calc(var(--ch-color) + '33');
 }
 
 .channel-icon {
-    font-size: 1.5rem;
-    width: 50px;
-    height: 50px;
+    font-size: 1.6rem;
+    width: 56px;
+    height: 56px;
     background: var(--ch-color, #222);
-    border-radius: 12px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease;
+}
+
+.channel-item:hover .channel-icon {
+    transform: scale(1.1) rotate(-5deg);
 }
 
 .channel-meta {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    overflow: hidden;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
 }
 
 .channel-name {
-    font-weight: 800;
-    font-size: 1rem;
+    font-weight: 850;
+    font-size: 1.05rem;
     color: #fff;
+    letter-spacing: -0.01em;
 }
 
 .channel-now {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+/* Barra de progreso en el item del canal */
+.channel-progress-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.channel-progress-fill {
+    height: 100%;
+    background: var(--ch-color, var(--primary));
+    width: 0%;
+    transition: width 1s linear;
+    box-shadow: 0 0 8px var(--ch-color);
 }
 
 .live-player-area {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 24px;
     height: 100%; /* Asegurar que el reproductor rellene el grid */
 }
 
 .live-player-wrapper {
     aspect-ratio: 16/9;
     background: #000;
-    border-radius: 24px;
+    border-radius: 32px;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.7);
     position: relative;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.player-container, .video-player, .video-iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+    background: #000;
 }
 
 .live-placeholder {
@@ -2267,88 +2319,201 @@ nav a.active::after { width: 24px; }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 25px;
     color: var(--text-muted);
+    background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+    z-index: 10;
+}
+
+.live-placeholder p {
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    opacity: 0.8;
 }
 
 .live-now-info {
-    padding: 24px;
-    background: rgba(255,255,255,0.03);
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.05);
+    padding: 30px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+    backdrop-filter: blur(20px);
+    border-radius: 28px;
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .live-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background: #ef4444;
     color: white;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.7rem;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.75rem;
     font-weight: 900;
-    margin-bottom: 12px;
-    animation: blink 1.5s infinite;
+    margin-bottom: 8px;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    width: fit-content;
 }
 
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+.live-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    animation: livePulse 1.5s infinite;
 }
+
+@keyframes livePulse {
+    0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+    70% { transform: scale(1.2); opacity: 0.5; box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+    100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+
+#liveTitle {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin: 0;
+    background: linear-gradient(to right, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+#liveNext {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Transición Glitch */
+.channel-glitch {
+    animation: glitchEffect 0.4s ease-out;
+}
+
+@keyframes glitchEffect {
+    0% { transform: scale(1); filter: brightness(1) contrast(1); }
+    50% { transform: scale(1.02); filter: brightness(2) contrast(1.5) hue-rotate(90deg); opacity: 0.8; }
+    100% { transform: scale(1); filter: brightness(1) contrast(1); }
+}
+
+@media (max-width: 1024px) {
+    .live-grid-container {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .live-sidebar {
+        height: 180px;
+        order: 2;
+    }
+    .channels-list {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 15px;
+    }
+    .channel-item {
+        min-width: 280px;
+    }
+}
+
 
 /* ================================================
    16. BÚSQUEDA POR VIBRAS (MOOD UI) ✨
 ================================================ */
-.mood-search-container {
-    margin-top: 25px;
+.header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+}
+
+/* EPG Modal Styles */
+.epg-modal-content {
+    max-width: 900px;
+    width: 90%;
+    max-height: 85vh;
+    padding: 40px;
+    background: rgba(10, 10, 25, 0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 100px rgba(0,0,0,0.8);
+}
+
+.epg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: 30px;
+    overflow-y: auto;
+    max-height: 50vh;
+    padding-right: 15px;
+}
+
+.epg-grid::-webkit-scrollbar { width: 5px; }
+.epg-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+.epg-channel-col {
     display: flex;
     flex-direction: column;
+    gap: 15px;
+}
+
+.epg-channel-header {
+    display: flex;
     align-items: center;
     gap: 12px;
-    animation: fadeIn 0.8s ease-out;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-.mood-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-}
-
-.mood-chips {
+.epg-show-item {
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
     display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.mood-chip {
-    padding: 10px 18px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50px;
-    color: #fff;
+    justify-content: space-between;
+    align-items: center;
     font-size: 0.9rem;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.epg-show-item:hover {
+    background: rgba(255,255,255,0.06);
+    transform: scale(1.02);
+}
+
+.epg-show-item.active {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+}
+
+.epg-time {
+    font-weight: 800;
+    color: var(--primary);
+    background: rgba(37, 99, 235, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+}
+
+.epg-name {
+    flex: 1;
+    margin-left: 12px;
     font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.mood-chip:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-3px);
-    border-color: var(--primary);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.mood-chip.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
-    transform: scale(1.05);
+@media (max-width: 600px) {
+    .header-flex { flex-direction: column; align-items: flex-start; }
+    .epg-modal-content { padding: 25px 15px; width: 95%; max-height: 90vh; }
+    .epg-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -2375,7 +2540,7 @@ nav a.active::after { width: 24px; }
     .mobile-nav-item svg { 
         width: 18px; 
         height: 18px; 
-    }
+        }
     .mobile-nav-item span { 
         font-size: 0.6rem; 
         letter-spacing: -0.03em;
@@ -2397,10 +2562,451 @@ nav a.active::after { width: 24px; }
         font-size: 1.2rem;
     }
     .unmute-hint { 
-        font-size: 10px; 
-        padding: 6px 10px; 
-        top: 8px; 
-        right: 8px; 
+        font-size: 14px; 
+        padding: 10px 16px; 
+        top: 20px; 
+        right: 20px; 
+        background: rgba(0,0,0,0.8);
+        border: 1px solid var(--primary);
     }
 }
 
+.unmute-hint {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    z-index: 20;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5), 0 0 15px var(--primary);
+    animation: bounceIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.05); opacity: 1; }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+/* ================================================
+   13. WATCH PARTY EMOTES
+================================================ */
+.floating-emote {
+    position: absolute;
+    bottom: 50px;
+    font-size: 3rem;
+    pointer-events: none;
+    z-index: 10000;
+    animation: floatUpAndFade 3s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+}
+
+.floating-emote span {
+    font-size: 0.9rem;
+    font-family: var(--font-premium);
+    background: rgba(0,0,0,0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    color: white;
+}
+
+@keyframes floatUpAndFade {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    10% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+    20% { transform: translateY(-30px) scale(1); opacity: 1; }
+    100% { transform: translateY(-300px) scale(1); opacity: 0; }
+}
+
+/* ================================================
+   14. BINGE-WATCH UX (PRÓXIMO EPISODIO)
+================================================ */
+.binge-prompt {
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    background: rgba(11, 18, 43, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 20px 25px;
+    z-index: 9000;
+    width: 350px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: bingeSlideIn 0.5s var(--ease-netflix) forwards;
+}
+
+@keyframes bingeSlideIn {
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.binge-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.binge-subtitle span {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.binge-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.epg-show-item:hover {
+    background: rgba(255,255,255,0.06);
+    transform: scale(1.02);
+}
+
+.epg-show-item.active {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+}
+
+.epg-time {
+    font-weight: 800;
+    color: var(--primary);
+    background: rgba(37, 99, 235, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+}
+
+.epg-name {
+    flex: 1;
+    margin-left: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 600px) {
+    .header-flex { flex-direction: column; align-items: flex-start; }
+    .epg-modal-content { padding: 25px 15px; width: 95%; max-height: 90vh; }
+    .epg-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .mood-chip {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+}
+
+/* --- OPTIMIZACIÓN IPHONE SE Y MÓVILES PEQUEÑOS (6 BOTONES) --- */
+@media (max-width: 400px) {
+    :root { 
+        --side-padding: 12px; 
+    }
+    .mobile-nav { 
+        padding: 5px 8px 15px; 
+        height: 62px; 
+        gap: 2px;
+    }
+    .mobile-nav-item {
+        min-width: 0;
+        flex: 1;
+    }
+    .mobile-nav-item svg { 
+        width: 18px; 
+        height: 18px; 
+        }
+    .mobile-nav-item span { 
+        font-size: 0.6rem; 
+        letter-spacing: -0.03em;
+        margin-top: 2px;
+    }
+    .mobile-nav-indicator {
+        width: 35px;
+    }
+
+    /* Grilla de Canales Pro */
+    .live-grid { 
+        grid-template-columns: 1fr !important; 
+        gap: 15px !important;
+    }
+    .channel-card { 
+        padding: 12px; 
+    }
+    .channel-icon {
+        font-size: 1.2rem;
+    }
+    .unmute-hint { 
+        font-size: 14px; 
+        padding: 10px 16px; 
+        top: 20px; 
+        right: 20px; 
+        background: rgba(0,0,0,0.8);
+        border: 1px solid var(--primary);
+    }
+}
+
+.unmute-hint {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    z-index: 20;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5), 0 0 15px var(--primary);
+    animation: bounceIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.05); opacity: 1; }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+/* ================================================
+   13. WATCH PARTY EMOTES
+================================================ */
+.floating-emote {
+    position: absolute;
+    bottom: 50px;
+    font-size: 3rem;
+    pointer-events: none;
+    z-index: 10000;
+    animation: floatUpAndFade 3s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+}
+
+.floating-emote span {
+    font-size: 0.9rem;
+    font-family: var(--font-premium);
+    background: rgba(0,0,0,0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    color: white;
+}
+
+@keyframes floatUpAndFade {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    10% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+    20% { transform: translateY(-30px) scale(1); opacity: 1; }
+    100% { transform: translateY(-300px) scale(1); opacity: 0; }
+}
+
+/* ================================================
+   14. BINGE-WATCH UX (PRÓXIMO EPISODIO)
+================================================ */
+.binge-prompt {
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    background: rgba(11, 18, 43, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 20px 25px;
+    z-index: 9000;
+    width: 350px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: bingeSlideIn 0.5s var(--ease-netflix) forwards;
+}
+
+@keyframes bingeSlideIn {
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.binge-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.binge-subtitle span {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.binge-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.binge-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.binge-prompt.hidden { display: none !important; }
+
+/* ================================================
+   15. CONTROLES DE HISTORIAL
+================================================ */
+.btn-remove-history {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 20;
+}
+
+.movie-card:hover .btn-remove-history {
+    opacity: 1;
+}
+
+.btn-remove-history:hover {
+    background: var(--danger, #ff3b30);
+    transform: scale(1.1);
+}
+
+/* ================================================
+   16. EXIT MODAL / LOGOUT PROMPT
+================================================ */
+.exit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.exit-modal-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.exit-modal-content {
+    background: rgba(11, 18, 43, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    padding: 30px;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.exit-modal-overlay.hidden .exit-modal-content {
+    transform: translateY(30px);
+}
+
+.exit-modal-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.exit-modal-text {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 25px;
+}
+
+.exit-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.exit-modal-btn {
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-change-profile {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-change-profile:hover {
+    background: #1d4ed8;
+    transform: scale(1.02);
+}
+
+.btn-logout-final {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-logout-final:hover {
+    color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+.btn-cancel-exit {
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.btn-cancel-exit:hover {
+    color: white;
+    text-decoration: underline;
+}

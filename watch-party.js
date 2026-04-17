@@ -90,6 +90,10 @@ export class WatchPartyManager {
                     this.onSyncCallback(payload);
                 }
             })
+            .on('broadcast', { event: 'emote' }, ({ payload }) => {
+                // Dispara un evento global para que la UI lo dibuje en pantalla
+                window.dispatchEvent(new CustomEvent('vivotv:party_emote', { detail: payload }));
+            })
             .on('presence', { event: 'sync' }, () => {
                 const state = this.currentChannel.presenceState();
                 console.log('[WatchParty] Usuarios en sala:', state);
@@ -123,6 +127,24 @@ export class WatchPartyManager {
      */
     onSync(callback) {
         this.onSyncCallback = callback;
+    }
+
+    /**
+     * El HOST o GUEST envía un Emote (Reacción) a toda la sala
+     */
+    broadcastEmote(emote) {
+        if (!this.currentChannel) return;
+
+        this.currentChannel.send({
+            type: 'broadcast',
+            event: 'emote',
+            payload: { emote, sender: this.profileName, timestamp: Date.now() }
+        });
+        
+        // Auto-dibujar el emote para el remitente
+        window.dispatchEvent(new CustomEvent('vivotv:party_emote', { 
+            detail: { emote, sender: this.profileName } 
+        }));
     }
 
     /**

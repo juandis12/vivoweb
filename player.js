@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { TMDB_SERVICE } from './tmdb.js';
-import { CATALOG_UI } from './ui.js';
 import { showToast } from './utils.js';
+import { CATALOG_UI } from './ui.js'; // Solo se usa en funciones, pero evitamos import preventivo si es posible
 
 let _supabase = null;
 export function setSupabase(client) { _supabase = client; }
@@ -207,49 +207,9 @@ export const PLAYER_LOGIC = {
         }
 
         // --- RELACIONADOS (More Like This) ---
-        this.renderSimilar(data.id, data.title ? 'movie' : 'tv', availableIds);
+        CATALOG_UI.renderSimilar(data.id, data.title ? 'movie' : 'tv', availableIds);
     },
 
-    async renderSimilar(id, type, availableIds) {
-        let similarSection = document.getElementById('similarTitlesSection');
-        if (!similarSection) {
-            similarSection = document.createElement('section');
-            similarSection.id = 'similarTitlesSection';
-            similarSection.className = 'details-section';
-            similarSection.innerHTML = `
-                <h3 class="section-label">Títulos Similares</h3>
-                <div class="similar-grid" id="similarGrid"></div>
-            `;
-            const mainCol = document.querySelector('.details-main-col');
-            if (mainCol) mainCol.appendChild(similarSection);
-        }
-
-        const grid = document.getElementById('similarGrid');
-        if (!grid) return;
-        
-        grid.innerHTML = '<div class="loader-wave"><span></span><span></span><span></span></div>';
-        
-        try {
-            const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/similar`);
-            grid.innerHTML = '';
-            
-            const results = (data.results || []).slice(0, 12);
-            if (results.length === 0) {
-                similarSection.classList.add('hidden');
-                return;
-            }
-
-            similarSection.classList.remove('hidden');
-            results.forEach(item => {
-                const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
-                const card = CATALOG_UI.createMovieCard(item, type, isAvail);
-                grid.appendChild(card);
-            });
-        } catch (e) { 
-            console.error('Error similar titles:', e);
-            similarSection.classList.add('hidden');
-        }
-    },
 
     async _checkMovieProgress(tmdbId, supabaseClient) {
         const progressObj = await this._getProgress(tmdbId, 'movie', 0, 0, supabaseClient);
@@ -599,21 +559,34 @@ export const PLAYER_LOGIC = {
             const id = cleanUrl.split('youtu.be/')[1].split(/[?&]/)[0];
             return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&disablekb=1&rel=0${seekSeconds > 0 ? '&start=' + seekSeconds : ''}`;
         }
-        // 2. Vimeo (Ocultando UI)
-        if (cleanUrl.includes('vimeo.com/') && !cleanUrl.includes('player.vimeo.com')) {
-            const parts = cleanUrl.split('vimeo.com/')[1].split(/[?&]/);
-            const id = parts[0];
-            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&background=1&title=0&byline=0&portrait=0${seekSeconds > 0 ? '#t=' + seekSeconds + 's' : ''}`;
+        // 2. Vimeo (Detección Ultra-Robusta con Regex)
+        const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+        const vimeoMatch = cleanUrl.match(vimeoRegex);
+        
+        if (vimeoMatch) {
+            const id = vimeoMatch[1];
+            const roundedSeek = Math.floor(seekSeconds);
+            // Prioridad: Query parameters (?t=) son más confiables para el primer inicio que el hash (#t)
+            return `https://player.vimeo.com/video/${id}?autoplay=1&muted=1&playsinline=1&title=0&byline=0&portrait=0${roundedSeek > 0 ? '&t=' + roundedSeek + 's' : ''}`;
         }
+
         // 3. Facebook
         if (cleanUrl.includes('facebook.com/') && !cleanUrl.includes('plugins/video.php')) {
             return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&autoplay=true&mute=true&show_text=0&width=1280${seekSeconds > 0 ? '&t=' + seekSeconds : ''}`;
         }
         
-        // 4. Intentar inyectar tiempo en reproductores genéricos
-        if (seekSeconds > 0 && !cleanUrl.includes('?t=') && !cleanUrl.includes('&t=') && !cleanUrl.includes('#t=')) {
-            // Utilizamos el hash estándar HTML5 Media Fragment
-            cleanUrl += `${cleanUrl.includes('#') ? '&' : '#'}t=${seekSeconds}`;
+        // 4. Inyectar Autoplay Global en reproductores genéricos
+        if (!cleanUrl.includes('autoplay=') && !cleanUrl.includes('auto=') && !cleanUrl.includes('autostart=')) {
+            const sep = cleanUrl.includes('?') ? '&' : '?';
+            cleanUrl += `${sep}autoplay=1&muted=1&mute=1&auto=1`;
+        }
+        
+        // 5. Intentar inyectar tiempo en reproductores genéricos
+        if (seekSeconds > 0 && !cleanUrl.includes('?t=') && !cleanUrl.includes('&t=') && !cleanUrl.includes('#t=') && !cleanUrl.includes('start=')) {
+            const roundedSeek = Math.floor(seekSeconds);
+            // Intentamos query param primero, si no, hash como fallback HTML5
+            const sepTime = cleanUrl.includes('?') ? '&' : '?';
+            cleanUrl += `${sepTime}t=${roundedSeek}`;
         }
         
         return cleanUrl;
@@ -626,7 +599,7 @@ export const PLAYER_LOGIC = {
         // --- SALTO INTELIGENTE (Auto-Resume) ---
         // Fase 10X UX: Delay reducido para fluidez
         if (seek > 0) {
-            const delay = 2000; // Iframe necesita más tiempo por anuncios
+            const delay = 2000; 
             console.log(`[VivoTV] Programando salto de progreso (${seek}s) en ${delay/1000}s...`);
             setTimeout(() => {
                 if (video && (video.readyState >= 1 || !video.paused)) {
@@ -636,6 +609,21 @@ export const PLAYER_LOGIC = {
                 }
             }, delay);
         }
+
+        // --- SISTEMA DE TELEMETRÍA GLOBAL (Para Watch Party) ---
+        window.PLAYER_GLOBAL_STATE = { currentTime: 0, isPlaying: false };
+        const updateTelemetry = () => {
+            if (!video.paused && !video.ended) {
+                window.PLAYER_GLOBAL_STATE.currentTime = video.currentTime;
+                window.PLAYER_GLOBAL_STATE.isPlaying = true;
+                this._checkBingeWatch(video.currentTime, video.duration);
+            } else {
+                window.PLAYER_GLOBAL_STATE.isPlaying = false;
+            }
+        };
+        video.addEventListener('timeupdate', updateTelemetry);
+        video.addEventListener('pause', updateTelemetry);
+        video.addEventListener('play', updateTelemetry);
 
         this._createSmartControls();
         video.play().catch(() => {});
@@ -770,11 +758,16 @@ export const PLAYER_LOGIC = {
                     }
                 });
                 this.progressTimer = setInterval(() => {
-                    if (this.ytPlayer && this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                        elapsed = this.ytPlayer.getCurrentTime();
-                        doSaveProgress(elapsed);
-                    }
-                }, 10000);
+            if (this.ytPlayer && this.ytPlayer.getPlayerState) {
+                if (this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                    elapsed = this.ytPlayer.getCurrentTime();
+                    doSaveProgress(elapsed);
+                    
+                    const duration = this.ytPlayer.getDuration();
+                    this._checkBingeWatch(elapsed, duration);
+                }
+            }
+        }, 10000);
             };
             if (typeof YT !== 'undefined' && YT.Player) initYT();
             else window.onYouTubeIframeAPIReady = initYT;
@@ -787,6 +780,10 @@ export const PLAYER_LOGIC = {
                 this.vimeoPlayer.getCurrentTime().then(secs => {
                     elapsed = secs;
                     doSaveProgress(elapsed);
+                    
+                    this.vimeoPlayer.getDuration().then(duration => {
+                        this._checkBingeWatch(elapsed, duration);
+                    });
                 });
             }, 10000);
         }
@@ -807,9 +804,100 @@ export const PLAYER_LOGIC = {
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
     },
 
+    /**
+     * Lógica de Auto-Play: Detecta el final del episodio (95%)
+     */
+    _checkBingeWatch(currentTime, totalTime) {
+        if (this.currentType !== 'tv' || !totalTime || totalTime < 60) return;
+        
+        // Evita disparar el prompt múltiples veces
+        if (this._bingePromptShown) return;
+
+        const progressPercent = currentTime / totalTime;
+        if (progressPercent >= 0.95) {
+            this._bingePromptShown = true;
+            console.log(`[VivoTV🎬] ¡Binge-Watch Detectado! ${Math.floor(progressPercent*100)}% Completado.`);
+            window.dispatchEvent(new CustomEvent('vivotv:binge_prompt', {
+                detail: {
+                    tmdbId: this.currentTmdbId,
+                    season: this.currentSeason,
+                    episode: this.currentEpisode
+                }
+            }));
+        }
+    },
+
+    /**
+     * Devuelve el estado actual de reproducción para Watch Party
+     */
+    getCurrentPlaybackState() {
+        // Native
+        const video = document.getElementById('videoPlayer');
+        if (video && !video.classList.contains('hidden')) {
+            return { currentTime: video.currentTime, isPlaying: !video.paused };
+        }
+        
+        // YouTube
+        if (this.ytPlayer && this.ytPlayer.getPlayerState) {
+            const state = this.ytPlayer.getPlayerState();
+            return { 
+                currentTime: this.ytPlayer.getCurrentTime() || 0, 
+                isPlaying: state === 1 // 1 = PLAYING
+            };
+        }
+        
+        // Vimeo
+        if (this.vimeoPlayer) {
+            // Guardamos localmente el progreso porque Vimeo es asíncrono
+            return { 
+                currentTime: window.PLAYER_GLOBAL_STATE?.currentTime || 0, 
+                isPlaying: window.PLAYER_GLOBAL_STATE?.isPlaying || false 
+            };
+        }
+
+        return null;
+    },
+
+    /**
+     * Aplica el estado remoto (Guest) del Watch Party
+     */
+    syncPlaybackState(payload) {
+        const { currentTime, isPlaying } = payload;
+        
+        // Native
+        const video = document.getElementById('videoPlayer');
+        if (video && !video.classList.contains('hidden')) {
+            const diff = Math.abs(video.currentTime - currentTime);
+            if (diff > 3) video.currentTime = currentTime;
+            if (isPlaying && video.paused) video.play().catch(() => {});
+            else if (!isPlaying && !video.paused) video.pause();
+            return;
+        }
+
+        // YouTube
+        if (this.ytPlayer && this.ytPlayer.seekTo) {
+            const ytTime = this.ytPlayer.getCurrentTime() || 0;
+            if (Math.abs(ytTime - currentTime) > 3) this.ytPlayer.seekTo(currentTime, true);
+            const state = this.ytPlayer.getPlayerState();
+            if (isPlaying && state !== 1) this.ytPlayer.playVideo();
+            else if (!isPlaying && state === 1) this.ytPlayer.pauseVideo();
+            return;
+        }
+
+        // Vimeo
+        if (this.vimeoPlayer) {
+            this.vimeoPlayer.getCurrentTime().then(vTime => {
+                if (Math.abs(vTime - currentTime) > 3) this.vimeoPlayer.setCurrentTime(currentTime);
+                if (isPlaying) this.vimeoPlayer.play().catch(() => {});
+                else this.vimeoPlayer.pause();
+            });
+        }
+    },
+
     _stopProgressTimer() {
         if (this.progressTimer) clearInterval(this.progressTimer);
         this.progressTimer = null;
+        this._bingePromptShown = false;
 
         // Limpiar Telemetría al detener
         if (window.updateGlobalPlaybackStatus) {

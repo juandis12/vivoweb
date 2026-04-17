@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { TMDB_SERVICE } from './tmdb.js';
 
 /**
  * Motor de Renderizado de la UI del Catálogo (Modularizado)
@@ -218,6 +219,47 @@ export const CATALOG_UI = {
         wrapper.appendChild(num);
         wrapper.appendChild(card);
         return wrapper;
+    },
+
+    async renderSimilar(id, type, availableIds) {
+        let similarSection = document.getElementById('similarTitlesSection');
+        if (!similarSection) {
+            similarSection = document.createElement('section');
+            similarSection.id = 'similarTitlesSection';
+            similarSection.className = 'details-section';
+            similarSection.innerHTML = `
+                <h3 class="section-label">Títulos Similares</h3>
+                <div class="similar-grid" id="similarGrid"></div>
+            `;
+            const mainCol = document.querySelector('.details-main-col');
+            if (mainCol) mainCol.appendChild(similarSection);
+        }
+
+        const grid = document.getElementById('similarGrid');
+        if (!grid) return;
+        
+        grid.innerHTML = '<div class="loader-wave"><span></span><span></span><span></span></div>';
+        
+        try {
+            const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/similar`);
+            grid.innerHTML = '';
+            
+            const results = (data.results || []).slice(0, 12);
+            if (results.length === 0) {
+                similarSection.classList.add('hidden');
+                return;
+            }
+
+            similarSection.classList.remove('hidden');
+            results.forEach(item => {
+                const isAvail = availableIds.has(item.id.toString()) || availableIds.has(item.id);
+                const card = this.createMovieCard(item, type, isAvail);
+                grid.appendChild(card);
+            });
+        } catch (e) { 
+            console.error('Error similar titles:', e);
+            similarSection.classList.add('hidden');
+        }
     }
 };
 
