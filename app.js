@@ -443,12 +443,19 @@ function updateProfileUI() {
         if (currentProfile.avatar_url) {
             userAvatarElement.textContent = '';
             userAvatarElement.className = 'avatar';
-            userAvatarElement.style.backgroundImage = `url('${currentProfile.avatar_url}')`;
+
+            // Resolver URL para soporte cross-device
+            let displayUrl = currentProfile.avatar_url;
+            if (!displayUrl.startsWith('http') && !displayUrl.startsWith('assets/avatars/')) {
+                displayUrl = `assets/avatars/${displayUrl}`;
+            }
+
+            userAvatarElement.style.backgroundImage = `url('${displayUrl}')`;
             userAvatarElement.style.backgroundSize = 'cover';
             userAvatarElement.style.backgroundPosition = 'center';
             userAvatarElement.style.backgroundColor = 'transparent';
         } else {
-            userAvatarElement.textContent = currentProfile.name[0];
+            userAvatarElement.textContent = currentProfile.name ? currentProfile.name[0] : '?';
             userAvatarElement.className = `avatar ${currentProfile.color || 'color-1'}`;
             userAvatarElement.style.backgroundImage = 'none';
         }

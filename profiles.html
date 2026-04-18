@@ -1186,6 +1186,14 @@
             }
         }
 
+        function resolveAvatarUrl(url) {
+            if (!url) return '';
+            if (url.startsWith('http')) return url;
+            if (url.startsWith('assets/avatars/')) return url;
+            // Si es solo el nombre (ej: avatar_ironman.png), añadir ruta
+            return `assets/avatars/${url}`;
+        }
+
         function renderProfiles() {
             grid.innerHTML = '';
 
@@ -1200,7 +1208,7 @@
                 item.innerHTML = `
                     <div class="profile-avatar ${p.color || 'color-1'}">
                         <span class="profile-avatar-initial">${p.name[0]}</span>
-                        ${p.avatar_url ? `<img src="${p.avatar_url}" alt="${p.name}" onerror="this.remove()">` : ''}
+                        ${p.avatar_url ? `<img src="${resolveAvatarUrl(p.avatar_url)}" alt="${p.name}" onerror="this.remove()">` : ''}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
                         ${_isOccupied(p) ? `
                             <div class="occupied-badge">EN USO</div>
@@ -1794,10 +1802,13 @@
         function renderAvatarGrid() {
             avatarGrid.innerHTML = '';
             const p = profiles.find(x => x.id === currentEditingProfileId);
+            // Normalizar el avatar_url actual para comparación correcta
+            const currentAvatar = p?.avatar_url ? p.avatar_url.split('/').pop() : null;
 
             AVATAR_LIST.forEach(av => {
+                const avatarFilename = av.url.split('/').pop();
                 const opt = document.createElement('div');
-                opt.className = `avatar-option ${p?.avatar_url === av.url ? 'selected' : ''}`;
+                opt.className = `avatar-option ${currentAvatar === avatarFilename ? 'selected' : ''}`;
                 opt.innerHTML = `<img src="${av.url}" class="avatar-img-choice" title="${av.name} (${av.theme})">`;
                 opt.onclick = () => selectAvatar(av.url);
                 avatarGrid.appendChild(opt);
@@ -1810,9 +1821,14 @@
 
             showToast("Guardando avatar...", "info");
 
+            // --- NORMALIZACIÓN CROSS-PLATFORM ---
+            // Guardar solo el nombre del archivo (ej: 'avatar_ironman.png')
+            // para que Flutter y la Web usen el mismo valor en la DB.
+            const normalizedUrl = url.split('/').pop();
+
             const { error } = await supabase
                 .from('vivotv_profiles')
-                .update({ avatar_url: url })
+                .update({ avatar_url: normalizedUrl })
                 .eq('id', id);
 
             if (error) {
@@ -1826,7 +1842,7 @@
             } else {
                 // Actualizar localmente solo si el server confirmó
                 const p = profiles.find(x => x.id === id);
-                if (p) p.avatar_url = url;
+                if (p) p.avatar_url = normalizedUrl;
 
                 showToast("Avatar actualizado con éxito", "success");
                 renderProfiles();
