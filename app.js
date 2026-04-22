@@ -294,71 +294,73 @@ function _setupGlobalSyncListeners() {
 async function populatePageContent() {
     updateProfileUI(); // Asegurar que el nombre/avatar aparezcan en la nueva sección
     
-    // Evitar poblar contenido si estamos en la sección En Vivo (tiene su propio controlador)
-    if (document.body.classList.contains('page-live') || window.location.pathname.includes('live.html')) {
-        console.log('[SPA Engine] 📺 Sección En Vivo detectada, saltando población estándar.');
-        return;
-    }
-
     if (!currentProfile || isPopulating) return;
     isPopulating = true;
     
-    console.log('[SPA Engine] 🧬 Poblando contenido de la página...');
+    console.log('[SPA Engine] 🧬 Iniciando sincronización de base de datos...');
     
-    if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
-
-    // --- LIMPIEZA: Limpiar carouseles residuales ---
-    const carouselIds = [
-        'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
-        'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
-        'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel',
-        'recommendedCarousel'
-    ];
-    carouselIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = '';
-    });
-
-    // 1. Ocultar secciones antes de repoblar
-    const allSections = ['trendingSection', 'popularSection', 'topRatedSection', 'actionSection', 'comedySection', 'horrorSection', 'scifiSection', 'recommendedSection', 'recentSection', 'myListSection', 'popularMoviesSection', 'popularTVSection'];
-    allSections.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-
-    // 2. Mostrar skeletons
-    carouselIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            CATALOG_UI.showSkeletons(id);
-            const section = el.closest('.catalog-row');
-            if (section && !['recentSection', 'recommendedSection', 'myListSection'].includes(section.id)) {
-                section.classList.remove('hidden');
-            }
-        }
-    });
-
-    const gridContainer = document.getElementById('gridContainer');
-    if (gridContainer) gridContainer.innerHTML = '';
-
     try {
-        // 2. Sincronizar catálogo personal
+        // 1. Sincronizar catálogo de Supabase (CRÍTICO para todas las páginas, incluido Live)
         await syncCatalog(supabase); 
-        renderDBCategoryRows();
 
-        // 3. Cargar historiales y filas personalizadas
+        // 2. Evitar poblar carruseles/hero si estamos en la sección En Vivo (tiene su propio controlador)
+        if (document.body.classList.contains('page-live') || window.location.pathname.includes('live.html')) {
+            console.log('[SPA Engine] 📺 Sección En Vivo detectada, sincronización completa. Cediendo control a live-ui.js.');
+            return;
+        }
+
+        console.log('[SPA Engine] 🧬 Poblando UI de la página...');
+    
+        if (window.location.hash !== '#linkMyList') window.scrollTo(0, 0);
+
+        // --- LIMPIEZA: Limpiar carouseles residuales ---
+        const carouselIds = [
+            'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
+            'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
+            'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel',
+            'recommendedCarousel'
+        ];
+        carouselIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '';
+        });
+
+        // 3. Ocultar secciones antes de repoblar
+        const allSections = ['trendingSection', 'popularSection', 'topRatedSection', 'actionSection', 'comedySection', 'horrorSection', 'scifiSection', 'recommendedSection', 'recentSection', 'myListSection', 'popularMoviesSection', 'popularTVSection'];
+        allSections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
+
+        // 4. Mostrar skeletons
+        carouselIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                CATALOG_UI.showSkeletons(id);
+                const section = el.closest('.catalog-row');
+                if (section && !['recentSection', 'recommendedSection', 'myListSection'].includes(section.id)) {
+                    section.classList.remove('hidden');
+                }
+            }
+        });
+
+        const gridContainer = document.getElementById('gridContainer');
+        if (gridContainer) gridContainer.innerHTML = '';
+
+        // 5. Cargar historiales y filas personalizadas
+        renderDBCategoryRows();
         loadPersonalizedRows();
         
         if (document.getElementById('favoritesGrid')) loadMyList();
         if (document.getElementById('searchResultsGrid')) initSearchPage();
 
-        // 4. Detectar tipo de página
+        // 6. Detectar tipo de página
         const isMoviesPage = document.body.classList.contains('page-movies');
         const isSeriesPage = document.body.classList.contains('page-series');
         const isAnimePage  = document.body.classList.contains('page-anime');
         const pageType     = (isSeriesPage || isAnimePage) ? 'tv' : (isMoviesPage ? 'movie' : 'all');
 
-        // 5. Cargar Hero
+        // 7. Cargar Hero
         let heroData;
         if (isAnimePage) {
             heroData = await TMDB_SERVICE.fetchFromTMDB('/discover/tv', { with_genres: 16, with_original_language: 'ja', sort_by: 'popularity.desc' });
@@ -391,7 +393,7 @@ async function populatePageContent() {
             startHeroRotation();
         }
 
-        // 6. Cargar Filas Progresivas
+        // 8. Cargar Filas Progresivas
         const renderRow = async (containerId, fetchFn, type) => {
             const el = document.getElementById(containerId);
             if (!el) return;
@@ -437,16 +439,16 @@ async function populatePageContent() {
             ]);
         }
         
-        // 6. Cargar Grilla (Biblioteca Completa)
+        // 9. Cargar Grilla (Biblioteca Completa)
         await loadGridData(pageType, 1, false, currentProfile);
         
-        // 7. Configurar Botones "Ver más"
+        // 10. Configurar Botones "Ver más"
         setupVerMasButtons();
         
         await loadMyList();
         await loadRecentlyWatched();
     } catch (e) {
-        console.error('Error poblando contenido:', e);
+        console.error('[SPA Engine] Error poblando contenido:', e);
     } finally {
         isPopulating = false;
     }

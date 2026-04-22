@@ -77,31 +77,26 @@ async function waitForCatalog() {
     return new Promise((resolve) => {
         const check = async () => {
             attempts++;
+            // Buscar en window o en el set exportado de catalog.js
             const catalog = window.DB_CATALOG || [];
             
             // Requisito crítico: Esperar a que el bloque prioritario de TMDB esté completamente cargado
-            if (catalog.length > 0 && window.isPriorityMetadataSynced) {
-                console.log(`[Live] Catálogo con metadatos detectado (${catalog.length} items). Activando motor.`);
+            if (catalog.length > 0 && (window.isPriorityMetadataSynced || attempts > 20)) {
+                console.log(`[Live] Catálogo detectado (${catalog.length} items). Activando motor.`);
                 if (placeholder) placeholder.innerHTML = `
                     <div class="loader-wave"><span></span><span></span><span></span></div>
                     <p>Buscando Programación...</p>
                 `;
                 resolve(catalog);
             } else {
-                // Si llevamos mucho tiempo, forzar una sincronización
-                if (attempts % 5 === 0) {
-                    console.log('[Live] Sincronización lenta, re-intentando fetch...');
-                    fetchAvailableIds(supabase);
-                }
-
-                // Fallback de seguridad: si tras 30s no hay nada, usar catálogo vacío para no bloquear la UI
-                if (attempts > 30) {
+                // Fallback de seguridad: si tras 15s no hay nada, usar catálogo vacío para no bloquear la UI
+                if (attempts > 50) {
                     console.warn('[Live] Tiempo de espera de catálogo agotado. Iniciando modo degradado.');
                     resolve([]);
                     return;
                 }
 
-                setTimeout(check, 1000);
+                setTimeout(check, 300); // Polling más agresivo (300ms) para mejorar respuesta
             }
         };
         check();
