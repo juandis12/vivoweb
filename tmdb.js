@@ -19,17 +19,9 @@ export const TMDB_SERVICE = {
         const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         const isKids = currentProfile?.is_kids === true;
 
-        let url;
-        if (CONFIG.USE_PROXY) {
-            url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
-            const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-            url.searchParams.append('path', cleanPath);
-        } else {
-            const _k = CONFIG._tk;
-            url = new URL(`https://api.themoviedb.org/3${endpoint}`);
-            url.searchParams.append('api_key', _k);
-            url.searchParams.append('language', 'es-MX');
-        }
+        const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+        const url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
+        url.searchParams.append('path', cleanPath);
 
         if (isKids) {
             url.searchParams.append('certification_country', 'US');

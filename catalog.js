@@ -2,6 +2,7 @@ import { CONFIG } from './config.js';
 import { TMDB_SERVICE } from './tmdb.js';
 import { CATALOG_UI } from './ui.js';
 import { showToast } from './utils.js';
+import { VIVOTV_DB } from './db.js';
 
 // ─── PERSISTENCIA EN SESIÓN (SPA Cache) ──────────────────────────────────────
 // DB_CATALOG se guarda en sessionStorage para evitar re-sync en navegación SPA.
@@ -10,30 +11,26 @@ const SESSION_CACHE_KEY = 'vivo_db_catalog_v1';
 const SESSION_CACHE_TS_KEY = 'vivo_db_catalog_ts_v1';
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutos
 
-function _loadCatalogFromSession() {
+async function _loadCatalogFromCache() {
     try {
-        const ts = sessionStorage.getItem(SESSION_CACHE_TS_KEY);
-        if (ts && (Date.now() - parseInt(ts)) < SESSION_TTL_MS) {
-            const cached = sessionStorage.getItem(SESSION_CACHE_KEY);
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    console.log(`[VivoTV] ⚡ Caché SPA cargado: ${parsed.length} ítems desde sessionStorage.`);
-                    return parsed;
-                }
-            }
+        const cached = await VIVOTV_DB.getAll();
+        if (cached && cached.length > 0) {
+            console.log(`[VivoTV] ⚡ Caché IndexedDB cargado: ${cached.length} ítems.`);
+            return cached;
         }
-    } catch (e) { /* silent */ }
+    } catch (e) { 
+        console.warn('[VivoTV] Falló carga de IndexedDB:', e);
+    }
     return null;
 }
 
-function _saveCatalogToSession(catalog) {
+async function _saveCatalogToCache(catalog) {
     try {
-        // Guardamos un máximo de 500 ítems para no saturar sessionStorage (~2-3MB)
-        const limited = catalog.slice(0, 500);
-        sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(limited));
-        sessionStorage.setItem(SESSION_CACHE_TS_KEY, Date.now().toString());
-    } catch (e) { /* silent */ }
+        await VIVOTV_DB.saveAll(catalog);
+        console.log(`[VivoTV] 💾 Catálogo persistido en IndexedDB (${catalog.length} ítems).`);
+    } catch (e) {
+        console.error('[VivoTV] Error persistiendo en IndexedDB:', e);
+    }
 }
 
 // ---- ESTADO GLOBAL DEL CATÁLOGO ----
@@ -157,35 +154,31 @@ export async function validateBatchAvailability(supabase, ids) {
 export async function fetchAvailableIds(supabase) {
     if (!supabase || isSyncing) return;
 
-    // ─── FAST PATH: Caché de sesión ─────────────────────────────────────────
-    // Si ya tenemos el catálogo en sessionStorage y no ha expirado,
-    // lo cargamos instantáneamente sin hacer ningún request a Supabase.
-    const sessionCatalog = _loadCatalogFromSession();
-    if (sessionCatalog) {
+    // ─── FAST PATH: Caché persistente (IndexedDB) ───────────────────────────
+    // Cargamos instantáneamente desde la base de datos local.
+    const cachedCatalog = await _loadCatalogFromCache();
+    if (cachedCatalog) {
         if (!window.DB_CATALOG) window.DB_CATALOG = [];
-        sessionCatalog.forEach(item => {
+        cachedCatalog.forEach(item => {
             const id = item.tmdb_id?.toString();
             if (!id) return;
             availableIds.add(id);
-            if (item.content_type === 'series') availableSeries.add(id);
+            if (item.content_type === 'series' || item.media_type === 'tv') availableSeries.add(id);
             else availableMovies.add(id);
-            const exists = window.DB_CATALOG.some(db => db.tmdb_id === id);
+            const exists = window.DB_CATALOG.some(db => (db.tmdb_id || db.id).toString() === id);
             if (!exists) window.DB_CATALOG.push(item);
         });
         window.availableIds = availableIds;
         window.availableMovies = availableMovies;
         window.availableSeries = availableSeries;
-        console.log(`[VivoTV] ⚡️ Cargado desde caché de sesión: ${availableIds.size} ítems.`);
         
         // Notificar y renderizar inmediatamente
-        dispatchBatchEvent(sessionCatalog);
+        dispatchBatchEvent(cachedCatalog);
         if (window.renderDBCategoryRows) window.renderDBCategoryRows();
         
-        // CORRECCIÓN: isSyncing nunca se marcaba como false en el FAST PATH.
-        // Si no lo reseteamos, el setInterval de 2 min nunca puede refrescar.
         isSyncing = false;
         
-        // Lanzar escaneo de fuentes en background (no bloquea UI)
+        // Lanzar escaneo de fuentes en background para detectar novedades
         scanAllDBContent(supabase);
         return;
     }
@@ -232,8 +225,8 @@ export async function fetchAvailableIds(supabase) {
 
         console.log(`[VivoTV] ✅ Catálogo personal sincronizado: ${availableIds.size} items.`);
         
-        // Persistir en sesión para navegación SPA rápida
-        _saveCatalogToSession(window.DB_CATALOG || []);
+        // Persistir en IndexedDB para carga instantánea futura
+        await _saveCatalogToCache(window.DB_CATALOG || []);
 
         // --- INICIALIZAR REALTIME SYNC (Fase Connect) ---
         initRealtimeSync(supabase);
@@ -468,8 +461,8 @@ async function syncMissingMetadata() {
         }
     }
 
-    // ✅ Persistir catálogo completo en sessionStorage al terminar el sync
-    _saveCatalogToSession(window.DB_CATALOG || []);
+    // ✅ Persistir catálogo completo en IndexedDB al terminar el sync
+    await _saveCatalogToCache(window.DB_CATALOG || []);
     console.log('[VivoTV] ✅ Turbo Sync Completo. Catálogo persistido en sesión.');
 
 }
