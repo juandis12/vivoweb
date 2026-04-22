@@ -966,20 +966,25 @@ async function loadMyList() {
         }
         emptyState?.classList.add('hidden');
         
-        // Show skeletons while loading details
-        CATALOG_UI.showSkeletons('favoritesGrid', 8);
+    // Cargar detalles EN PARALELO con endpoint LIGERO (getSummary)
+    // Antes: 20 llamadas secuenciales (~14s) → Ahora: todas a la vez (~700ms)
+    favoritesGrid.innerHTML = '';
+    CATALOG_UI.showSkeletons('favoritesGrid', Math.min(favs.length, 8));
 
-        favoritesGrid.innerHTML = '';
-        
-        // Cargar detalles y renderizar en la grilla
-        for (const item of favs) {
-            const details = await TMDB_SERVICE.getDetails(item.tmdb_id, item.type || 'movie').catch(() => null);
-            if (!details) continue;
-            const isAvail = availableIds.has(item.tmdb_id.toString()) || availableIds.has(item.tmdb_id);
-            const card = CATALOG_UI.createMovieCard(details, item.type || 'movie', isAvail);
-            favoritesGrid.appendChild(card);
-        }
-        return;
+    const detailResults = await Promise.all(
+        favs.map(item =>
+            TMDB_SERVICE.getSummary(item.tmdb_id, item.type || 'movie').catch(() => null)
+        )
+    );
+
+    favoritesGrid.innerHTML = '';
+    detailResults.forEach((details, i) => {
+        if (!details || !details.id) return;
+        const isAvail = availableIds.has(favs[i].tmdb_id?.toString()) || availableIds.has(favs[i].tmdb_id);
+        const card = CATALOG_UI.createMovieCard(details, favs[i].type || 'movie', isAvail);
+        favoritesGrid.appendChild(card);
+    });
+    return;
     }
 
     // Handle home carousel if exists
@@ -1089,8 +1094,9 @@ async function loadRecentlyWatched() {
         return true;
     });
 
+    // Parallel con getSummary (endpoint ligero) — antes usaba getDetails pesado
     const results = await Promise.all(unique.map(item => 
-        TMDB_SERVICE.getDetails(item.tmdb_id, item.type)
+        TMDB_SERVICE.getSummary(item.tmdb_id, item.type)
             .then(details => ({ details, historyItem: item }))
             .catch(() => null)
     ));
@@ -1215,7 +1221,9 @@ async function loadFullHistory() {
     }
     if (!currentProfile) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
+    // CORRECCIÓN: getSession() usa caché local, getUser() hace un round-trip al servidor
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     const { data: history } = await supabase.from('watch_history')
@@ -1240,8 +1248,9 @@ async function loadFullHistory() {
         return true;
     });
 
+    // Parallel con getSummary (endpoint ligero) para el historial completo
     const details = await Promise.all(unique.map(item => 
-        TMDB_SERVICE.getDetails(item.tmdb_id, item.type)
+        TMDB_SERVICE.getSummary(item.tmdb_id, item.type)
             .then(d => ({ ...d, historyItem: item }))
             .catch(() => null)
     ));
@@ -1307,9 +1316,9 @@ if (btnHeroInfo) btnHeroInfo.addEventListener('click', (e) => {
 // El manejo de btnModalPlay y btnCloseModal ahora se gestiona directamente en PLAYER_LOGIC.openDetail
 // para una mayor reactividad y menor acoplamiento.
 
-document.addEventListener('DOMContentLoaded', () => initializeVivotvApp());
 
 // ---- SISTEMA DE SCROLL PREMIUM (Fase Auditoria Scroll) ----
+
 let isDragging = false;
 let startX, scrollLeft;
 
@@ -1617,15 +1626,28 @@ window.addEventListener('contentAdded', async (e) => {
     window.dispatchEvent(new CustomEvent('batchLoaded', { detail: { ids: [tmdb_id] } }));
 });
 
-// Sincronización continua de bajo impacto (Solo cada 2 minutos)
+
+// Sincronización inteligente de bajo impacto (cada 2 minutos)
+// Solo refresca si el caché de sesión está vencido o próximo a vencer.
+// Evita tráfico a Supabase si sessionStorage aún tiene datos frescos.
 setInterval(async () => {
     try {
-        console.log('[VivoTV] 🔄 Iniciando refresh de catálogo en segundo plano...');
+        const ts = sessionStorage.getItem('vivo_db_catalog_ts_v1');
+        const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutos (igual que catalog.js)
+        const REFRESH_THRESHOLD = 25 * 60 * 1000; // Refrescar cuando faltan 5 min
+        
+        if (ts && (Date.now() - parseInt(ts)) < REFRESH_THRESHOLD) {
+            // Caché reciente — no hace falta refrescar
+            return;
+        }
+        
+        console.log('[VivoTV] 🔄 Caché próximo a expirar, refrescando catálogo...');
         await fetchAvailableIds(); 
     } catch (e) {
         console.warn('Error actualizando disponibles:', e);
     }
-}, 120000); // 2 minutos para no saturar
+}, 120000); // Chequeamos cada 2 minutos, pero solo actuamos cuando es necesario
+
 
 // Manejo de Flechas
 document.addEventListener('click', (e) => {

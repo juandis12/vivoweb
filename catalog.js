@@ -181,7 +181,11 @@ export async function fetchAvailableIds(supabase) {
         dispatchBatchEvent(sessionCatalog);
         if (window.renderDBCategoryRows) window.renderDBCategoryRows();
         
-        // Lanzar escaneo de fuentes en background (no bloquea)
+        // CORRECCIÓN: isSyncing nunca se marcaba como false en el FAST PATH.
+        // Si no lo reseteamos, el setInterval de 2 min nunca puede refrescar.
+        isSyncing = false;
+        
+        // Lanzar escaneo de fuentes en background (no bloquea UI)
         scanAllDBContent(supabase);
         return;
     }
