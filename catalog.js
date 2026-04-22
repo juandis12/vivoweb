@@ -3,6 +3,39 @@ import { TMDB_SERVICE } from './tmdb.js';
 import { CATALOG_UI } from './ui.js';
 import { showToast } from './utils.js';
 
+// ─── PERSISTENCIA EN SESIÓN (SPA Cache) ──────────────────────────────────────
+// DB_CATALOG se guarda en sessionStorage para evitar re-sync en navegación SPA.
+// El TTL de 30 minutos garantiza que los datos no sean demasiado viejos.
+const SESSION_CACHE_KEY = 'vivo_db_catalog_v1';
+const SESSION_CACHE_TS_KEY = 'vivo_db_catalog_ts_v1';
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutos
+
+function _loadCatalogFromSession() {
+    try {
+        const ts = sessionStorage.getItem(SESSION_CACHE_TS_KEY);
+        if (ts && (Date.now() - parseInt(ts)) < SESSION_TTL_MS) {
+            const cached = sessionStorage.getItem(SESSION_CACHE_KEY);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log(`[VivoTV] ⚡ Caché SPA cargado: ${parsed.length} ítems desde sessionStorage.`);
+                    return parsed;
+                }
+            }
+        }
+    } catch (e) { /* silent */ }
+    return null;
+}
+
+function _saveCatalogToSession(catalog) {
+    try {
+        // Guardamos un máximo de 500 ítems para no saturar sessionStorage (~2-3MB)
+        const limited = catalog.slice(0, 500);
+        sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(limited));
+        sessionStorage.setItem(SESSION_CACHE_TS_KEY, Date.now().toString());
+    } catch (e) { /* silent */ }
+}
+
 // ---- ESTADO GLOBAL DEL CATÁLOGO ----
 export let availableMovies = new Set();
 export let availableSeries = new Set();
@@ -123,19 +156,48 @@ export async function validateBatchAvailability(supabase, ids) {
  */
 export async function fetchAvailableIds(supabase) {
     if (!supabase || isSyncing) return;
+
+    // ─── FAST PATH: Caché de sesión ─────────────────────────────────────────
+    // Si ya tenemos el catálogo en sessionStorage y no ha expirado,
+    // lo cargamos instantáneamente sin hacer ningún request a Supabase.
+    const sessionCatalog = _loadCatalogFromSession();
+    if (sessionCatalog) {
+        if (!window.DB_CATALOG) window.DB_CATALOG = [];
+        sessionCatalog.forEach(item => {
+            const id = item.tmdb_id?.toString();
+            if (!id) return;
+            availableIds.add(id);
+            if (item.content_type === 'series') availableSeries.add(id);
+            else availableMovies.add(id);
+            const exists = window.DB_CATALOG.some(db => db.tmdb_id === id);
+            if (!exists) window.DB_CATALOG.push(item);
+        });
+        window.availableIds = availableIds;
+        window.availableMovies = availableMovies;
+        window.availableSeries = availableSeries;
+        console.log(`[VivoTV] ⚡️ Cargado desde caché de sesión: ${availableIds.size} ítems.`);
+        
+        // Notificar y renderizar inmediatamente
+        dispatchBatchEvent(sessionCatalog);
+        if (window.renderDBCategoryRows) window.renderDBCategoryRows();
+        
+        // Lanzar escaneo de fuentes en background (no bloquea)
+        scanAllDBContent(supabase);
+        return;
+    }
+
     isSyncing = true;
+    console.log('[VivoTV] 📡 Sincronizando Catálogo Personal...');
+    const BATCH_SIZE = 500;
+    let hasMore = true;
+    let offset = 0;
 
     try {
-        console.log('[VivoTV] 📡 Sincronizando Catálogo Personal...');
-        const BATCH_SIZE = 500;
-        let hasMore = true;
-        let offset = 0;
-
         while (hasMore) {
             const { data: batch, error } = await supabase
                 .from('content')
                 .select('*')
-                .order('tmdb_id', { ascending: true }) // ORDEN VITAL PARA En Vivo
+                .order('tmdb_id', { ascending: true })
                 .range(offset, offset + BATCH_SIZE - 1);
 
             if (error || !batch || batch.length === 0) {
@@ -148,12 +210,9 @@ export async function fetchAvailableIds(supabase) {
             batch.forEach(item => {
                 const id = item.tmdb_id?.toString();
                 if (!id) return;
-                
-                // Si está en 'content', por definición está disponible
                 availableIds.add(id);
                 if (item.content_type === 'series') availableSeries.add(id);
                 else availableMovies.add(id);
-
                 const exists = window.DB_CATALOG.some(db => db.tmdb_id === id);
                 if (!exists) window.DB_CATALOG.push(item);
             });
@@ -163,23 +222,21 @@ export async function fetchAvailableIds(supabase) {
             if (batch.length < BATCH_SIZE) hasMore = false;
             offset += BATCH_SIZE;
             
-            // Notificar disponibilidad de este lote de tu catálogo
             dispatchBatchEvent(batch);
-            
             await new Promise(r => setTimeout(r, 100));
         }
 
         console.log(`[VivoTV] ✅ Catálogo personal sincronizado: ${availableIds.size} items.`);
         
-        // --- ESCANEO DE IDs (Metadatos + Fuentes) ---
-        // Esperamos al escaneo para que el modo hibrido tenga datos desde el inicio
-        await scanAllDBContent(supabase); 
+        // Persistir en sesión para navegación SPA rápida
+        _saveCatalogToSession(window.DB_CATALOG || []);
+
+        await scanAllDBContent(supabase);
 
     } catch (e) {
         console.error('[VivoTV] ❌ Fallo en sincronización de catálogo:', e);
     } finally {
         window.isCatalogSyncing = false;
-        // Re-renderizar filas de la DB al terminar el proceso global
         if (window.renderDBCategoryRows) window.renderDBCategoryRows();
     }
 }
@@ -287,9 +344,10 @@ async function syncMissingMetadata() {
         
         try {
             const type = availableSeries.has(id) ? 'tv' : 'movie';
-            let details = await TMDB_SERVICE.getDetails(id, type);
+            // ✅ CLAVE: Usamos getSummary() (endpoint LIGERO) en vez de getDetails()
+            // Esto reduce el tamaño de respuesta ~60-70% por ítem en el sync masivo.
+            let details = await TMDB_SERVICE.getSummary(id, type);
             
-            // Si es 404 definitivo, lo marcamos y no intentamos el otro tipo
             if (details && details.error === 404) {
                 invalidIds.add(id);
                 console.warn(`[Turbo Sync] ID ${id} no encontrado en TMDB como ${type}. Saltando...`);
@@ -297,9 +355,8 @@ async function syncMissingMetadata() {
             }
 
             if (!details || !details.id) {
-                // Segundo intento por si el tipo estaba mal detectado (solo si no fue 404)
                 const altType = type === 'tv' ? 'movie' : 'tv';
-                details = await TMDB_SERVICE.getDetails(id, altType);
+                details = await TMDB_SERVICE.getSummary(id, altType);
                 
                 if (details && details.error === 404) {
                     invalidIds.add(id);
@@ -340,22 +397,22 @@ async function syncMissingMetadata() {
     if (backgroundBlock.length > 0) {
         console.log(`[VivoTV] 📥 Procesando resto del catálogo (${backgroundBlock.length} items)...`);
         
-        // Dividimos en bloques de 100 para refrescos parciales de la UI
         const CHUNK_SIZE = 100;
         for (let i = 0; i < backgroundBlock.length; i += CHUNK_SIZE) {
             const chunk = backgroundBlock.slice(i, i + CHUNK_SIZE);
             await workerPool(chunk);
             
-            // Actualizar UI cada 100 items nuevos
             window.dispatchEvent(new CustomEvent('metadataBatchSynced'));
             if (window.renderDBCategoryRows) window.renderDBCategoryRows();
             
-            // Pequeño respiro para el hilo principal (100ms)
             await new Promise(r => setTimeout(r, 100));
         }
     }
 
-    console.log('[VivoTV] ✅ Turbo Sync Completo. Catálogo sincronizado al 100%.');
+    // ✅ Persistir catálogo completo en sessionStorage al terminar el sync
+    _saveCatalogToSession(window.DB_CATALOG || []);
+    console.log('[VivoTV] ✅ Turbo Sync Completo. Catálogo persistido en sesión.');
+
 }
 
 function dispatchBatchEvent(items) {

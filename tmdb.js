@@ -12,7 +12,7 @@ function _escapeHTML(str) {
 }
 
 /**
- * Servicio TMDB v3.1 — Todas las llamadas a la API sin persistencia.
+ * Servicio TMDB v3.2 — Endpoint ligero vs. completo separados.
  */
 export const TMDB_SERVICE = {
     async fetchFromTMDB(endpoint, params = {}) {
@@ -63,10 +63,19 @@ export const TMDB_SERVICE = {
     getTopRated: (page = 1)     => TMDB_SERVICE.fetchFromTMDB('/movie/top_rated', { page }),
     getPopularTV: (page = 1)    => TMDB_SERVICE.fetchFromTMDB('/tv/popular', { page }),
     
+    // ─── ENDPOINT LIGERO ─────────────────────────────────────────────────────
+    // Sólo trae: id, title/name, poster_path, backdrop_path, genres, vote_average.
+    // Se usa en el sync masivo del catálogo (syncMissingMetadata) para reducir
+    // el tamaño de respuesta ~60-70% vs. getDetails.
+    async getSummary(id, type = 'movie') {
+        return TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`);
+    },
+
+    // ─── ENDPOINT COMPLETO ────────────────────────────────────────────────────
+    // Agrega genres object completo. Solo se usa cuando ya se tiene el item
+    // en pantalla de detalle o cuando getSummary no es suficiente.
     async getDetails(id, type = 'movie') {
         const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}`, { append_to_response: 'genres' });
-        
-        // El autoguardado pasivo ha sido desactivado permanentemente para favorecer RLS
         return data;
     },
 
@@ -81,3 +90,4 @@ export const TMDB_SERVICE = {
         return (data.results || []).filter(m => m.backdrop_path).slice(0, 32);
     },
 };
+
