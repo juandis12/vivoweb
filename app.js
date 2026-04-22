@@ -249,6 +249,41 @@ async function initializeVivotvApp() {
     
     window.VIVOTV_AUTH_INITIALIZED = true;
     isAuthInitializing = false;
+
+    // --- LISTENERS DE SINCRONIZACIÓN REALTIME (Fase Connect) ---
+    _setupGlobalSyncListeners();
+}
+
+/**
+ * CONFIGURACIÓN DE LISTENERS REALTIME PARA UI
+ */
+function _setupGlobalSyncListeners() {
+    // 1. Handover: Continuar viendo desde otro dispositivo
+    window.addEventListener('vivotv:handover', async (e) => {
+        const { tmdb_id, progress, type } = e.detail;
+        
+        // Evitar notificar si ya estamos viendo ese mismo contenido
+        if (window.VIVOTV_PLAYING_ID === tmdb_id.toString()) return;
+
+        // Obtener detalles del contenido para el Toast
+        const details = await TMDB_SERVICE.getDetails(tmdb_id, type || 'movie');
+        const title = details.title || details.name || 'Contenido';
+
+        showToast(`📲 Sigue viendo "${title}" en el segundo ${progress}`, 'info', {
+            action: 'REANUDAR',
+            onClick: () => {
+                // Lógica para abrir el player en esa posición (implementada en ui.js/player.js)
+                if (window.openPlayer) window.openPlayer(tmdb_id, type, progress);
+            }
+        });
+    });
+
+    // 2. Refresh de Favoritos
+    window.addEventListener('vivotv:favs_updated', () => {
+        // El catálogo ya se refresca internamente en catalog.js, 
+        // pero aquí podemos actualizar UI específica si fuera necesario.
+        console.log('[App] UI de favoritos sincronizada.');
+    });
 }
 
 /**

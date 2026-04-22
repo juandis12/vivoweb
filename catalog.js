@@ -235,6 +235,9 @@ export async function fetchAvailableIds(supabase) {
         // Persistir en sesión para navegación SPA rápida
         _saveCatalogToSession(window.DB_CATALOG || []);
 
+        // --- INICIALIZAR REALTIME SYNC (Fase Connect) ---
+        initRealtimeSync(supabase);
+
         await scanAllDBContent(supabase);
 
     } catch (e) {
@@ -243,6 +246,58 @@ export async function fetchAvailableIds(supabase) {
         window.isCatalogSyncing = false;
         if (window.renderDBCategoryRows) window.renderDBCategoryRows();
     }
+}
+
+/**
+ * MOTOR DE SINCRONIZACIÓN REALTIME (Web)
+ */
+let realtimeChannels = [];
+export function initRealtimeSync(supabase) {
+    if (!supabase || realtimeChannels.length > 0) return;
+
+    console.log('[VivoTV] 📡 Activando motor Realtime para Sincronización Total...');
+
+    // 1. Suscripción a Favoritos (Auto-Refresco de Corazones)
+    const favsChannel = supabase.channel('realtime_favs')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_favorites' }, payload => {
+            console.log('[Sync] ⚡ Cambio en favoritos detectado vía Realtime');
+            window.dispatchEvent(new CustomEvent('vivotv:favs_updated', { detail: payload }));
+            // Recargar lista si estamos en la página de favoritos
+            if (document.getElementById('favoritesGrid')) loadMyList(supabase, window.currentProfile, availableIds);
+        })
+        .subscribe();
+
+    // 2. Suscripción a Nuevo Contenido (Notificaciones Push in-app)
+    const contentChannel = supabase.channel('realtime_new_content')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'video_sources' }, payload => {
+            const item = payload.new;
+            console.log('[Sync] 🔥 ¡Nuevo contenido detectado!', item.title || item.tmdb_id);
+            window.dispatchEvent(new CustomEvent('vivotv:new_content', { detail: item }));
+            showToast(`🚀 ¡Nuevo estreno!: ${item.title || 'Contenido recién agregado'}`, 'success');
+            // Añadir al set de disponibilidad sin recargar todo
+            if (item.tmdb_id) {
+                availableIds.add(item.tmdb_id.toString());
+                availableMovies.add(item.tmdb_id.toString());
+            }
+        })
+        .subscribe();
+
+    // 3. Suscripción a Historial (Handover / Continuar Viendo)
+    const historyChannel = supabase.channel('realtime_history')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'watch_history' }, payload => {
+            if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+                const { tmdb_id, progress_seconds, type } = payload.new;
+                if (tmdb_id && progress_seconds > 0) {
+                    console.log(`[Sync] 🕒 Handover Detectado: ${tmdb_id} en ${progress_seconds}s`);
+                    window.dispatchEvent(new CustomEvent('vivotv:handover', { 
+                        detail: { tmdb_id, progress: progress_seconds, type } 
+                    }));
+                }
+            }
+        })
+        .subscribe();
+
+    realtimeChannels.push(favsChannel, contentChannel, historyChannel);
 }
 
 /**
