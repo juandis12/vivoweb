@@ -1189,7 +1189,42 @@ export const PLAYER_LOGIC = {
         return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sc).padStart(2, '0')}` : `${m}:${String(sc).padStart(2, '0')}`;
     },
 
+    forceSaveCurrentProgress() {
+        try {
+            const video = document.getElementById('videoPlayer');
+            if (video && !video.classList.contains('hidden')) {
+                const cur = Math.floor(video.currentTime);
+                if (cur > 0) {
+                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+                    console.log('[Player] Forzado salvado - Nativo:', cur);
+                }
+            }
+
+            if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+                const cur = Math.floor(this.ytPlayer.getCurrentTime());
+                if (cur > 0) {
+                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+                    console.log('[Player] Forzado salvado - YouTube:', cur);
+                }
+            }
+
+            if (this.vimeoPlayer && typeof this.vimeoPlayer.getCurrentTime === 'function') {
+                this.vimeoPlayer.getCurrentTime().then(cur => {
+                    const secs = Math.floor(cur);
+                    if (secs > 0) {
+                        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, secs, _supabase);
+                        console.log('[Player] Forzado salvado - Vimeo:', secs);
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('[Player] Error al forzar salvado:', e);
+        }
+    },
+
     closeModal() {
+        console.log('[Player] Cerrando modal, salvando progreso...');
+        this.forceSaveCurrentProgress();
         this._stopProgressTimer();
         this._stopTrailer();
         this._cancelMarathon();

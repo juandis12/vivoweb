@@ -709,8 +709,11 @@ export async function renderDBCatalog(containerId, filterType = 'all', isAnime =
     // 1. Filtrado Estricto DB-Only
     if (isAnime) {
         items = items.filter(item => {
-            const genres = item.genres || item.genre_ids || [];
-            const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
+            const genresArr = item.genres || item.genre_ids || [];
+            const genreIds = genresArr.map(g => {
+                const id = typeof g === 'object' ? g.id : g;
+                return parseInt(id);
+            });
             const isAnimeContent = genreIds.includes(16) || (item.content_type || '').toLowerCase() === 'anime';
             return isAnimeContent;
         });
