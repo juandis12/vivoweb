@@ -1494,8 +1494,8 @@ nav a.active::after { width: 24px; }
 
 @media (max-width: 600px) {
     .movies-grid, .grid-container {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px 8px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px 12px;
     }
 }
 
@@ -1622,7 +1622,7 @@ nav a.active::after { width: 24px; }
     -webkit-backdrop-filter: blur(40px) saturate(180%) contrast(110%);
     border: 1.2px solid rgba(255, 255, 255, 0.15); /* Borde de luz */
     border-radius: 42px;
-    display: none !important;
+    display: none; /* Se activa vía media query */
     justify-content: space-around;
     align-items: center;
     z-index: 5000;
@@ -1666,17 +1666,26 @@ nav a.active::after { width: 24px; }
     justify-content: center;
     color: rgba(255, 255, 255, 0.4); /* Muted inactive icon */
     text-decoration: none;
-    font-size: 0; /* Ocultamos etiquetas para minimalismo premium */
+    font-size: 0.65rem; /* Pequeño para etiquetas pro */
+    font-weight: 700;
     flex: 1;
     height: 100%;
     z-index: 10;
     transition: all 0.4s var(--ease-smooth);
     -webkit-tap-highlight-color: transparent;
+    gap: 4px;
+}
+
+.mobile-nav-item span {
+    opacity: 0;
+    transform: translateY(5px);
+    transition: all 0.4s var(--ease-spring);
+    pointer-events: none;
 }
 
 .mobile-nav-item svg {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     stroke-width: 2.2;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -1685,8 +1694,13 @@ nav a.active::after { width: 24px; }
     color: #fff; /* Icono activo en blanco puro */
 }
 
+.mobile-nav-item.active span {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .mobile-nav-item.active svg {
-    transform: scale(1.1) translateY(0);
+    transform: scale(1.1) translateY(-2px);
     filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.4));
 }
 
@@ -1969,9 +1983,66 @@ nav a.active::after { width: 24px; }
     text-shadow: 0 0 20px rgba(229, 9, 20, 0.3);
 }
 
-/* ================================================
-   15. MODO MARATÓN (PLAYER NEXT OVERLAY)
- ================================================ */
+/* SMART CONTROLS (SKIP INTRO / NEXT EP / PIP) */
+.skip-intro-btn, .next-episode-btn {
+    position: absolute;
+    bottom: 80px;
+    right: 30px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #000;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.skip-intro-btn.active {
+    display: flex;
+    animation: slideInRight 0.5s forwards;
+}
+
+.next-episode-btn {
+    bottom: 140px; /* Separado del de skip intro si aparecen juntos */
+}
+
+.pip-btn {
+    position: absolute;
+    top: 30px;
+    right: 80px;
+    width: 45px;
+    height: 45px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.pip-btn:hover {
+    background: var(--primary);
+    transform: scale(1.1);
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(50px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
 .marathon-overlay {
     position: absolute; inset: 0; z-index: 200;
     background: rgba(0,0,0,0.85); backdrop-filter: blur(15px);

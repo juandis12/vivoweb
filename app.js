@@ -1443,6 +1443,7 @@ function initAppForPage() {
         // 2. Si ya estamos inicializados, forzar recarga de contenido para la nueva "página"
         if (window.VIVOTV_AUTH_INITIALIZED) {
             populatePageContent();
+            initMobileNavIndicator();
         }
     } catch(e) { fatalLog('Error crítico en inicialización SPA: ' + e.message); }
 
