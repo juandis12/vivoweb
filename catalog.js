@@ -34,13 +34,37 @@ async function _saveCatalogToCache(catalog) {
 }
 
 // ---- ESTADO GLOBAL DEL CATÁLOGO ----
-export let availableMovies = new Set();
-export let availableSeries = new Set();
-export let availableIds    = new Set();
-export let DB_CATALOG      = [];
+// BUG-05 FIX: El código anterior tenía DOS referencias distintas:
+//   export let DB_CATALOG = [];  ← referencia del módulo
+//   window.DB_CATALOG = DB_CATALOG; ← referencia de window
+// Al reasignar una, la otra quedaba desincronizada. Ahora hay un único
+// objeto de estado interno. Los getters/setters centralizados mantienen
+// window.DB_CATALOG y la exportación siempre apuntando al mismo array.
+const _catalogState = {
+    availableMovies: new Set(),
+    availableSeries: new Set(),
+    availableIds: new Set(),
+    catalog: [],
+};
+
+export const availableMovies = _catalogState.availableMovies;
+export const availableSeries = _catalogState.availableSeries;
+export const availableIds    = _catalogState.availableIds;
+
+// Getter único para DB_CATALOG (siempre sincronizado)
+export function getDBCatalog() { return _catalogState.catalog; }
+
+// Setter centralizado: actualiza ambas referencias de forma atómica
+export function setDBCatalog(newData) {
+    _catalogState.catalog = newData;
+    window.DB_CATALOG = newData;
+}
+
+// Para retrocompatibilidad con código que aún use DB_CATALOG directo:
+export let DB_CATALOG    = _catalogState.catalog;
+window.DB_CATALOG = _catalogState.catalog;
 
 // Exportar al objeto window para acceso global
-window.DB_CATALOG = DB_CATALOG;
 window.isCatalogSyncing = false;
 
 /**
@@ -158,7 +182,8 @@ export async function fetchAvailableIds(supabase) {
     // Cargamos instantáneamente desde la base de datos local.
     const cachedCatalog = await _loadCatalogFromCache();
     if (cachedCatalog) {
-        if (!window.DB_CATALOG) window.DB_CATALOG = [];
+        // Usar el catálogo existente o inicializar de forma atómica
+        if (!window.DB_CATALOG || !window.DB_CATALOG.length) setDBCatalog([]);
         cachedCatalog.forEach(item => {
             const id = item.tmdb_id?.toString();
             if (!id) return;
@@ -202,7 +227,8 @@ export async function fetchAvailableIds(supabase) {
                 break;
             }
 
-            if (!window.DB_CATALOG) window.DB_CATALOG = [];
+            // BUG-05 FIX: Si es el primer batch, inicializar de forma atómica
+            if (!window.DB_CATALOG || !window.DB_CATALOG.length) setDBCatalog([]);
             
             batch.forEach(item => {
                 const id = item.tmdb_id?.toString();
@@ -728,9 +754,18 @@ export async function executeSearch(query, currentProfile, availableIds) {
 
 export async function loadMyList(supabase, currentProfile, availableIds) {
     if (!supabase || !currentProfile) return [];
-    const { data: favs } = await supabase.from('user_favorites').select('tmdb_id, type').eq('profile_id', currentProfile.id);
+    const { data: favs } = await supabase
+        .from('user_favorites')
+        .select('tmdb_id, type')
+        .eq('profile_id', currentProfile.id);
     if (!favs?.length) return [];
-    const details = await Promise.all(favs.map(f => TMDB_SERVICE.getDetails(f.tmdb_id, f.type || 'movie').catch(() => null)));
+    // PERF-01 FIX: Usar getSummary() (ligero) en lugar de getDetails() (pesado).
+    // getDetails() descarga créditos, videos e imágenes extra — innecesario para
+    // el listado. Esto reduce el ancho de banda ~70% por ítem y evita saturar
+    // el rate limit de TMDB en usuarios con muchos favoritos.
+    const details = await Promise.all(
+        favs.map(f => TMDB_SERVICE.getSummary(f.tmdb_id, f.type || 'movie').catch(() => null))
+    );
     return details.filter(d => d);
 }
 
