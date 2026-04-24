@@ -501,47 +501,86 @@ export const PLAYER_LOGIC = {
                 };
             }
 
-            // --- SOPORTE HLS (Fase 26) ---
-            if (smartUrl.toLowerCase().includes('.m3u8') && typeof Hls !== 'undefined') {
-                if (Hls.isSupported()) {
-                    this.hls = new Hls({
-                        enableSoftwareAES: true,
-                        autoStartLoad: true,
-                        // Ignorar errores menores de metadatos para evitar saltos al inicio
-                        ignoreDeviceStreamErrors: true,
-                        maxMaxBufferLength: 30
-                    });
-                    this.hls.attachMedia(video);
-                    this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        if (seekSeconds > 0) video.currentTime = seekSeconds;
-                        video.play().catch(e => console.warn('[Player] Autoplay bloqueado:', e));
-                        if (loader) loader.classList.add('hidden');
-                        this._startVideoTracking(video, seekSeconds);
-                    });
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = smartUrl;
-                    video.addEventListener('loadedmetadata', () => {
-                        if (seekSeconds > 0) video.currentTime = seekSeconds;
-                        video.play().catch(e => console.warn('[Player] Autoplay bloqueado:', e));
-                        if (loader) loader.classList.add('hidden');
-                        this._startVideoTracking(video, seekSeconds);
-                    }, { once: true });
-                }
-            } else {
+            // PROBLEMA 3 FIX: el `loadedmetadata` es el lugar correcto para el seek inicial.
+            // El setTimeout en _startVideoTracking también intentaba hacer seek, creando
+            // una race condition. Ahora `loadedmetadata` aplica el seek y le avisa a
+            // _startVideoTracking que NO debe volver a saltar.
+            if (smartUrl.toLowerCase().includes('.m3u8') && typeof Hls !== 'undefined' && Hls.isSupported()) {
+                this.hls = new Hls({
+                    enableSoftwareAES: true,
+                    autoStartLoad: true,
+                    ignoreDeviceStreamErrors: true,
+                    maxMaxBufferLength: 30
+                });
+                this.hls.attachMedia(video);
+                this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    if (seekSeconds > 0) {
+                        video.currentTime = seekSeconds;
+                        console.log(`[Player] HLS Seek aplicado: ${seekSeconds}s`);
+                    }
+                    video.play().catch(e => console.warn('[Player] Autoplay bloqueado:', e));
+                    if (loader) loader.classList.add('hidden');
+                    this._startVideoTracking(video, seekSeconds, true); // seekAlreadyApplied=true
+                });
+                this.hls.loadSource(smartUrl);
+            } else if (smartUrl.toLowerCase().includes('.m3u8') && video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Safari nativo sin HLS.js
                 video.src = smartUrl;
                 video.addEventListener('loadedmetadata', () => {
-                    if (seekSeconds > 0) {
-                        console.log(`[Player] Sincronización Inicial (Reloj Maestro): ${seekSeconds}s`);
-                        video.currentTime = seekSeconds;
-                    }
+                    if (seekSeconds > 0) video.currentTime = seekSeconds;
+                    video.play().catch(e => console.warn('[Player] Autoplay bloqueado:', e));
+                    if (loader) loader.classList.add('hidden');
+                    this._startVideoTracking(video, seekSeconds, true); // seekAlreadyApplied=true
+                }, { once: true });
+            } else {
+                // ── HTTPS STREAMS (y MP4/WebM sin extensión) ──────────────────────────
+                // Las URLs tipo https://server.com/video/abc (sin extensión) entran aquí.
+                // El seek funciona SOLO si el servidor soporta HTTP Range Requests
+                // (header: Accept-Ranges: bytes). Si no lo soporta, video.currentTime
+                // vuelve a 0 silenciosamente. Usamos verificación de seekable + retry.
+                video.src = smartUrl;
+
+                video.addEventListener('loadedmetadata', () => {
                     video.play().catch(e => {
-                        console.warn("[Player] Autoplay bloqueado, requiere clic inicial", e);
+                        console.warn("[Player] Autoplay bloqueado, requiere clic inicial:", e);
                         if (loader) loader.innerHTML = '<div class="play-hint">▶ CARGANDO SEÑAL...</div>';
                     });
+
+                    if (seekSeconds > 0) {
+                        // Intentar seek inmediato
+                        video.currentTime = seekSeconds;
+
+                        // Verificar después de 800ms si el seek fue efectivo
+                        setTimeout(() => {
+                            const actual = Math.floor(video.currentTime);
+                            const expected = seekSeconds;
+                            const seekWorked = Math.abs(actual - expected) < 5;
+
+                            if (seekWorked) {
+                                console.log(`[Player] ✅ Seek HTTPS exitoso: ${actual}s`);
+                                showToast("Reanudando desde donde te quedaste...", "info");
+                            } else {
+                                // El servidor no soporta Range Requests — seek no funciona
+                                console.warn(`[Player] ⚠️ Servidor no soporta seek (actual=${actual}s, expected=${expected}s)`);
+                                // Intentar una vez más por si el stream aún estaba buffering
+                                video.currentTime = seekSeconds;
+                                setTimeout(() => {
+                                    const actual2 = Math.floor(video.currentTime);
+                                    if (Math.abs(actual2 - expected) < 5) {
+                                        showToast("Reanudando desde donde te quedaste...", "info");
+                                    } else {
+                                        // Informar al usuario sin romper la reproducción
+                                        showToast(`▶ Reproduciendo desde el inicio (el servidor no permite reanudar)`, "warning");
+                                        console.warn('[Player] ❌ Seek no disponible en este servidor de streaming.');
+                                    }
+                                }, 1500);
+                            }
+                        }, 800);
+                    }
                 }, { once: true });
 
                 if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
-                this._startVideoTracking(video, seekSeconds);
+                this._startVideoTracking(video, seekSeconds, true);
             }
         }
     },
@@ -592,22 +631,26 @@ export const PLAYER_LOGIC = {
         return cleanUrl;
     },
 
-    _startVideoTracking(video, seek) {
-        let hasJumped = seek <= 0;
+    _startVideoTracking(video, seek, seekAlreadyApplied = false) {
+        let hasJumped = seek <= 0 || seekAlreadyApplied;
         let lastSavedTime = -1;
 
         // --- SALTO INTELIGENTE (Auto-Resume) ---
-        // Fase 10X UX: Delay reducido para fluidez
-        if (seek > 0) {
-            const delay = 2000; 
-            console.log(`[VivoTV] Programando salto de progreso (${seek}s) en ${delay/1000}s...`);
+        // PROBLEMA 3 FIX: Solo volvemos a saltar si `loadedmetadata` NO lo hizo ya.
+        // Esto evita la race condition entre el handler del evento y el setTimeout.
+        if (seek > 0 && !seekAlreadyApplied) {
+            const delay = 1500; 
+            console.log(`[VivoTV] Programando seek de seguridad (${seek}s) en ${delay/1000}s...`);
             setTimeout(() => {
-                if (video && (video.readyState >= 1 || !video.paused)) {
+                if (video && !hasJumped && (video.readyState >= 1 || !video.paused)) {
                     video.currentTime = seek;
                     hasJumped = true;
                     showToast("Reanudando desde donde te quedaste...", "info");
                 }
             }, delay);
+        } else if (seek > 0 && seekAlreadyApplied) {
+            hasJumped = true;
+            showToast("Reanudando desde donde te quedaste...", "info");
         }
 
         // --- SISTEMA DE TELEMETRÍA GLOBAL (Para Watch Party) ---
@@ -693,18 +736,26 @@ export const PLAYER_LOGIC = {
                 }
             }
 
-            // Detección de Intro (Primeros 3 minutos)
+            // PROBLEMA 4 FIX: Detección de Intro SOLO en los primeros 60 segundos reales.
+            // El umbral anterior era 180s (3 minutos) — si el usuario reanudaba en el
+            // minuto 1:30, el botón aparecía igual aunque ya hubiera pasado la intro.
+            // Ahora usamos 60s como límite superior de la zona de intro, lo cual es
+            // más conservador y evita el falso positivo en resumes.
             const skipBtn = document.getElementById('btnSkipIntro');
-            if (cur > 10 && cur < 180) {
+            const isInIntroZone = cur > 10 && cur < 60;
+
+            if (isInIntroZone) {
                 if (skipBtn && !skipBtn.classList.contains('active')) {
                     skipBtn.classList.add('active');
-                    // AUTO-SKIP SOLICITADO: Saltar solo tras 10s
+                    // AUTO-SKIP: Solo salta si el usuario sigue en la zona de intro 8s después
+                    // (no saltar si ya superó los 60s por seek/resume entre tanto)
                     setTimeout(() => {
-                        if (skipBtn.classList.contains('active')) {
+                        const curNow = Math.floor(video.currentTime);
+                        if (skipBtn.classList.contains('active') && curNow < 60) {
                             skipBtn.click();
                             showToast("Intro saltada automáticamente", "info");
                         }
-                    }, 10000);
+                    }, 8000);
                 }
             } else {
                 skipBtn?.classList.remove('active');
