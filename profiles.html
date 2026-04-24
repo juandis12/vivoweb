@@ -1563,6 +1563,7 @@
             // --- SESIÓN PERSISTENTE (Fase 2: Usabilidad) ---
             localStorage.removeItem('vivotv_current_profile');
             localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
+            sessionStorage.setItem('vivotv_profile_chosen', 'true');
             window.location.href = 'index.html';
         };
 
@@ -1732,6 +1733,7 @@
             } else {
                 // Seleccionar e ir al index
                 localStorage.setItem('vivotv_current_profile', JSON.stringify(data));
+                sessionStorage.setItem('vivotv_profile_chosen', 'true');
                 window.location.href = 'index.html';
             }
         };

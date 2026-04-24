@@ -443,6 +443,8 @@ async function syncMissingMetadata() {
 
             if (details && details.id) {
                 window.DB_CATALOG.push(details);
+                // Trigger re-render of DB rows if we are on index to show newly identified animes
+                if (window.renderDBCategoryRows) window.renderDBCategoryRows();
             }
         } catch (e) {
             // Error silencioso para no bloquear el pool
@@ -707,7 +709,10 @@ export async function renderDBCatalog(containerId, filterType = 'all', isAnime =
     // 1. Filtrado Estricto DB-Only
     if (isAnime) {
         items = items.filter(item => {
-            return validateContentType(item, 'tv');
+            const genres = item.genres || item.genre_ids || [];
+            const genreIds = genres.map(g => typeof g === 'object' ? g.id : g);
+            const isAnimeContent = genreIds.includes(16) || (item.content_type || '').toLowerCase() === 'anime';
+            return isAnimeContent;
         });
     } else if (filterType !== 'all') {
         items = items.filter(item => {

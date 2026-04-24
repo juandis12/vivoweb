@@ -241,6 +241,19 @@ async function initializeVivotvApp() {
     // Manejar estado inicial
     if (user) {
         console.log('[VivoTV] ✅ Sesión recuperada.');
+        
+        // --- MOTOR DE PERFILES 10X: Forzar selección de perfil al abrir/entrar ---
+        // Usamos sessionStorage para que si el usuario cierra la pestaña o abre una nueva,
+        // siempre se le pregunte "¿Quién está viendo?", cumpliendo con el estándar Netflix.
+        const isProfileChosenInSession = sessionStorage.getItem('vivotv_profile_chosen');
+        const isOnProfilesPage = window.location.pathname.includes('profiles.html');
+
+        if (!isProfileChosenInSession && !isOnProfilesPage) {
+            console.log('[VivoTV] 🔀 Redirigiendo a perfiles (Selección obligatoria)');
+            window.location.href = 'profiles.html';
+            return;
+        }
+
         await toDashboard(user, authProfile);
     } else {
         console.log('[VivoTV] ℹ️ Sin sesión activa.');
