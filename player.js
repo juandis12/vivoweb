@@ -717,8 +717,11 @@ export const PLAYER_LOGIC = {
             this._stopProgressTimer();
 
             if (this.currentType === 'tv') {
-                const nextEp = this._getNextEpisode();
-                if (nextEp) this._showMarathonCountdown(nextEp, _supabase);
+                // BUG FIX: _getNextEpisode es async — se necesita .then()
+                // Antes se llamaba sin await, recibiendo una Promise en vez del episodio.
+                this._getNextEpisode().then(nextEp => {
+                    if (nextEp) this._showMarathonCountdown(nextEp, _supabase);
+                });
             }
         };
 
@@ -1209,6 +1212,23 @@ export const PLAYER_LOGIC = {
         skipBtn.innerHTML = `<span>Saltar Intro</span> <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`;
         container.appendChild(skipBtn);
 
+        // BUG FIX: Botón "Siguiente Episodio" que aparece 2 minutos antes de terminar
+        // Este botón existía en la lógica de ontimeupdate pero NUNCA se creaba en el DOM.
+        const nextEpBtn = document.createElement('button');
+        nextEpBtn.id = 'btnNextEpisode';
+        nextEpBtn.className = 'next-episode-btn';
+        nextEpBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg> <span>Siguiente Episodio</span>`;
+        nextEpBtn.style.cssText = `
+            position: absolute; bottom: 70px; right: 20px;
+            background: #fff; color: #000; border: none;
+            padding: 10px 20px; border-radius: 6px;
+            font-size: 14px; font-weight: 700;
+            cursor: pointer; display: none; align-items: center;
+            gap: 8px; z-index: 100; opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        container.appendChild(nextEpBtn);
+
         // Botón PiP
         const pipBtn = document.createElement('div');
         pipBtn.id = 'btnPiP';
@@ -1223,6 +1243,26 @@ export const PLAYER_LOGIC = {
             skipBtn.classList.remove('active');
             showToast("Intro saltada", "info");
         };
+        nextEpBtn.onclick = () => {
+            this._cancelMarathon();
+            this.playNextEpisode();
+        };
+    },
+
+    // BUG FIX: estos métodos eran llamados en ontimeupdate pero no estaban definidos
+    // causando un crash silencioso de JS cada segundo durante la reproducción.
+    _showNextEpisodeButton() {
+        const btn = document.getElementById('btnNextEpisode');
+        if (!btn || btn.style.opacity === '1') return;
+        btn.style.display = 'flex';
+        requestAnimationFrame(() => { btn.style.opacity = '1'; });
+    },
+
+    _hideNextEpisodeButton() {
+        const btn = document.getElementById('btnNextEpisode');
+        if (!btn) return;
+        btn.style.opacity = '0';
+        setTimeout(() => { btn.style.display = 'none'; }, 300);
     },
 
     async togglePiP() {
