@@ -68,6 +68,7 @@ let searchTimeout   = null;
 let lastSearchResults = [];
 let currentFilter     = 'all';
 let pendingPartyId    = new URLSearchParams(window.location.search).get('party') || sessionStorage.getItem('vivotv_pending_party_id');
+if (pendingPartyId === 'null') pendingPartyId = null;
 if (pendingPartyId) sessionStorage.setItem('vivotv_pending_party_id', pendingPartyId);
 
 window.VIVOTV_VIEWING_STATUS = null; 
