@@ -28,6 +28,8 @@ import {
 import { WatchPartyGuide } from './watch-party-guide.js';
 
 
+
+
 // Usar instancia única centralizada
 if (supabase) {
     setSupabase(supabase);
@@ -302,8 +304,13 @@ function _setupGlobalSyncListeners() {
     });
 
     // 3. Inicializar Guía de Watch Party
-    initWatchPartyGuide();
+    try {
+        initWatchPartyGuide();
+    } catch (e) {
+        console.warn('[WatchParty] Error inicializando guía:', e);
+    }
 }
+
 
 /**
  * INICIALIZA LA GUÍA DE WATCH PARTY (BOTÓN FLOTANTE)
@@ -315,7 +322,11 @@ function initWatchPartyGuide() {
                           document.body.classList.contains('page-anime') ||
                           window.location.pathname.includes('peliculas.html') ||
                           window.location.pathname.includes('series.html') ||
-                          window.location.pathname.includes('anime.html');
+                          window.location.pathname.includes('anime.html') ||
+                          window.location.pathname.endsWith('index.html') ||
+                          window.location.pathname === '/' ||
+                          window.location.pathname === '';
+
 
     if (!isContentPage) return;
 
