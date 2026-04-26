@@ -660,9 +660,10 @@ async function toDashboard(user, profile) {
 
         // --- FASE 4: AUTO JOIN WATCH PARTY DESPUÉS DEL LOGIN ---
         if (typeof pendingPartyId !== 'undefined' && pendingPartyId) {
+            const capturedPartyId = pendingPartyId; // CLAVE: Capturar la variable antes de que sea borrada por el hilo principal
             import('./watch-party-ui.js').then(module => {
-                console.log('[App] Resolviendo invitación a Watch Party:', pendingPartyId);
-                module.joinPartyFromUrl(pendingPartyId);
+                console.log('[App] Resolviendo invitación a Watch Party:', capturedPartyId);
+                module.joinPartyFromUrl(capturedPartyId);
             }).catch(e => console.error('[App] Error al cargar Watch Party UI:', e));
             pendingPartyId = null;
             sessionStorage.removeItem('vivotv_pending_party_id');
