@@ -681,6 +681,12 @@ export const PLAYER_LOGIC = {
         video.addEventListener('pause', updateTelemetry);
         video.addEventListener('play', updateTelemetry);
 
+        // --- WATCH PARTY FAST SYNC (Eventos Inmediatos) ---
+        const fireForceSync = () => window.dispatchEvent(new CustomEvent('vivotv:force_party_sync'));
+        video.addEventListener('seeked', fireForceSync);
+        video.addEventListener('play', fireForceSync);
+        video.addEventListener('pause', fireForceSync);
+
         this._createSmartControls();
         video.play().catch(() => {});
         

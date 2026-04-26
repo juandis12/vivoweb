@@ -40,6 +40,15 @@ export async function joinPartyFromUrl(partyId) {
     // Abrir el detalle del contenido automáticamente
     await PLAYER_LOGIC.openDetail(party.tmdb_id, party.media_type, supabase);
     
+    // Forzar inicio de reproducción automático
+    setTimeout(() => {
+        const playBtn = document.getElementById('btnModalPlay');
+        if (playBtn) {
+            console.log('[WatchParty] Iniciando reproductor automáticamente para invitado.');
+            playBtn.click();
+        }
+    }, 1000);
+    
     // Inyectar estado visual de sala
     showPartyHUD(party.creator_name);
 }
@@ -73,7 +82,54 @@ function showPartyHUD(hostName, partyId = null) {
         hud = document.createElement('div');
         hud.id = 'partyHUD';
         hud.className = 'glass-floating-card party-hud';
+        // Configuración inicial de posición (arriba a la derecha)
+        hud.style.position = 'fixed';
+        hud.style.top = '20px';
+        hud.style.right = '20px';
+        hud.style.bottom = 'auto';
+        hud.style.cursor = 'move';
+        hud.style.zIndex = '2147483647';
         document.body.appendChild(hud);
+        
+        // --- LÓGICA DRAGGABLE (Arrastrable HUD) ---
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        const dragStart = (e) => {
+            if (e.target.closest('button')) return; // No arrastrar si presiona un botón
+            initialX = e.type === "touchstart" ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+            initialY = e.type === "touchstart" ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+            isDragging = true;
+        };
+
+        const dragEnd = () => {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        };
+
+        const drag = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.type === "touchmove" ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                currentY = e.type === "touchmove" ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+                hud.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+            }
+        };
+
+        hud.addEventListener("touchstart", dragStart, { passive: false });
+        hud.addEventListener("touchend", dragEnd, { passive: false });
+        hud.addEventListener("touchmove", drag, { passive: false });
+        hud.addEventListener("mousedown", dragStart);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("mousemove", drag);
     }
 
     hud.innerHTML = `
@@ -135,14 +191,29 @@ export function startHostSyncLoop() {
     if (syncInterval) clearInterval(syncInterval);
     
     syncInterval = setInterval(() => {
-        if (PLAYER_LOGIC && PLAYER_LOGIC.getCurrentPlaybackState) {
-            const state = PLAYER_LOGIC.getCurrentPlaybackState();
-            if (state) {
-                manager.broadcastSync(state.currentTime, state.isPlaying);
-            }
-        }
-    }, 2000); // Sincronizar cada 2 segundos
+        executeImmediateSync();
+    }, 2000);
 }
+
+/**
+ * Ejecuta una sincronización inmediata (Usado para saltos rápidos)
+ */
+export function executeImmediateSync() {
+    const manager = getManager();
+    if (!manager || !manager.isHost) return;
+
+    if (PLAYER_LOGIC && PLAYER_LOGIC.getCurrentPlaybackState) {
+        const state = PLAYER_LOGIC.getCurrentPlaybackState();
+        if (state) {
+            manager.broadcastSync(state.currentTime, state.isPlaying);
+        }
+    }
+}
+
+// Listener global para Forzar saltos instantáneos (Skips/Ads)
+window.addEventListener('vivotv:force_party_sync', () => {
+    executeImmediateSync();
+});
 
 /**
  * Escuchador Global de Emotes: Renderiza el globo flotante

@@ -654,6 +654,15 @@ async function toDashboard(user, profile) {
         
         // Poblar contenido inicial
         await populatePageContent();
+
+        // --- FASE 4: AUTO JOIN WATCH PARTY DESPUÉS DEL LOGIN ---
+        if (typeof pendingPartyId !== 'undefined' && pendingPartyId) {
+            import('./watch-party-ui.js').then(module => {
+                console.log('[App] Resolviendo invitación a Watch Party:', pendingPartyId);
+                module.joinPartyFromUrl(pendingPartyId);
+            }).catch(e => console.error('[App] Error al cargar Watch Party UI:', e));
+            pendingPartyId = null; // Consumirlo para evitar re-loops
+        }
     } catch (e) {
         console.error('[Dashboard] Error en inicialización:', e);
     }
