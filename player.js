@@ -175,6 +175,8 @@ export const PLAYER_LOGIC = {
                 playerContainer.classList.add('hidden');
                 videoPlayer.pause();
                 videoIframe.src = '';
+                const helpBtn = document.getElementById('watchPartyHelpBtn');
+                if (helpBtn) helpBtn.style.display = 'flex';
             };
 
             this.checkIfFavorite(supabaseClient);
@@ -448,6 +450,10 @@ export const PLAYER_LOGIC = {
         }
 
         container.classList.remove('hidden');
+        if (container.id === 'playerContainer') {
+            const helpBtn = document.getElementById('watchPartyHelpBtn');
+            if (helpBtn) helpBtn.style.display = 'none';
+        }
         if (loader) loader.classList.remove('hidden');
 
         // Determinar título para telemetría
