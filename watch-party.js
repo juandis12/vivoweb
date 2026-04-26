@@ -100,6 +100,13 @@ export class WatchPartyManager {
                     this.onSyncCallback(payload);
                 }
             })
+            .on('broadcast', { event: 'end_party' }, () => {
+                if (!this.isHost) {
+                    console.log('[WatchParty] El host cerró la sala. Desconectando...');
+                    this.leaveParty(); // Se sale automáticamente
+                    window.dispatchEvent(new CustomEvent('vivotv:party_ended'));
+                }
+            })
             .on('broadcast', { event: 'emote' }, ({ payload }) => {
                 // Dispara un evento global para que la UI lo dibuje en pantalla
                 window.dispatchEvent(new CustomEvent('vivotv:party_emote', { detail: payload }));
@@ -158,10 +165,23 @@ export class WatchPartyManager {
     }
 
     /**
+     * El HOST envía una señal de cierre a todos los invitados justo antes de salir
+     */
+    broadcastEndParty() {
+        if (!this.isHost || !this.currentChannel) return;
+        this.currentChannel.send({
+            type: 'broadcast',
+            event: 'end_party',
+            payload: { timestamp: Date.now() }
+        });
+    }
+
+    /**
      * Cierra la sala
      */
     async leaveParty() {
         if (this.isHost && this.currentPartyId) {
+            this.broadcastEndParty(); // Avisar a invitados antes de destruir
             await this.supabase.from('vivotv_watch_parties').delete().eq('id', this.currentPartyId);
         }
         
@@ -172,6 +192,9 @@ export class WatchPartyManager {
         this.currentPartyId = null;
         this.currentChannel = null;
         this.isHost = false;
+        
+        // CustomEvent para notificar a la UI web
+        window.dispatchEvent(new CustomEvent('vivotv:party_left'));
         showToast('Has salido de la sala');
     }
 }

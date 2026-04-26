@@ -2,7 +2,7 @@
 // Este archivo actúa como un proxy para ocultar la TMDB_API_KEY
 export default async function handler(req, res) {
     const { path, ...params } = req.query;
-    
+
     // Configurar CORS básico
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -19,12 +19,12 @@ export default async function handler(req, res) {
             // Autorizados: Localhost y tus dominios de prod (ej. miservidor-vivoweb.vercel.app)
             const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
             const extendsVivoweb = hostname.includes('vivoweb'); // Si usas Vercel con ramas automáticas
-            
+
             if (!isLocal && !extendsVivoweb) {
                 console.warn('🛡️ CORS Bloqueado para hostname:', hostname);
                 return res.status(403).json({ error: 'Acceso no autorizado (CORS estricto).' });
             }
-        } catch(e) {
+        } catch (e) {
             return res.status(403).json({ error: 'Origen inválido.' });
         }
     }
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
     const API_KEY = process.env.TMDB_API_KEY;
     if (!API_KEY) {
-        return res.status(500).json({ 
+        return res.status(500).json({
             error: 'TMDB_API_KEY no configurada en Vercel',
             tip: 'Debes añadir TMDB_API_KEY en el panel de Vercel > Settings > Environment Variables'
         });
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         const tmdbUrl = `${baseUrl}/${path}?${queryParams}`;
         const response = await fetch(tmdbUrl);
         const data = await response.json();
-        
+
         return res.status(response.status).json(data);
     } catch (error) {
         console.error('Proxy Error:', error);

@@ -244,6 +244,24 @@ window.addEventListener('vivotv:force_party_sync', () => {
     executeImmediateSync();
 });
 
+// Listener global cuando el Host destruye la sala de forma remota
+window.addEventListener('vivotv:party_ended', () => {
+    showToast('El Host ha cerrado la sala. Desconectando...', 'warning');
+    const hud = document.getElementById('partyHUD');
+    if (hud) hud.remove();
+    if (syncInterval) clearInterval(syncInterval);
+    if (PLAYER_LOGIC && PLAYER_LOGIC.closeModal) {
+        PLAYER_LOGIC.closeModal();
+    }
+});
+
+// Listener global cuando el Host se sale voluntariamente de su propia sala
+window.addEventListener('vivotv:party_left', () => {
+    if (syncInterval) clearInterval(syncInterval);
+    const hud = document.getElementById('partyHUD');
+    if (hud) hud.remove();
+});
+
 /**
  * Escuchador Global de Emotes: Renderiza el globo flotante
  */
