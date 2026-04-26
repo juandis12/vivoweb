@@ -26,10 +26,25 @@ function getManager() {
  * Lógica para unirse desde una URL (Llamada desde app.js)
  */
 export async function joinPartyFromUrl(partyId) {
+    if (!partyId) return;
+    
+    // Corregir strings malformadas que WhatsApp o navegadores dañan
+    let cleanId = partyId.replace(/[^a-zA-Z0-9-]/g, '').trim(); 
+    if (cleanId.length === 32 && !cleanId.includes('-')) {
+        // Re-injectar guiones si se perdieron
+        cleanId = cleanId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+    }
+
+    const profile = getSessionProfile();
+    if (!profile) {
+        showToast('Debes seleccionar un perfil primero para unirte', 'warning');
+        return;
+    }
+
     const manager = getManager();
     if (!manager) return;
 
-    const party = await manager.joinParty(partyId);
+    const party = await manager.joinParty(cleanId);
     if (!party) return;
 
     // Configurar el listener de sincronización
