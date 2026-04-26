@@ -95,6 +95,9 @@ export async function createPartyUI(tmdbId, mediaType) {
             showToast('Enlace de invitación copiado al portapapeles', 'info');
         });
 
+        // ENCENDER EL FARO (Loop de Sincronización)
+        startHostSyncLoop();
+
         showPartyHUD('Tú (Host)', partyId);
     }
 }

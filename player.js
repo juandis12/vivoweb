@@ -734,9 +734,13 @@ export const PLAYER_LOGIC = {
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
 
         // Guardado al pausar (Event Driven)
-        video.onpause = () => { doSave(); };
-
         // Guardado al terminar + Siguiente Episodio
+        // --- EVENTOS WATCH PARTY (Sincronización Instantánea) ---
+        const forceSync = () => window.dispatchEvent(new CustomEvent('vivotv:force_party_sync'));
+        video.onplay = () => { forceSync(); };
+        video.onpause = () => { doSave(); forceSync(); };
+        video.onseeked = () => { forceSync(); };
+
         video.onended = () => {
             doSave();
             this._stopProgressTimer();
