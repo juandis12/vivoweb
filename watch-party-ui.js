@@ -37,7 +37,7 @@ export async function joinPartyFromUrl(partyId) {
         cleanId = cleanId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
     }
 
-    const profile = getSessionProfile();
+    const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
     if (!profile) {
         showToast('Debes seleccionar un perfil primero para unirte', 'warning');
         return;
