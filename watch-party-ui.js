@@ -28,6 +28,8 @@ function getManager() {
 export async function joinPartyFromUrl(partyId) {
     if (!partyId) return;
     
+    showToast('Resolviendo enlace de Watch Party...', 'info');
+
     // Corregir strings malformadas que WhatsApp o navegadores dañan
     let cleanId = partyId.replace(/[^a-zA-Z0-9-]/g, '').trim(); 
     if (cleanId.length === 32 && !cleanId.includes('-')) {
@@ -42,7 +44,10 @@ export async function joinPartyFromUrl(partyId) {
     }
 
     const manager = getManager();
-    if (!manager) return;
+    if (!manager) {
+        showToast('Error interno: Manager no inicializado.', 'error');
+        return;
+    }
 
     const party = await manager.joinParty(cleanId);
     if (!party) return;
@@ -52,17 +57,23 @@ export async function joinPartyFromUrl(partyId) {
         handleReceivedSync(payload);
     });
 
+    console.log('[WatchParty] Abriendo contenido:', party.tmdb_id, party.media_type);
+    showToast('Sala encontrada. Abriendo reproductor...', 'success');
+    
     // Abrir el detalle del contenido automáticamente
     await PLAYER_LOGIC.openDetail(party.tmdb_id, party.media_type, supabase);
     
-    // Forzar inicio de reproducción automático
+    // Empezar cuenta regresiva visual para bypass de autoplay
     setTimeout(() => {
         const playBtn = document.getElementById('btnModalPlay');
         if (playBtn) {
-            console.log('[WatchParty] Iniciando reproductor automáticamente para invitado.');
+            console.log('[WatchParty] Simulando Play Button para sincronizar.');
             playBtn.click();
+        } else {
+            console.error('[WatchParty] No se encontró btnModalPlay');
+            showToast('Pulsa el botón Reproducir para sincronizarte', 'info');
         }
-    }, 1000);
+    }, 1500);
     
     // Inyectar estado visual de sala
     showPartyHUD(party.creator_name);
