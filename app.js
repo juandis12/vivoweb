@@ -67,11 +67,13 @@ let heroItems   = [];
 let searchTimeout   = null;
 let lastSearchResults = [];
 let currentFilter     = 'all';
-let pendingPartyId    = new URLSearchParams(window.location.search).get('party'); // FASE 4: Capturar invitación
+let pendingPartyId    = new URLSearchParams(window.location.search).get('party') || sessionStorage.getItem('vivotv_pending_party_id');
+if (pendingPartyId) sessionStorage.setItem('vivotv_pending_party_id', pendingPartyId);
+
 window.VIVOTV_VIEWING_STATUS = null; 
 let currentProfile = null;
 let heartbeatTimer = null;
-let isPopulating = false; // Guard para evitar sobre-población SPA
+let isPopulating = false;
 
 // El estado y validaciones ahora se importan de catalog.js para consistencia SPA
 const getAvailableIds = () => window.availableIds || new Set();
@@ -661,7 +663,8 @@ async function toDashboard(user, profile) {
                 console.log('[App] Resolviendo invitación a Watch Party:', pendingPartyId);
                 module.joinPartyFromUrl(pendingPartyId);
             }).catch(e => console.error('[App] Error al cargar Watch Party UI:', e));
-            pendingPartyId = null; // Consumirlo para evitar re-loops
+            pendingPartyId = null;
+            sessionStorage.removeItem('vivotv_pending_party_id');
         }
     } catch (e) {
         console.error('[Dashboard] Error en inicialización:', e);

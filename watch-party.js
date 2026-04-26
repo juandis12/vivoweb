@@ -54,13 +54,22 @@ export class WatchPartyManager {
      */
     async joinParty(partyId) {
         try {
+            console.log(`[WatchParty] Intentando unirse a sala: ${partyId}`);
+            
             const { data, error } = await this.supabase
                 .from('vivotv_watch_parties')
                 .select('*')
                 .eq('id', partyId)
-                .single();
+                .maybeSingle();
 
-            if (error || !data) throw new Error('La sala no existe');
+            if (error) {
+                console.error('[WatchParty] Error de Supabase al leer la sala:', error);
+                throw new Error('Error al buscar la sala en la base de datos (Posible RLS o permisos)');
+            }
+            if (!data) {
+                console.error('[WatchParty] La sala no existe o ya fue eliminada por el host.');
+                throw new Error('La sala no existe o fue eliminada');
+            }
 
             this.currentPartyId = partyId;
             this.isHost = false;
@@ -69,6 +78,7 @@ export class WatchPartyManager {
             showToast(`Unido a la sala de ${data.creator_name}`, 'success');
             return data;
         } catch (e) {
+            console.error('[WatchParty] Error en joinParty:', e.message || e);
             showToast('No se pudo unir a la sala', 'error');
             return null;
         }
