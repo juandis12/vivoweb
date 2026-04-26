@@ -148,14 +148,27 @@ export const PLAYER_LOGIC = {
                 }
             };
             
-            // FASE 4: Evento de Watch Party
-            const btnWP = document.getElementById('btnWatchParty');
-            if (btnWP) {
-                btnWP.onclick = async () => {
+            // FASE 4: Evento de Watch Party (vincular al botón Compartir)
+            const btnShareList = document.querySelectorAll('.btn-share');
+            btnShareList.forEach(btnShare => {
+                // Clonar para limpiar eventos previos
+                const newBtnShare = btnShare.cloneNode(true);
+                
+                // Actualizar visualmente para que sea obvio que es de Watch Party
+                newBtnShare.innerHTML = `<span style="font-size:1.2rem; margin-right:8px;">🎉</span> Iniciar Watch Party`;
+                newBtnShare.style.background = 'linear-gradient(135deg, rgba(88, 28, 135, 0.8), rgba(126, 34, 206, 0.9))';
+                newBtnShare.style.border = '1px solid rgba(216, 180, 254, 0.5)';
+                newBtnShare.style.boxShadow = '0 10px 20px rgba(126, 34, 206, 0.4)';
+                
+                btnShare.parentNode.replaceChild(newBtnShare, btnShare);
+                
+                newBtnShare.onclick = async () => {
+                    showToast('Creando sala de Watch Party...', 'info');
                     const { createPartyUI } = await import('./watch-party-ui.js');
                     createPartyUI(tmdbId, type);
                 };
-            }
+            });
+
 
             const btnExit = document.getElementById('btnExitPlayer');
             btnExit.onclick = () => {
