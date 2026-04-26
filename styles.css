@@ -3142,3 +3142,142 @@ nav a.active::after { width: 24px; }
         opacity: 0;
     }
 }
+
+/* ================================================
+   31. TOUR INTERACTIVO (WATCH PARTY GUIDE)
+ ================================================ */
+.guide-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(4, 4, 12, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.guide-modal {
+    background: var(--surface-low);
+    background: linear-gradient(135deg, var(--surface-low) 0%, #131a33 100%);
+    width: 100%; max-width: 420px;
+    border-radius: 24px;
+    position: relative;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 30px var(--primary-glow);
+    overflow: hidden;
+    animation: slideUp 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.guide-close {
+    position: absolute; top: 16px; right: 20px;
+    background: none; border: none; color: #fff;
+    font-size: 2rem; cursor: pointer; opacity: 0.6;
+    transition: opacity 0.2s; z-index: 10;
+}
+.guide-close:hover { opacity: 1; }
+
+.guide-content {
+    padding: 40px 30px 20px;
+    text-align: center;
+}
+
+.guide-img-container {
+    width: 120px; height: 120px;
+    margin: 0 auto 30px;
+    background: var(--primary-glow);
+    border-radius: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--primary);
+    box-shadow: 0 0 40px var(--primary-glow);
+}
+
+.guide-img {
+    width: 80px; height: 80px; object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+}
+
+.guide-title {
+    font-size: 1.6rem; font-weight: 800; margin-bottom: 15px;
+    background: linear-gradient(to bottom, #fff 60%, #cbd5e1 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.guide-text {
+    color: var(--text-secondary); font-size: 1.05rem; line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.guide-dots {
+    display: flex; justify-content: center; gap: 8px; margin-bottom: 10px;
+}
+.guide-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+}
+.guide-dot.active {
+    width: 24px; border-radius: 10px;
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.guide-footer {
+    padding: 0 30px 40px;
+    display: flex; flex-direction: column; gap: 20px;
+}
+
+.guide-nav-buttons {
+    display: flex; gap: 12px;
+}
+
+.btn-guide {
+    padding: 12px 20px; border-radius: 12px;
+    font-weight: 700; font-size: 0.95rem; border: none;
+    cursor: pointer; transition: all 0.2s;
+}
+
+.btn-prev {
+    flex: 1; background: rgba(255,255,255,0.1); color: white;
+}
+.btn-next {
+    flex: 2; background: var(--primary); color: white;
+    box-shadow: 0 8px 20px var(--primary-glow);
+}
+.btn-next:hover { transform: scale(1.02); filter: brightness(1.1); }
+
+.btn-skip {
+    background: none; color: var(--text-muted); font-size: 0.85rem;
+    text-decoration: underline; opacity: 0.7;
+}
+.btn-skip:hover { opacity: 1; }
+
+.btn-help-floating {
+    position: fixed; bottom: 100px; right: 30px;
+    width: 60px; height: 60px; border-radius: 20px;
+    background: var(--surface-highest);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 900;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+.btn-help-floating:hover {
+    transform: scale(1.1) translateY(-5px);
+    border-color: var(--primary);
+    box-shadow: 0 15px 40px var(--primary-glow);
+}
+.btn-help-floating img { width: 35px; height: 35px; object-fit: contain; }
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+}
+.fade-out { animation: fadeIn 0.3s ease reverse forwards; }
+
+@media (max-width: 600px) {
+    .btn-help-floating { bottom: 90px; right: 20px; width: 50px; height: 50px; }
+}

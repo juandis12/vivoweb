@@ -25,6 +25,9 @@ import {
     setCurrentProfile 
 } from './auth.js';
 
+import { WatchPartyGuide } from './watch-party-guide.js';
+
+
 // Usar instancia única centralizada
 if (supabase) {
     setSupabase(supabase);
@@ -297,7 +300,38 @@ function _setupGlobalSyncListeners() {
         // pero aquí podemos actualizar UI específica si fuera necesario.
         console.log('[App] UI de favoritos sincronizada.');
     });
+
+    // 3. Inicializar Guía de Watch Party
+    initWatchPartyGuide();
 }
+
+/**
+ * INICIALIZA LA GUÍA DE WATCH PARTY (BOTÓN FLOTANTE)
+ */
+function initWatchPartyGuide() {
+    // Solo mostrar en páginas de contenido (detalles, películas, series, etc)
+    const isContentPage = document.body.classList.contains('page-movies') || 
+                          document.body.classList.contains('page-series') || 
+                          document.body.classList.contains('page-anime') ||
+                          window.location.pathname.includes('peliculas.html') ||
+                          window.location.pathname.includes('series.html') ||
+                          window.location.pathname.includes('anime.html');
+
+    if (!isContentPage) return;
+
+    const guide = new WatchPartyGuide();
+    
+    const helpBtn = document.createElement('div');
+    helpBtn.className = 'btn-help-floating';
+    helpBtn.id = 'watchPartyHelpBtn';
+    helpBtn.innerHTML = `<img src="assets/info-help-btn.png" alt="Ayuda">`;
+    helpBtn.title = '¿Cómo compartir con amigos?';
+    
+    helpBtn.onclick = () => guide.show();
+    
+    document.body.appendChild(helpBtn);
+}
+
 
 /**
  * POBLACIÓN DE CONTENIDO (Core SPA)
