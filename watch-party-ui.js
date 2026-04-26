@@ -162,13 +162,14 @@ function showPartyHUD(hostName, partyId = null) {
     }
 
     hud.innerHTML = `
-        <div class="floating-card-content">
-            <span class="floating-badge">WATCH PARTY</span>
-            <h3>Sala de ${hostName}</h3>
-            <p>${partyId ? 'Copia el link para invitar amigos' : 'Sincronizado con el anfitrión'}</p>
+        <div class="floating-card-background" style="position:absolute; inset:0; z-index:0; background: url('./app_background.webp') center/cover no-repeat; opacity:0.25; pointer-events:none;"></div>
+        <div class="floating-card-content" style="position:relative; z-index:1;">
+            <span class="floating-badge" style="background:var(--primary); color:white; padding:2px 10px; border-radius:10px; font-weight:900; font-size:0.7rem;">VIVOTV</span>
+            <h3 style="margin-top:10px; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">Sala de ${hostName}</h3>
+            <p style="color:var(--text-secondary);">${partyId ? 'Copia el link para invitar amigos' : 'Sincronizado con el anfitrión'}</p>
             
             <!-- Social Emotes UI -->
-            <div class="party-emotes" style="display:flex; gap:10px; margin: 15px 0; justify-content:center;">
+            <div class="party-emotes" style="display:flex; gap:10px; margin: 15px 0; justify-content:center; background:rgba(0,0,0,0.3); padding:8px; border-radius:12px;">
                 <button class="btn-emote" data-emote="😂" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">😂</button>
                 <button class="btn-emote" data-emote="😱" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">😱</button>
                 <button class="btn-emote" data-emote="😍" style="font-size:1.5rem; background:transparent; border:none; cursor:pointer; transition:transform 0.2s;">😍</button>
@@ -177,7 +178,7 @@ function showPartyHUD(hostName, partyId = null) {
             </div>
 
             <div class="floating-card-actions">
-                <button class="float-btn float-btn-outline" id="btnLeaveParty">Salir</button>
+                <button class="float-btn float-btn-outline" id="btnLeaveParty">Salir de la Sala</button>
             </div>
         </div>
     `;
