@@ -3,11 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>En Vivo | VivoTV</title>
+    <meta name="description" content="Mira televisión en vivo gratis online. Disfruta de canales de cine, series y anime con programación simultánea en VIVOTV. La experiencia de TV tradicional en tu navegador.">
+    <meta name="keywords" content="television en vivo gratis, canales online español, ver tv en directo, streaming en vivo hd, canales de cine 24/7, vivotv en vivo">
+    <title>Televisión En Vivo Online Gratis | VIVOTV</title>
     <link rel="stylesheet" href="styles.css">
     <script type="module">
         import { LAYOUT } from './layout.js';
         LAYOUT.init();
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BroadcastService",
+      "name": "VIVOTV Live Channels",
+      "description": "Servicio de televisión en vivo con canales de cine, series y anime 24/7.",
+      "url": "https://vivoweb-liart.vercel.app/live.html",
+      "broadcastDisplayName": "VIVOTV En Vivo"
+    }
     </script>
 </head>
 <body class="page-live">
@@ -75,6 +87,15 @@
             </div>
         </div>
     </div>
+
+        <!-- SEO CONTENT BLOCK -->
+        <section class="seo-content-block" style="padding: 40px var(--side-padding); opacity: 0.8; font-size: 0.9rem; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px;">
+            <h2 style="font-size: 1.2rem; color: var(--primary); margin-bottom: 15px;">TV en Vivo Gratis: La Experiencia de Cine 24/7</h2>
+            <p>En **VIVOTV**, llevamos la experiencia de la televisión tradicional al entorno digital. Nuestra sección de **televisión en vivo** te permite sintonizar canales temáticos que transmiten contenido sin interrupciones las 24 horas del día. Disfruta de maratones de películas de acción, bloques de anime clásico y lo mejor de las series premium en tiempo real.</p>
+            <p>Gracias a nuestra tecnología de **programación simultánea**, todos los usuarios ven lo mismo al mismo tiempo, lo que facilita las interacciones y el sentimiento de comunidad. Consulta nuestra **Guía de TV (EPG)** para no perderte tus programas favoritos y planifica tus noches de cine con antelación.</p>
+            <p>La televisión en directo nunca fue tan accesible. Sin cables, sin contratos y totalmente gratis en HD. VIVOTV En Vivo es la forma más inteligente de ver televisión hoy.</p>
+        </section>
+    </main>
 
     <script type="module" src="app.js"></script>
     <script type="module" src="live-ui.js"></script>

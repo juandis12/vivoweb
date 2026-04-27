@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="VivoTV - La mejor plataforma para ver películas, series y anime online gratis en HD. Disfruta del mejor contenido de streaming premium y Watch Parties con amigos.">
-    <meta name="keywords" content="peliculas online, ver series gratis, anime online, estrenos 2024, ver peliculas gratis, watch party, streaming premium, peliculas hd, series hd, anime sub español">
-    <meta name="robots" content="index, follow">
+        content="VIVOTV - La plataforma definitiva para ver películas online, series completas y anime sub español gratis en Full HD. Disfruta de estrenos, canales en vivo y Watch Party. Regístrate gratis para guardar tu progreso.">
+    <meta name="keywords" content="ver peliculas online gratis, mejores series 2024, ver anime gratis, peliculas estreno hd, streaming gratis sin cortes, vivo tv online, watch party español, anime sub español online">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <meta name="author" content="VIVOTV">
     <link rel="canonical" href="https://vivoweb-liart.vercel.app/">
     
@@ -16,18 +16,32 @@
 
     <!-- Schema.org for Google (JSON-LD) -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "VIVOTV",
-      "url": "https://vivoweb-liart.vercel.app/",
-      "description": "Ver películas, series y anime online gratis en alta definición.",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://vivoweb-liart.vercel.app/?search={search_term_string}",
-        "query-input": "required name=search_term_string"
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "VIVOTV",
+        "url": "https://vivoweb-liart.vercel.app/",
+        "description": "Plataforma de streaming para ver películas, series y anime gratis.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://vivoweb-liart.vercel.app/busqueda.html?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "VIVOTV",
+        "url": "https://vivoweb-liart.vercel.app/",
+        "logo": "https://vivoweb-liart.vercel.app/pwa-icon-512.png",
+        "sameAs": [
+          "https://facebook.com/vivotv",
+          "https://twitter.com/vivotv",
+          "https://instagram.com/vivotv"
+        ]
       }
-    }
+    ]
     </script>
 
     <!-- Open Graph (WhatsApp, Discord, Facebook) -->
@@ -307,8 +321,19 @@
                     <div class="carousel" id="scifiCarousel"></div>
                     <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
                 </div>
+            <!-- SEO TEXT BLOCK (Visibilidad para busquedas) -->
+            <section class="seo-content-block" style="padding: 40px var(--side-padding); opacity: 0.8; font-size: 0.9rem; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px;">
+                <h2 style="font-size: 1.2rem; color: var(--primary); margin-bottom: 15px;">VIVOTV: Tu Portal de Streaming Gratuito en HD</h2>
+                <p>Bienvenido a <strong>VIVOTV</strong>, la plataforma líder para <strong>ver películas online gratis</strong>, series de televisión de estreno y el mejor <strong>anime sub español</strong>. Nuestro catálogo se actualiza diariamente para ofrecerte los últimos estrenos de cine y las series más populares en calidad Full HD.</p>
+                <p>¿Buscas dónde ver anime online? En VIVOTV contamos con una amplia biblioteca de Shonen, Seinen y estrenos de temporada con subtítulos en español. Además, nuestra función de <strong>Watch Party</strong> te permite disfrutar del contenido sincronizado con tus amigos, chateando en tiempo real mientras ven sus producciones favoritas.</p>
+                <p>Al <strong>registrarte en VIVOTV</strong>, obtienes beneficios exclusivos: guarda tus películas en "Mi Lista", mantén un historial de reproducción sincronizado en todos tus dispositivos y recibe notificaciones de nuevos episodios de tus series seguidas. Todo esto sin suscripciones mensuales y de forma totalmente gratuita.</p>
+                <div style="margin-top: 20px; display: flex; gap: 20px; flex-wrap: wrap;">
+                    <a href="peliculas.html" style="color: #94a3b8; text-decoration: none;">Películas Online</a>
+                    <a href="series.html" style="color: #94a3b8; text-decoration: none;">Series HD</a>
+                    <a href="anime.html" style="color: #94a3b8; text-decoration: none;">Anime Gratis</a>
+                    <a href="live.html" style="color: #94a3b8; text-decoration: none;">Televisión en Vivo</a>
+                </div>
             </section>
-
         </div>
     </main>
 
