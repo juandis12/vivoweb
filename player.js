@@ -473,10 +473,12 @@ export const PLAYER_LOGIC = {
         const smartUrl = this._getSmartUrl(url, seekSeconds);
         const isIframe = smartUrl.includes('youtube.com') ||
             smartUrl.includes('vimeo.com') ||
+            smartUrl.includes('vimeus.com') ||
             smartUrl.includes('facebook.com') ||
             smartUrl.includes('ok.ru') ||
             smartUrl.includes('upstream') ||
             smartUrl.includes('mixdrop') ||
+            smartUrl.includes('/e/') ||
             smartUrl.includes('embed');
 
         const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
