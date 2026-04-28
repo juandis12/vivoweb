@@ -299,48 +299,6 @@ export const CATALOG_UI = {
             console.error('Error similar titles:', e);
             similarSection.classList.add('hidden');
         }
-    }
-};
-
-/**
- * Efectos Globales de UI
- */
-export const UI_EFFECTS = {
-    initNavbarScroll() {
-        const navbar = document.getElementById('navbar');
-        if (!navbar) return;
-        window.addEventListener('scroll', () => {
-            const scrolled = window.scrollY > 100;
-            navbar.classList.toggle('scrolled', scrolled);
-            if (scrolled) {
-                const opacity = Math.min(0.95, 0.4 + (window.scrollY - 100) / 800);
-                navbar.style.background = `rgba(9, 9, 11, ${opacity})`;
-            } else {
-                navbar.style.background = '';
-            }
-        });
-    },
-
-    initMobileNavIndicator() {
-        const nav = document.querySelector('.mobile-nav');
-        const indicator = document.getElementById('navIndicator');
-        const activeItem = document.querySelector('.mobile-nav-item.active');
-        if (!nav || !indicator || !activeItem) return;
-        setTimeout(() => {
-            const navRect = nav.getBoundingClientRect();
-            const activeRect = activeItem.getBoundingClientRect();
-            const offsetLeft = activeRect.left - navRect.left;
-            const itemWidth = activeRect.width;
-            const indicatorWidth = 64; 
-            indicator.style.left = `${offsetLeft + (itemWidth - indicatorWidth) / 2}px`;
-            indicator.style.opacity = "1";
-        }, 100);
-    },
-
-    setLoading(isLoading, btnText, btnLoader, btnSubmit) {
-        if (btnText) btnText.classList.toggle('hidden', isLoading);
-        if (btnLoader) btnLoader.classList.toggle('hidden', !isLoading);
-        if (btnSubmit) btnSubmit.disabled = isLoading;
     },
 
     // MODO TV BOX: Navegación por Teclado
@@ -384,6 +342,48 @@ export const UI_EFFECTS = {
             document.documentElement.style.setProperty('--accent-dynamic', `rgb(${r}, ${g}, ${b})`);
             document.documentElement.style.setProperty('--accent-dynamic-glow', `rgba(${r}, ${g}, ${b}, 0.5)`);
         };
+    }
+};
+
+/**
+ * Efectos Globales de UI
+ */
+export const UI_EFFECTS = {
+    initNavbarScroll() {
+        const navbar = document.getElementById('navbar');
+        if (!navbar) return;
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY > 100;
+            navbar.classList.toggle('scrolled', scrolled);
+            if (scrolled) {
+                const opacity = Math.min(0.95, 0.4 + (window.scrollY - 100) / 800);
+                navbar.style.background = `rgba(9, 9, 11, ${opacity})`;
+            } else {
+                navbar.style.background = '';
+            }
+        });
+    },
+
+    initMobileNavIndicator() {
+        const nav = document.querySelector('.mobile-nav');
+        const indicator = document.getElementById('navIndicator');
+        const activeItem = document.querySelector('.mobile-nav-item.active');
+        if (!nav || !indicator || !activeItem) return;
+        setTimeout(() => {
+            const navRect = nav.getBoundingClientRect();
+            const activeRect = activeItem.getBoundingClientRect();
+            const offsetLeft = activeRect.left - navRect.left;
+            const itemWidth = activeRect.width;
+            const indicatorWidth = 64; 
+            indicator.style.left = `${offsetLeft + (itemWidth - indicatorWidth) / 2}px`;
+            indicator.style.opacity = "1";
+        }, 100);
+    },
+
+    setLoading(isLoading, btnText, btnLoader, btnSubmit) {
+        if (btnText) btnText.classList.toggle('hidden', isLoading);
+        if (btnLoader) btnLoader.classList.toggle('hidden', !isLoading);
+        if (btnSubmit) btnSubmit.disabled = isLoading;
     }
 };
 

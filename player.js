@@ -1641,44 +1641,10 @@ export const PLAYER_LOGIC = {
     },
     
     showContentError(container, type = 'movie') {
-        if (!container) return;
-        const contentTypeLabel = type === 'tv' ? 'serie' : (type === 'anime' ? 'anime' : 'película');
+        // Overlay de error desactivado por petición del usuario
+        console.warn(`[Player] Error de carga para ${type}, pero el overlay está desactivado.`);
         
-        // Evitar duplicados
-        if (container.querySelector('.content-error-overlay')) return;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'content-error-overlay';
-        overlay.innerHTML = `
-            <div class="error-content glass-panel">
-                <div class="error-icon-wrapper">
-                    <div class="error-icon-glow"></div>
-                    <div class="error-icon">🎬</div>
-                </div>
-                <h3>Contenido no disponible</h3>
-                <p>
-                    Lo sentimos, estamos <b>solucionando los problemas técnicos</b> con esta ${contentTypeLabel} para que puedas disfrutarla pronto. 
-                    Prueba con otro servidor o intenta más tarde.
-                </p>
-                <div class="error-actions">
-                    <button class="btn btn-primary" onclick="location.reload()">REINTENTAR</button>
-                    <button class="btn btn-secondary" id="btnReportError" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">REPORTAR FALLO</button>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(overlay);
-        
-        const btnReport = overlay.querySelector('#btnReportError');
-        if (btnReport) {
-            btnReport.onclick = () => {
-                btnReport.innerHTML = '<span style="color: #10b981">✅ REPORTADO</span>';
-                btnReport.disabled = true;
-                // Opcional: Feedback háptico o visual extra
-            };
-        }
-
-        // Detener trackers y ocultar loader
+        // Mantener la lógica de limpieza crítica
         this._stopProgressTimer();
         const loader = document.getElementById('playerLoader');
         if (loader) loader.classList.add('hidden');
