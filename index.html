@@ -50,18 +50,19 @@
     ]
     </script>
 
-    <!-- Open Graph (WhatsApp, Discord, Facebook) -->
-    <meta property="og:title" content="VIVOTV | Ver Películas, Series y Anime Online Gratis">
-    <meta property="og:description" content="La mejor plataforma de streaming gratuito en HD. ¡Únete ahora!">
-    <meta property="og:image" content="https://vivoweb-liart.vercel.app/app_background.webp">
-    <meta property="og:url" content="https://vivoweb-liart.vercel.app/">
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://vivoweb-liart.vercel.app/">
+    <meta property="og:title" content="VIVOTV | Películas, Series y Anime Gratis">
+    <meta property="og:description" content="Mira tus películas y series favoritas gratis en VIVOTV. El mejor contenido de anime y estrenos de cine en un solo lugar.">
+    <meta property="og:image" content="https://vivoweb-liart.vercel.app/assets/logo-share.png">
 
-    <!-- Twitter Cards -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="VIVOTV | Películas y Series Gratis">
-    <meta name="twitter:description" content="Streaming gratuito de alta calidad. Ver anime, cine y series online.">
-    <meta name="twitter:image" content="https://vivoweb-liart.vercel.app/app_background.webp">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://vivoweb-liart.vercel.app/">
+    <meta property="twitter:title" content="VIVOTV | Películas, Series y Anime Gratis">
+    <meta property="twitter:description" content="Mira tus películas y series favoritas gratis en VIVOTV. El mejor contenido de anime y estrenos de cine en un solo lugar.">
+    <meta property="twitter:image" content="https://vivoweb-liart.vercel.app/assets/logo-share.png">
 
     <!-- PWA & Mobile Meta -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -70,26 +71,55 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0b122b">
 
-    <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="styles.css?v=1.0.1">
+    
+    <!-- Pre-conexiones de alto rendimiento -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Epilogue:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap"
         rel="stylesheet">
 
     <!-- VivoWeb Layout Engine (Fase 10X) -->
+    <script type="module" src="./layout.js"></script>
     <script type="module">
         import { LAYOUT } from './layout.js';
-        LAYOUT.init();
+        if (LAYOUT) LAYOUT.init();
     </script>
 </head>
 
 <body>
+    <!-- Splash Screen Estático para carga instantánea -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-logo">VIVO<span>TV</span></div>
+        <div class="splash-bars"><div></div><div></div><div></div><div></div><div></div></div>
+    </div>
 
-    <!-- Los componentes Navbar, Splash y Mobile Nav se inyectan dinámicamente vía layout.js -->
-
-    <!-- Pantalla de Autenticación con Mesh Gradient Innovador -->
+    <!-- Navbar Estática para FCP Ultra-Rápido -->
+    <header class="navbar" id="navbar">
+        <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer">VIVO<span>TV</span></div>
+        <nav id="mainNav" class="hidden">
+            <a href="index.html" id="navInicio">Inicio</a>
+            <a href="peliculas.html" id="navPeliculas">Películas</a>
+            <a href="series.html" id="navSeries">Series</a>
+            <a href="anime.html" id="navAnime">Anime</a>
+            <a href="live.html" id="navLive">En Vivo</a>
+            <a href="milista.html" id="linkMyList">Mi Lista</a>
+        </nav>
+        <div class="user-actions">
+            <div class="search-box hidden" id="searchBox">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="searchInput" placeholder="Buscar títulos...">
+                <button class="btn-clear-search hidden" id="btnClearSearch">&times;</button>
+            </div>
+            <div id="userProfile" class="hidden user-profile-btn">
+                <div class="avatar" id="userAvatar">U</div>
+                <span id="userName">Usuario</span>
+            </div>
+        </div>
+    </header>
 
     <!-- Pantalla de Autenticación con Mesh Gradient Innovador -->
     <div id="authSection" class="auth-container">
@@ -488,14 +518,55 @@
         </div>
     </div>
 
+    <!-- Modal de Salida (Híbrido) -->
+    <div id="exitModal" class="exit-modal-overlay hidden">
+        <div class="exit-modal-content">
+            <h2 class="exit-modal-title">¿A dónde quieres ir?</h2>
+            <p class="exit-modal-text">Selecciona una opción para continuar.</p>
+            <div class="exit-modal-actions">
+                <button class="exit-modal-btn btn-change-profile" id="btnSwitchProfile">Elegir otro perfil</button>
+                <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">Cerrar sesión de la cuenta</button>
+                <button class="exit-modal-btn btn-cancel-exit" id="btnCancelExit">Volver</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast de notificación -->
     <div class="toast hidden" id="toast"></div>
 
-    <!-- Navegación Móvil Inferior — Inyectada dinámicamente vía layout.js para sincronía y precisión -->
+    <!-- Navegación Móvil Inferior (Tab Bar Estilo iPhone) -->
+    <nav class="mobile-nav">
+        <div class="mobile-nav-indicator" id="navIndicator"></div>
+        <a href="index.html" class="mobile-nav-item" id="mNavInicio">
+            <svg viewBox="0 0 24 24" width="24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span>Inicio</span>
+        </a>
+        <a href="peliculas.html" class="mobile-nav-item" id="mNavPeliculas">
+            <svg viewBox="0 0 24 24" width="24"><path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/></svg>
+            <span>Cine</span>
+        </a>
+        <a href="series.html" class="mobile-nav-item" id="mNavSeries">
+            <svg viewBox="0 0 24 24" width="24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+            <span>Series</span>
+        </a>
+        <a href="anime.html" class="mobile-nav-item" id="mNavAnime">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            <span>Anime</span>
+        </a>
+        <a href="live.html" class="mobile-nav-item" id="mNavLive">
+            <svg viewBox="0 0 24 24" width="24"><path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .89-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.11-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z"/></svg>
+            <span>Vivo</span>
+        </a>
+        <a href="milista.html" class="mobile-nav-item" id="mNavLista">
+            <svg viewBox="0 0 24 24" width="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+            <span>Mi Lista</span>
+        </a>
+    </nav>
 
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <!-- Modal de Recuperación de Contraseña -->
     <div id="resetPasswordModal" class="modal-overlay hidden">
         <div class="modal-content glass-panel" style="max-width: 400px; margin: 20px auto; position: relative;">
@@ -525,12 +596,6 @@
             </div>
         </div>
     </div>
-
-    <!-- MOTOR DE AUTH UNIFICADO: Gestionado vía auth.js y app.js -->
-
-    <!-- SDKs de Video (Fase 2: Usabilidad) -->
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="https://player.vimeo.com/api/player.js"></script>
 
     <!-- App principal (catálogo, carruseles, búsqueda) -->
     <script src="app.js?v=wp5" type="module"></script>

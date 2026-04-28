@@ -21,6 +21,32 @@ export const PLAYER_LOGIC = {
     currentPlaybackTitle: null,
     ytPlayer: null,
     vimeoPlayer: null,
+    sdksLoaded: false,
+
+    // CARGA DINÁMICA DE SDKS (Optimización Mobile 10X)
+    async _ensureVideoSDKs() {
+        if (this.sdksLoaded) return;
+        
+        console.log('[Player] Cargando SDKs de video bajo demanda...');
+        const scripts = [
+            'https://cdn.jsdelivr.net/npm/hls.js@latest',
+            'https://www.youtube.com/iframe_api',
+            'https://player.vimeo.com/api/player.js'
+        ];
+
+        await Promise.all(scripts.map(src => {
+            return new Promise((resolve) => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = resolve; // Continuar aunque uno falle
+                document.head.appendChild(s);
+            });
+        }));
+
+        this.sdksLoaded = true;
+        console.log('[Player] SDKs listos.');
+    },
 
     // Helper para formatear segundos a HH:MM:SS o MM:SS
     formatTime(seconds) {
@@ -124,6 +150,9 @@ export const PLAYER_LOGIC = {
             const btnPlay = document.getElementById('btnModalPlay');
             btnPlay.onclick = async () => {
                 this._stopTrailer();
+                // Asegurar SDKs antes de cualquier reproducción
+                await this._ensureVideoSDKs();
+
                 if (type === 'tv' || details.media_type === 'tv') {
                     // SI ES SERIE: BUSCAR ÚLTIMO VISTO O E1 PARA PLAY INMEDIATO
                     const targetEp = this.lastSeriesProgress || { season_number: 1, episode_number: 1 };

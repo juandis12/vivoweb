@@ -19,9 +19,19 @@ export const CATALOG_UI = {
         // Cinematic Fade Transition
         heroBanner.style.opacity = '0';
         
-        setTimeout(() => {
+        const updateUI = () => {
             const backdrop = movie.backdrop_url || (movie.backdrop_path ? `${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}` : '');
-            if (backdrop) heroBanner.style.backgroundImage = `url('${backdrop}')`;
+            if (backdrop) {
+                // Pre-carga agresiva para evitar parpadeo blanco
+                const img = new Image();
+                img.src = backdrop;
+                img.onload = () => {
+                    heroBanner.style.backgroundImage = `url('${backdrop}')`;
+                    heroBanner.style.opacity = '1';
+                };
+            } else {
+                heroBanner.style.opacity = '1';
+            }
 
             if (heroTitle) heroTitle.textContent = movie.title || movie.name;
             if (heroOverview) heroOverview.textContent = movie.description || movie.overview || 'Sin descripción disponible.';
@@ -51,9 +61,14 @@ export const CATALOG_UI = {
                 btnInfo.dataset.tmdbId = finalId;
                 btnInfo.dataset.type   = type;
             }
+        };
 
-            heroBanner.style.opacity = '1';
-        }, 500);
+        // Si es la primera carga o no hay transición previa, ir directo
+        if (heroBanner.style.opacity === '1') {
+            setTimeout(updateUI, 300); // Pequeño delay para el fade-out si ya había algo
+        } else {
+            updateUI();
+        }
 
         if (indicators && heroItems.length > 1) {
             indicators.innerHTML = '';

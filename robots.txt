@@ -1,7 +1,10 @@
 User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /admin/
-Disallow: /config.js
 
+# Sitemap
 Sitemap: https://vivoweb-liart.vercel.app/sitemap.xml
+
+# Evitar indexación de archivos de configuración
+Disallow: /config.js
+Disallow: /db.js
+Disallow: /auth.js
