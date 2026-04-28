@@ -1052,24 +1052,8 @@ nav a.active::after { width: 24px; }
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
-.coming-soon-badge {
-    position: absolute;
-    bottom: 8px;
-    left: 8px;
-    right: 8px;
-    padding: 6px;
-    background: rgba(15, 15, 15, 0.85);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-align: center;
-    letter-spacing: 1.5px;
-    z-index: 5;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Bloque de badge antiguo eliminado para evitar conflictos */
+
 
 .availability-pop {
     animation: availabilityPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1241,30 +1225,77 @@ nav a.active::after { width: 24px; }
     box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
 }
 
-.maintenance-badge {
-    background: rgba(255, 152, 0, 0.9); color: white; padding: 4px 10px; border-radius: 4px;
-    font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; gap: 5px;
-    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+/* --- SISTEMA DE ETIQUETAS (BADGES) PREMIUM --- */
+.badge-container {
+    position: absolute; 
+    top: 12px; 
+    left: 12px; 
+    z-index: 10;
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px;
+    pointer-events: none;
 }
 
 .coming-soon-badge {
-    background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 4px 10px; 
-    border-radius: 4px; font-size: 0.7rem; font-weight: 700;
+    background: rgba(15, 23, 42, 0.75) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-/* Estado de Mantenimiento */
-.movie-card.in-maintenance .movie-card-inner {
-    filter: grayscale(1) brightness(0.6);
-    opacity: 0.8;
-}
-.movie-card.in-maintenance:hover .movie-card-inner {
-    filter: grayscale(0.5) brightness(0.8);
-    transform: scale(1.02);
+.coming-soon-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: #fbbf24; /* Color ámbar de espera */
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px #fbbf24;
 }
 
-.badge-container {
-    position: absolute; top: 10px; left: 10px; z-index: 5;
-    display: flex; flex-direction: column; gap: 5px;
+.available-badge {
+    background: linear-gradient(135deg, #e11d48, #9f1239) !important;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 8px 16px rgba(225, 29, 72, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.available-badge svg {
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.5));
+}
+
+.maintenance-badge {
+    background: rgba(245, 158, 11, 0.9); 
+    color: white; 
+    padding: 5px 12px; 
+    border-radius: 6px;
+    font-size: 0.65rem; 
+    font-weight: 800; 
+    display: flex; 
+    align-items: center; 
+    gap: 6px;
+    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3);
 }
 
 .rating-imdb {
