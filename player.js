@@ -508,19 +508,26 @@ export const PLAYER_LOGIC = {
             this.currentIsIframe = true;
             this._startIframeTracking(seekSeconds, iframe);
             
+            // Limpiar timers previos si existen
+            if (this.iframeErrorTimer) clearTimeout(this.iframeErrorTimer);
+
             if (loader) {
-                // Si después de 8 segundos no hemos ocultado el loader (o el usuario no interactúa),
-                // podría ser un error 404 o carga lenta.
+                // Reducido a 6 segundos para una respuesta más rápida ante fallos 404 detectados en consola
                 this.iframeErrorTimer = setTimeout(() => {
-                    if (!iframe.src.includes('about:blank')) {
-                        // Verificación básica: Si vimeus.com retorna 404, a veces se queda en blanco.
-                        // Como no podemos leer el status code por CORS, ofrecemos el banner de ayuda.
+                    if (this.currentIsIframe && !iframe.src.includes('about:blank')) {
+                        // Si el loader sigue o el usuario no ha interactuado, mostramos el banner
+                        console.warn('[VivoTV] Posible error 404 o carga fallida en iframe detectado.');
                         this.showContentError(container, this.currentType);
                     }
-                }, 10000);
+                }, 6000);
             }
 
-            if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
+            if (loader) {
+                // Ocultar loader tras un tiempo razonable si parece haber cargado
+                setTimeout(() => {
+                    if (loader) loader.classList.add('hidden');
+                }, 3000);
+            }
         } else {
             iframe.classList.add('hidden');
             video.classList.remove('hidden');
@@ -1485,14 +1492,14 @@ export const PLAYER_LOGIC = {
         overlay.className = 'content-error-overlay';
         overlay.innerHTML = `
             <div class="content-error-icon">🎬</div>
-            <h2 class="content-error-title">Contenido no disponible</h2>
+            <h2 class="content-error-title">¡Estamos trabajando en ello!</h2>
             <p class="content-error-desc">
-                Lo sentimos, estamos solucionando problemas con esta ${contentTypeLabel}. 
-                Nuestros técnicos han sido notificados y estará disponible pronto.
+                Lo sentimos, estamos <b>solucionando los problemas técnicos</b> con esta ${contentTypeLabel} para que puedas disfrutarla pronto. 
+                Nuestros técnicos ya están en el caso.
             </p>
             <div class="content-error-actions">
-                <button class="btn-error-retry" onclick="location.reload()">Reintentar</button>
-                <button class="btn-error-report" onclick="this.textContent='✅ Reportado'">Reportar Fallo</button>
+                <button class="btn-error-retry" onclick="location.reload()">REINTENTAR</button>
+                <button class="btn-error-report" onclick="this.textContent='✅ REPORTADO'">REPORTAR FALLO</button>
             </div>
         `;
         
