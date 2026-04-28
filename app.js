@@ -36,7 +36,7 @@ if (supabase) {
 }
 
 // ---- REFERENCIAS DOM ----
-// Movidas dentro de initAppForPage() para evitar problemas entre páginas
+window.VIVOTV_TOGGLE_FAVORITE = (tmdbId, type, btn) => PLAYER_LOGIC.toggleFavorite(supabase, tmdbId, type, btn);
 let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit;
 
 
@@ -61,6 +61,7 @@ const getDBCatalog    = () => window.DB_CATALOG || [];
 
 let isDashboardInit = false;
 let isAuthInitialized = false;
+window.VIVOTV_FAVORITES = new Set();
 
 // ================================================
 // INNOVACIÓN: UI INTERACTIVA
@@ -381,6 +382,14 @@ async function populatePageContent() {
     try {
         // 1. Sincronizar catálogo de Supabase (CRÍTICO para todas las páginas, incluido Live)
         await syncCatalog(supabase); 
+
+        // 1b. Cargar favoritos en caché para la UI
+        if (currentProfile) {
+            const { data: fv } = await supabase.from('user_favorites').select('tmdb_id').eq('profile_id', currentProfile.id);
+            if (fv) {
+                window.VIVOTV_FAVORITES = new Set(fv.map(f => f.tmdb_id.toString()));
+            }
+        }
 
         // 2. Evitar poblar carruseles/hero si estamos en la sección En Vivo (tiene su propio controlador)
         if (document.body.classList.contains('page-live') || window.location.pathname.includes('live.html')) {
@@ -1540,6 +1549,11 @@ function initAppForPage() {
 
     try {
         setupAuthListeners();
+        window.addEventListener('refresh-my-list', () => {
+            console.log('[SPA] Refrescando sección de Mi Lista...');
+            if (document.getElementById('favoritesGrid')) loadMyList();
+        });
+
         // 1. Asegurar Auth
         initializeVivotvApp();
         

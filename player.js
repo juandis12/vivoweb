@@ -1281,27 +1281,61 @@ export const PLAYER_LOGIC = {
         if (text) text.textContent = !!data ? 'En Mi Lista' : 'Mi Lista';
     },
 
-    async toggleFavorite(supabase) {
-        const btn = document.getElementById('btnAddToMyList');
-        const isAdded = btn.classList.contains('added-to-list');
+    async toggleFavorite(supabase, tmdbId = null, type = null, btnElement = null) {
+        const finalId = tmdbId || this.currentTmdbId;
+        const finalType = type || this.currentType;
         const profile = JSON.parse(sessionStorage.getItem('vivotv_current_profile'));
-        if (!profile) return;
+        if (!profile || !finalId) return;
 
-        if (isAdded) {
-            await supabase.from('user_favorites').delete()
-                .eq('user_id', this.currentUserId)
-                .eq('profile_id', profile.id) // Fase 3
-                .eq('tmdb_id', Number(this.currentTmdbId));
-        } else {
-            await supabase.from('user_favorites').insert({ 
-                user_id: this.currentUserId, 
-                profile_id: profile.id, // Fase 3
-                tmdb_id: Number(this.currentTmdbId),
-                type: this.currentType // movie o tv
-            });
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId) return;
+
+        // Determinar si ya está en la lista (prioriza el elemento visual pasado)
+        const btn = btnElement || document.getElementById('btnAddToMyList');
+        const isAdded = btn?.classList.contains('added-to-list') || btn?.textContent === '✓';
+
+        try {
+            if (isAdded) {
+                await supabase.from('user_favorites').delete()
+                    .eq('profile_id', profile.id)
+                    .eq('tmdb_id', Number(finalId));
+            } else {
+                await supabase.from('user_favorites').insert({ 
+                    user_id: userId, 
+                    profile_id: profile.id, 
+                    tmdb_id: Number(finalId),
+                    type: finalType
+                });
+            }
+
+            // Actualizar UI del botón
+            if (btnElement) {
+                const isNowAdded = !isAdded;
+                btnElement.classList.toggle('added-to-list', isNowAdded);
+                btnElement.textContent = isNowAdded ? '✓' : '+';
+                btnElement.title = isNowAdded ? 'Eliminar de Mi Lista' : 'Añadir a Mi Lista';
+            } else {
+                this.checkIfFavorite(supabase);
+            }
+
+            // Actualizar caché global de favoritos para coherencia visual
+            if (window.VIVOTV_FAVORITES) {
+                const idStr = finalId.toString();
+                if (isAdded) window.VIVOTV_FAVORITES.delete(idStr);
+                else window.VIVOTV_FAVORITES.add(idStr);
+            }
+
+            if (window.showToast) window.showToast(isAdded ? 'Eliminado de Mi Lista' : 'Añadido a Mi Lista');
+            
+            // Si estamos en la sección de "Mi Lista", recargarla
+            if (document.getElementById('favoritesGrid') && !document.getElementById('favoritesGrid').classList.contains('hidden')) {
+                // Pequeño delay para que la DB se actualice
+                setTimeout(() => window.dispatchEvent(new CustomEvent('refresh-my-list')), 500);
+            }
+        } catch (e) {
+            console.error('[Favorites] Error:', e);
         }
-        this.checkIfFavorite(supabase);
-        showToast(isAdded ? 'Eliminado de Mi Lista' : 'Añadido a Mi Lista');
     },
 
     showFloatingResumeCard({ thumb, title, desc, onResume }) {

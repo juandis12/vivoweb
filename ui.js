@@ -154,6 +154,7 @@ export const CATALOG_UI = {
         const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
         const isWatched = progress && progress >= 95;
 
+        const isFav = window.VIVOTV_FAVORITES?.has(id);
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
@@ -192,7 +193,11 @@ export const CATALOG_UI = {
             <div class="movie-tooltip">
                 <div class="movie-tooltip-actions">
                     <button class="movie-tooltip-btn btn-play" title="Reproducir">${isMaintenance ? '🔧' : '▶'}</button>
-                    <button class="movie-tooltip-btn btn-outline-rnd" title="Añadir a Mi Lista">+</button>
+                    <button class="movie-tooltip-btn btn-outline-rnd btn-add-fav ${isFav ? 'added-to-list' : ''}" 
+                            title="${isFav ? 'Eliminar de Mi Lista' : 'Añadir a Mi Lista'}"
+                            onclick="event.stopPropagation(); window.VIVOTV_TOGGLE_FAVORITE('${id}', '${type}', this)">
+                        ${isFav ? '✓' : '+'}
+                    </button>
                 </div>
                 <div class="movie-tooltip-meta">
                     <span class="movie-tooltip-rating">${rating} Match</span>
