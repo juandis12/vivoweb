@@ -27,16 +27,21 @@
 
         .profile-container {
             text-align: center;
-            animation: fadeIn 0.8s ease;
+            animation: fadeIn 0.8s ease forwards;
             width: 100%;
             max-width: 800px;
             padding: 20px;
+            opacity: 1; /* Forzar visibilidad post-animación */
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
                 transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
@@ -900,6 +905,8 @@
 
         #firstProfileContainer.active {
             display: flex;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
         .setup-card {
@@ -1143,51 +1150,83 @@
         let globalServerNow = new Date();
 
         async function loadProfilesFromDB() {
-            if (window.location.protocol === 'file:') {
-                console.error('[Protección CORS] No puedes abrir la app directamente desde el archivo. Usa un servidor local (Live Server).');
-                showToast('⚠️ Error de seguridad: Usa Live Server para cargar los perfiles.', 'error', 8000);
-                return;
-            }
+            try {
+                if (window.location.protocol === 'file:') {
+                    console.error('[Protección CORS] No puedes abrir la app directamente desde el archivo. Usa un servidor local (Live Server).');
+                    showToast('⚠️ Error de seguridad: Usa Live Server para cargar los perfiles.', 'error', 8000);
+                    return;
+                }
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                window.location.href = 'index.html';
-                return;
-            }
+                console.log('[VivoTV] Verificando sesión de usuario...');
+                const { data: userData, error: authError } = await supabase.auth.getUser();
+                const user = userData?.user;
 
-            // 1. Obtener perfiles directamente filtrando por el usuario actual
-            const { data: dbData, error: dbError } = await supabase
-                .from('vivotv_profiles')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: true });
+                if (authError || !user) {
+                    console.warn('[VivoTV] Sesión inválida detectada. Limpiando y redirigiendo...', authError);
+                    
+                    // IMPORTANTE: signOut limpia el localStorage y rompe el bucle de redirección
+                    await supabase.auth.signOut();
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    
+                    showToast('Tu sesión ha expirado o es inválida. Por favor, ingresa de nuevo.', 'warning');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2500);
+                    return;
+                }
 
-            // 2. Obtener tiempo de servidor (Sync) - Usamos el RPC original o fallback si falla
-            const { data: syncData, error: syncError } = await supabase.rpc('vivotv_get_profiles_synced');
+                // 1. Obtener perfiles directamente filtrando por el usuario actual
+                console.log('[VivoTV] Cargando perfiles de la DB...');
+                const { data: dbData, error: dbError } = await supabase
+                    .from('vivotv_profiles')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: true });
 
-            if (dbError) {
-                console.error('[VivoTV] Error cargando perfiles:', dbError);
-                showToast('Error cargando los perfiles.', 'error');
-                return;
-            }
+                if (dbError) {
+                    console.error('[VivoTV] Error cargando perfiles:', dbError);
+                    showToast('Error cargando los perfiles.', 'error');
+                    
+                    // Falla crítica: Mostrar mensaje en el grid para no dejar la pantalla en blanco
+                    grid.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ff9800;">
+                            <p style="font-size: 1.5rem; margin-bottom: 10px;">⚠️ Problema de conexión</p>
+                            <p style="opacity: 0.7;">No pudimos conectar con Supabase. Reintentando en unos segundos...</p>
+                        </div>
+                    `;
+                    selectionContainer.style.display = 'block'; 
+                    return;
+                }
 
-            profiles = dbData || [];
+                profiles = dbData || [];
 
-            // Corrección de Fecha: Asegurar que extraemos la propiedad correcta si es un objeto
-            if (syncData && syncData.server_now) {
-                globalServerNow = new Date(syncData.server_now);
-            } else {
-                globalServerNow = new Date(); // Fallback local
-            }
+                // 2. Obtener tiempo de servidor (Sync)
+                try {
+                    const { data: syncData } = await supabase.rpc('vivotv_get_profiles_synced');
+                    if (syncData && syncData.server_now) {
+                        globalServerNow = new Date(syncData.server_now);
+                    } else {
+                        globalServerNow = new Date();
+                    }
+                } catch (e) {
+                    console.warn('[Sync] RPC no disponible, usando hora local.');
+                    globalServerNow = new Date();
+                }
 
-            if (profiles && profiles.length > 0) {
-                selectionContainer.style.display = 'block';
-                firstProfileContainer.classList.remove('active');
-                renderProfiles();
-            } else {
-                selectionContainer.style.display = 'none';
-                firstProfileContainer.classList.add('active');
-                setupNameInput.focus();
+                if (profiles && profiles.length > 0) {
+                    selectionContainer.style.display = 'block';
+                    firstProfileContainer.classList.remove('active');
+                    renderProfiles();
+                } else {
+                    selectionContainer.style.display = 'none';
+                    firstProfileContainer.classList.add('active');
+                    setupNameInput.focus();
+                }
+            } catch (err) {
+                console.error('[Critical Error] loadProfilesFromDB crashed:', err);
+                showToast('Error crítico al cargar perfiles. Por favor, recarga la página.', 'error');
             }
         }
 
@@ -1208,11 +1247,16 @@
             }
 
             profiles.forEach(p => {
+                if (!p || !p.name) return; // Saltar perfiles sin nombre (evita crash)
+
                 const item = document.createElement('div');
                 item.className = 'profile-item';
+                
+                const initial = p.name ? p.name[0].toUpperCase() : '?';
+
                 item.innerHTML = `
                     <div class="profile-avatar ${p.color || 'color-1'}">
-                        <span class="profile-avatar-initial">${p.name[0]}</span>
+                        <span class="profile-avatar-initial">${initial}</span>
                         ${p.avatar_url ? `<img src="${resolveAvatarUrl(p.avatar_url)}" alt="${p.name}" onerror="this.remove()">` : ''}
                         ${p.is_kids ? '<span class="kids-badge">Niños</span>' : ''}
                         ${_isOccupied(p) ? `
@@ -1233,7 +1277,7 @@
                             <div class="edit-icon-btn">✏️</div>
                         </div>
                     </div>
-                    <div class="profile-name-input">${p.name}</div>
+                    <div class="profile-name">${p.name}</div>
                 `;
 
                 if (_isOccupied(p)) item.classList.add('occupied');
@@ -1859,9 +1903,15 @@
         btnCancelAvatar.onclick = () => avatarModal.classList.remove('active');
 
         // Iniciar carga y refresco automático cada 10s
-        loadProfilesFromDB();
+        loadProfilesFromDB().finally(() => {
+            // CRÍTICO: Añadir clase 'loaded' para que styles.css (body { opacity: 0 }) 
+            // permita ver la página. Sin esto, la pantalla se queda negra.
+            document.body.classList.add('loaded');
+        });
+
         setInterval(() => {
-            if (profiles.length > 0) loadProfilesFromDB();
+            // Poll constante incluso si está vacío (para detectar nuevos perfiles)
+            loadProfilesFromDB();
         }, 10000);
     </script>
 </body>

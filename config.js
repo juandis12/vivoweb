@@ -21,11 +21,12 @@ export const CONFIG = {
     TMDB_API_KEY: '743275e25bcea0a320b87d2af271a136', // Fallback para desarrollo local (sacada de Flutter)
     
     // SEGURIDAD: Control de logs en consola
-    DEBUG: false
+    DEBUG: true
 };
 
 // ---- MOTOR DE SEGURIDAD (Consola Limpia) ----
-// Se ejecuta inmediatamente para silenciar logs de otros módulos
+// En producción, podrías habilitar esto, pero por ahora lo dejamos libre para depuración.
+/*
 if (!CONFIG.DEBUG) {
     const noop = () => {};
     console.log = noop;
@@ -33,6 +34,7 @@ if (!CONFIG.DEBUG) {
     console.info = noop;
     console.warn = noop; 
 }
+*/
 
 // Funciones globales seguras
 window.logDebug = (msg) => { if (CONFIG.DEBUG) console.debug(`[DEBUG] ${msg}`); };
