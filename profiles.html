@@ -1157,23 +1157,31 @@
                     return;
                 }
 
+                // 0. Estrategia de recuperación de sesión híbrida
                 console.log('[VivoTV] Verificando sesión de usuario...');
-                const { data: userData, error: authError } = await supabase.auth.getUser();
-                const user = userData?.user;
+                
+                // Primero intentamos getSession (Instantáneo/Local)
+                let { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                // Si getSession falla o está vacío, intentamos getUser (Network check)
+                if (sessionError || !session) {
+                    console.log('[VivoTV] getSession no devolvió nada, intentando getUser...');
+                    const { data: userData, error: authError } = await supabase.auth.getUser();
+                    if (userData?.user) {
+                        session = { user: userData.user };
+                    }
+                }
 
-                if (authError || !user) {
-                    console.warn('[VivoTV] Sesión inválida detectada. Limpiando y redirigiendo...', authError);
+                const user = session?.user;
+
+                if (!user) {
+                    console.warn('[VivoTV] No se detectó ninguna sesión activa. Redirigiendo al login...');
                     
-                    // IMPORTANTE: signOut limpia el localStorage y rompe el bucle de redirección
-                    await supabase.auth.signOut();
-                    localStorage.clear();
+                    // Solo limpiamos si estamos seguros de que no hay sesión
+                    localStorage.removeItem('vivotv_current_profile');
                     sessionStorage.clear();
                     
-                    showToast('Tu sesión ha expirado o es inválida. Por favor, ingresa de nuevo.', 'warning');
-                    
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 2500);
+                    window.location.href = 'index.html';
                     return;
                 }
 

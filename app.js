@@ -214,10 +214,10 @@ async function initializeVivotvApp() {
     
     // Configurar el listener de cambios
     const { user, profile: authProfile } = await initAuth((event, session, profile) => {
-        // Solo reaccionar si ya terminó la carga inicial
-        if (!window.VIVOTV_AUTH_INITIALIZED) return;
-
         console.log(`[VivoTV] 📡 Cambio de estado detectado: ${event}`);
+        
+        // El bloqueo !window.VIVOTV_AUTH_INITIALIZED causaba que los inicios de sesión rápidos fueran ignorados.
+        // Ahora permitimos que el evento SIGNED_IN dispare el dashboard incluso durante el arranque.
         if (event === 'SIGNED_IN' && session) {
             toDashboard(session.user, profile);
         } else if (event === 'SIGNED_OUT') {
@@ -232,7 +232,7 @@ async function initializeVivotvApp() {
         // --- MOTOR DE PERFILES 10X: Forzar selección de perfil al abrir/entrar ---
         // Usamos sessionStorage para que si el usuario cierra la pestaña o abre una nueva,
         // siempre se le pregunte "¿Quién está viendo?", cumpliendo con el estándar Netflix.
-        const isProfileChosenInSession = sessionStorage.getItem('vivotv_profile_chosen');
+        const isProfileChosenInSession = sessionStorage.getItem('vivotv_profile_chosen') === 'true';
         const isOnProfilesPage = window.location.pathname.includes('profiles.html');
 
         if (!isProfileChosenInSession && !isOnProfilesPage) {
@@ -770,62 +770,75 @@ function setupAuthListeners() {
     const emailEl = document.getElementById('email');
     const usernameEl = document.getElementById('username');
 
-    if (loginForm) {
-        console.log('[VivoTV] Capturando listener de Login/Registro...');
-        loginForm.onsubmit = async (e) => {
+    const handleAuthAction = async (e) => {
+        if (e) {
             e.preventDefault();
             e.stopPropagation();
+        }
+        
+        setLoading(true);
+        const authError = document.getElementById('authError');
+        if (authError) authError.classList.add('hidden');
+
+        try {
+            const email = emailEl?.value.trim();
+            const password = passwordEl?.value;
             
-            setLoading(true);
-            const authError = document.getElementById('authError');
-            if (authError) authError.classList.add('hidden');
+            if (!email || !password) {
+                throw new Error('Por favor, completa todos los campos.');
+            }
 
-            try {
-                const email = emailEl?.value.trim();
-                const password = passwordEl?.value;
+            if (isLoginMode) {
+                console.log('[Auth] Intentando Login via Supabase...');
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+            } else {
+                console.log('[Auth] Intentando Registro via Supabase...');
+                const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
+                const { error } = await supabase.auth.signUp({ 
+                    email, 
+                    password,
+                    options: { data: { username: username, name: username } }
+                });
+                if (error) throw error;
                 
-                if (!email || !password) {
-                    throw new Error('Por favor, completa todos los campos.');
+                // ÉXITO REGISTRO: UI Minimalista
+                const authCard = document.querySelector('.auth-card');
+                if (authCard) {
+                    authCard.innerHTML = `
+                        <div class="registration-success-ui">
+                            <div class="success-icon">📩</div>
+                            <h3>¡Correo enviado!</h3>
+                            <p>Revisa tu bandeja de entrada en: <strong>${email}</strong></p>
+                            <button class="btn btn-primary btn-block" onclick="window.location.reload()">Regresar</button>
+                        </div>
+                    `;
                 }
+                showToast('📩 Revisa tu correo para activar la cuenta.', 'success');
+            }
+        } catch (err) {
+            console.error('[Auth Error]:', err.message);
+            const authError = document.getElementById('authError');
+            if (authError) {
+                authError.textContent = mapError(err.message);
+                authError.classList.remove('hidden');
+            }
+            showToast(mapError(err.message), 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-                if (isLoginMode) {
-                    console.log('[Auth] Intentando Login via Supabase...');
-                    const { error } = await supabase.auth.signInWithPassword({ email, password });
-                    if (error) throw error;
-                } else {
-                    console.log('[Auth] Intentando Registro via Supabase...');
-                    const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
-                    const { error } = await supabase.auth.signUp({ 
-                        email, 
-                        password,
-                        options: { data: { username: username, name: username } }
-                    });
-                    if (error) throw error;
-                    
-                    // ÉXITO REGISTRO: UI Minimalista
-                    const authCard = document.querySelector('.auth-card');
-                    if (authCard) {
-                        authCard.innerHTML = `
-                            <div class="registration-success-ui">
-                                <div class="success-icon">📩</div>
-                                <h3>¡Correo enviado!</h3>
-                                <p>Revisa tu bandeja de entrada en: <strong>${email}</strong></p>
-                                <button class="btn btn-primary btn-block" onclick="window.location.reload()">Regresar</button>
-                            </div>
-                        `;
-                    }
-                    showToast('📩 Revisa tu correo para activar la cuenta.', 'success');
-                }
-            } catch (err) {
-                console.error('[Auth Error]:', err.message);
-                const authError = document.getElementById('authError');
-                if (authError) {
-                    authError.textContent = mapError(err.message);
-                    authError.classList.remove('hidden');
-                }
-                showToast(mapError(err.message), 'error');
-            } finally {
-                setLoading(false);
+    if (btnSubmit) {
+        btnSubmit.onclick = handleAuthAction;
+    }
+
+    if (loginForm) {
+        loginForm.onsubmit = handleAuthAction;
+        // Permitir Enter para enviar
+        loginForm.onkeydown = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                handleAuthAction(e);
             }
         };
     }
