@@ -1,7 +1,7 @@
 {
-  "name": "VivoTV",
-  "short_name": "VivoTV",
-  "description": "Tu plataforma de streaming premium. Películas, series y contenido exclusivo con experiencia nativa.",
+  "name": "VIVOTV",
+  "short_name": "VIVOTV",
+  "description": "Ver películas gratis, series y anime online en HD con VIVOTV.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b122b",
