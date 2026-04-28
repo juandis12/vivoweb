@@ -3468,42 +3468,62 @@ nav a.active::after { width: 24px; }
         font-size: 1.1rem;
     }
 
-    /* 3. Navegación Móvil Inferior (Tab Bar Premium) */
+    /* 3. Navegación Móvil Inferior (Tab Bar Premium Unificada) */
     .mobile-nav {
         display: flex !important;
-        position: fixed; 
-        bottom: 0; 
-        left: 0; 
-        right: 0;
-        width: 100% !important;
+        position: fixed !important; 
+        bottom: 0 !important; 
+        left: 0 !important; 
+        width: 100vw !important;
         height: 75px;
-        background: rgba(10, 10, 15, 0.95); 
+        background: rgba(10, 10, 15, 0.98) !important; 
         backdrop-filter: blur(30px);
         -webkit-backdrop-filter: blur(30px);
-        justify-content: space-around; 
+        justify-content: space-evenly !important; 
         align-items: center;
-        padding: 0 0 15px 0; 
-        z-index: 99999;
+        padding: 0 0 env(safe-area-inset-bottom, 15px) 0 !important; 
+        z-index: 999999 !important;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0 !important; /* Eliminar redondeados que causan el recorte */
+        border-radius: 0 !important;
+        box-sizing: border-box !important;
     }
     
     .mobile-nav-item {
-        display: flex; flex-direction: column; align-items: center;
-        color: rgba(255, 255, 255, 0.5); text-decoration: none; font-size: 0.65rem;
-        gap: 6px; transition: 0.3s; flex: 1;
+        display: flex; 
+        flex-direction: column; 
+        align-items: center;
+        color: rgba(255, 255, 255, 0.5); 
+        text-decoration: none; 
+        font-size: 0.6rem;
+        gap: 4px; 
+        transition: 0.3s; 
+        flex: 1;
         justify-content: center;
+        min-width: 0;
     }
     
-    .mobile-nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+    .mobile-nav-item svg { width: 22px; height: 22px; fill: currentColor; margin-bottom: 2px; }
     .mobile-nav-item.active { color: white; }
     .mobile-nav-item.active svg { color: var(--primary); transform: scale(1.1); }
-    .mobile-nav-item span { font-weight: 700; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .mobile-nav-item span { 
+        font-weight: 700; 
+        opacity: 0.8; 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .mobile-nav-item.active span { opacity: 1; }
     
     .mobile-nav-indicator {
-        position: absolute; top: 0; height: 3px; background: var(--primary);
-        width: 20%; border-radius: 0 0 10px 10px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: absolute; 
+        top: 0; 
+        height: 3px; 
+        background: var(--primary);
+        width: 16.66%; /* 100 / 6 items */
+        border-radius: 0 0 10px 10px; 
+        transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-shadow: 0 0 20px var(--primary-glow);
     }
 
