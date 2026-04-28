@@ -633,21 +633,22 @@ export const PLAYER_LOGIC = {
             if (this.iframeErrorTimer) clearTimeout(this.iframeErrorTimer);
 
             if (loader) {
-                // Reducido a 6 segundos para una respuesta más rápida ante fallos 404 detectados en consola
+                // Aumentado a 15 segundos para dar margen a servidores lentos (vidsrc, streamtape, etc)
+                // y evitar el "falso error" que reporta el usuario.
                 this.iframeErrorTimer = setTimeout(() => {
                     if (this.currentIsIframe && !iframe.src.includes('about:blank')) {
-                        // Si el loader sigue o el usuario no ha interactuado, mostramos el banner
-                        console.warn('[VivoTV] Posible error 404 o carga fallida en iframe detectado.');
+                        // Solo mostrar si el loader sigue presente o no hubo interacción exitosa
+                        console.warn('[VivoTV] El contenido tarda demasiado. Mostrando banner de soporte.');
                         this.showContentError(container, this.currentType);
                     }
-                }, 6000);
+                }, 15000); 
             }
 
             if (loader) {
-                // Ocultar loader tras un tiempo razonable si parece haber cargado
+                // Ocultar loader tras un tiempo razonable para permitir ver el reproductor del iframe
                 setTimeout(() => {
                     if (loader) loader.classList.add('hidden');
-                }, 3000);
+                }, 4000);
             }
         } else {
             iframe.classList.add('hidden');
@@ -1609,26 +1610,41 @@ export const PLAYER_LOGIC = {
         if (!container) return;
         const contentTypeLabel = type === 'tv' ? 'serie' : (type === 'anime' ? 'anime' : 'película');
         
+        // Evitar duplicados
+        if (container.querySelector('.content-error-overlay')) return;
+
         const overlay = document.createElement('div');
         overlay.className = 'content-error-overlay';
         overlay.innerHTML = `
-            <div class="content-error-icon">🎬</div>
-            <h2 class="content-error-title">¡Estamos trabajando en ello!</h2>
-            <p class="content-error-desc">
-                Lo sentimos, estamos <b>solucionando los problemas técnicos</b> con esta ${contentTypeLabel} para que puedas disfrutarla pronto. 
-                Nuestros técnicos ya están en el caso.
-            </p>
-            <div class="content-error-actions">
-                <button class="btn-error-retry" onclick="location.reload()">REINTENTAR</button>
-                <button class="btn-error-report" onclick="this.textContent='✅ REPORTADO'">REPORTAR FALLO</button>
+            <div class="error-content glass-panel">
+                <div class="error-icon-wrapper">
+                    <div class="error-icon-glow"></div>
+                    <div class="error-icon">🎬</div>
+                </div>
+                <h3>Contenido no disponible</h3>
+                <p>
+                    Lo sentimos, estamos <b>solucionando los problemas técnicos</b> con esta ${contentTypeLabel} para que puedas disfrutarla pronto. 
+                    Prueba con otro servidor o intenta más tarde.
+                </p>
+                <div class="error-actions">
+                    <button class="btn btn-primary" onclick="location.reload()">REINTENTAR</button>
+                    <button class="btn btn-secondary" id="btnReportError" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">REPORTAR FALLO</button>
+                </div>
             </div>
         `;
         
-        // Evitar duplicados
-        const exists = container.querySelector('.content-error-overlay');
-        if (!exists) container.appendChild(overlay);
+        container.appendChild(overlay);
         
-        // Detener trackers
+        const btnReport = overlay.querySelector('#btnReportError');
+        if (btnReport) {
+            btnReport.onclick = () => {
+                btnReport.innerHTML = '<span style="color: #10b981">✅ REPORTADO</span>';
+                btnReport.disabled = true;
+                // Opcional: Feedback háptico o visual extra
+            };
+        }
+
+        // Detener trackers y ocultar loader
         this._stopProgressTimer();
         const loader = document.getElementById('playerLoader');
         if (loader) loader.classList.add('hidden');
