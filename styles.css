@@ -1,8 +1,8 @@
 :root {
     /* Paleta Abyssal Navy & Vivid Primary (Stitch Sync) 🎬 */
-    --bg-base: #0b122b; /* Abyssal Navy */
+    --bg-base: #060912; /* Abyssal Navy */
     --bg-surface: #0b122b;
-    --primary: #2563eb; /* Vivid Primary */
+    --primary: #3ecf8e; /* Vivid Primary */
     --primary-container: #1d4ed8;
     --primary-glow: rgba(37, 99, 235, 0.4);
     --secondary: #facc15; /* Secondary Highlight (Vivid Yellow) */
