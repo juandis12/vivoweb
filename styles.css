@@ -36,6 +36,14 @@
     /* Netflix Specific Timings */
     --ease-netflix: cubic-bezier(0.33, 1, 0.68, 1);
     --card-expand-delay: 0.3s;
+    --vh: 1vh;
+}
+
+/* Fix para altura real en móviles */
+html, body { 
+    height: 100%; 
+    height: calc(var(--vh, 1vh) * 100); 
+    overflow-x: hidden; 
 }
 
 /* ================================================
@@ -128,9 +136,11 @@ button { font-family: inherit; cursor: pointer; }
 ================================================ */
 .splash-screen {
     position: fixed; inset: 0; z-index: 9999;
-    background: radial-gradient(circle at center, #131a33 0%, var(--bg-base) 100%);
+    background-color: #0b122b;
+    background: radial-gradient(circle at center, #131a33 0%, #0b122b 100%);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px;
-    animation: splashFadeOut 0.5s ease 2.2s forwards;
+    animation: splashFadeOut 0.5s ease 3s forwards;
+    pointer-events: all;
 }
 
 .splash-logo {
@@ -1772,6 +1782,7 @@ nav a.active::after { width: 24px; }
         inset 0 1.5px 2px rgba(255, 255, 255, 0.3);
 }
 
+.mobile-nav {
     position: fixed; bottom: 0; left: 0; width: 100%;
     background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);

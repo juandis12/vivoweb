@@ -1,11 +1,11 @@
 {
-  "name": "VIVOTV",
+  "name": "VIVOTV | Películas, Series y Anime Gratis",
   "short_name": "VIVOTV",
-  "description": "Ver películas gratis, series y anime online en HD con VIVOTV.",
+  "description": "VIVOTV es la mejor plataforma para ver películas gratis, series y anime online en HD. Disfruta del mejor contenido sin suscripciones.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b122b",
-  "theme_color": "#2563eb",
+  "theme_color": "#0b122b",
   "orientation": "any",
   "icons": [
     {
@@ -21,7 +21,16 @@
       "purpose": "any"
     }
   ],
-  "categories": ["entertainment", "video"],
+  "categories": ["entertainment", "video", "movies"],
+  "screenshots": [
+    {
+      "src": "app_background.webp",
+      "sizes": "1280x720",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Streaming Premium Gratuito"
+    }
+  ],
   "lang": "es",
   "dir": "ltr",
   "prefer_related_applications": false
