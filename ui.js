@@ -341,5 +341,51 @@ export const UI_EFFECTS = {
         if (btnText) btnText.classList.toggle('hidden', isLoading);
         if (btnLoader) btnLoader.classList.toggle('hidden', !isLoading);
         if (btnSubmit) btnSubmit.disabled = isLoading;
+    },
+
+    // MODO TV BOX: Navegación por Teclado
+    initTVNavigation() {
+        document.addEventListener('keydown', (e) => {
+            const active = document.activeElement;
+            if (!active || !active.classList.contains('movie-card')) {
+                if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                    const first = document.querySelector('.movie-card');
+                    if (first) first.focus();
+                }
+                return;
+            }
+
+            const cards = Array.from(document.querySelectorAll('.movie-card'));
+            const index = cards.indexOf(active);
+            const rowWidth = 6; // Aproximado para grilla
+
+            switch(e.key) {
+                case 'ArrowRight': e.preventDefault(); if (index < cards.length - 1) cards[index + 1].focus(); break;
+                case 'ArrowLeft': e.preventDefault(); if (index > 0) cards[index - 1].focus(); break;
+                case 'ArrowDown': e.preventDefault(); if (index + rowWidth < cards.length) cards[index + rowWidth].focus(); break;
+                case 'ArrowUp': e.preventDefault(); if (index - rowWidth >= 0) cards[index - rowWidth].focus(); break;
+                case 'Enter': active.click(); break;
+            }
+        });
+    },
+
+    // INTERFAZ ADAPTATIVA: Colores Dinámicos
+    async applyAdaptiveTheme(imageUrl) {
+        if (!imageUrl) return;
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = imageUrl;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 1; canvas.height = 1;
+            ctx.drawImage(img, 0, 0, 1, 1);
+            const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+            document.documentElement.style.setProperty('--accent-dynamic', `rgb(${r}, ${g}, ${b})`);
+            document.documentElement.style.setProperty('--accent-dynamic-glow', `rgba(${r}, ${g}, ${b}, 0.5)`);
+        };
     }
 };
+
+// Iniciar componentes premium
+CATALOG_UI.initTVNavigation();

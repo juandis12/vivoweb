@@ -103,6 +103,25 @@ export const PLAYER_LOGIC = {
         setTimeout(() => selector.classList.add('visible'), 100);
     },
 
+    // Mini Player Toggle
+    toggleMiniPlayer(active) {
+        const container = document.getElementById('playerContainer');
+        const miniContainer = document.getElementById('miniPlayerContainer');
+        if (!container || !miniContainer) return;
+
+        if (active) {
+            miniContainer.classList.add('active');
+            miniContainer.appendChild(container);
+            container.classList.add('is-mini');
+        } else {
+            miniContainer.classList.remove('active');
+            // Re-insertar en el slot original del DOM si existe
+            const originalSlot = document.getElementById('modalMainContent');
+            if (originalSlot) originalSlot.prepend(container);
+            container.classList.remove('is-mini');
+        }
+    },
+
     // Helper para formatear segundos a HH:MM:SS o MM:SS
     formatTime(seconds) {
         if (!seconds || isNaN(seconds)) return '00:00';
@@ -256,12 +275,24 @@ export const PLAYER_LOGIC = {
 
             const btnExit = document.getElementById('btnExitPlayer');
             btnExit.onclick = () => {
+                this.toggleMiniPlayer(false);
                 playerContainer.classList.add('hidden');
                 videoPlayer.pause();
                 videoIframe.src = '';
                 const helpBtn = document.getElementById('watchPartyHelpBtn');
                 if (helpBtn) helpBtn.style.display = 'flex';
             };
+
+            const btnMinimize = document.getElementById('btnMinimizePlayer');
+            if (btnMinimize) {
+                btnMinimize.onclick = () => {
+                    this.toggleMiniPlayer(true);
+                    playerContainer.classList.add('hidden'); // Ocultar el fullscreen original
+                };
+            }
+
+            // Aplicar Interfaz Adaptativa (XPTV Style)
+            CATALOG_UI.applyAdaptiveTheme(TMDB_SERVICE.getImageUrl(details.backdrop_path));
 
             this.checkIfFavorite(supabaseClient);
         } catch (err) {
@@ -637,9 +668,10 @@ export const PLAYER_LOGIC = {
                 // y evitar el "falso error" que reporta el usuario.
                 this.iframeErrorTimer = setTimeout(() => {
                     if (this.currentIsIframe && !iframe.src.includes('about:blank')) {
-                        // Solo mostrar si el loader sigue presente o no hubo interacción exitosa
-                        console.warn('[VivoTV] El contenido tarda demasiado. Mostrando banner de soporte.');
-                        this.showContentError(container, this.currentType);
+                        console.warn('[VivoTV] El contenido tarda demasiado o falló. Intentando servidor alternativo.');
+                        this._tryNextServer(seekSeconds).then(success => {
+                            if (!success) this.showContentError(container, this.currentType);
+                        });
                     }
                 }, 15000); 
             }
@@ -658,7 +690,9 @@ export const PLAYER_LOGIC = {
 
             // Manejo de Errores en Video Directo
             video.onerror = () => {
-                this.showContentError(container, this.currentType);
+                this._tryNextServer(video.currentTime || seekSeconds).then(success => {
+                    if (!success) this.showContentError(container, this.currentType);
+                });
             };
             
             // Forzar inicio automático silenciado (Muted Autoplay)
@@ -1648,6 +1682,29 @@ export const PLAYER_LOGIC = {
         this._stopProgressTimer();
         const loader = document.getElementById('playerLoader');
         if (loader) loader.classList.add('hidden');
+    },
+
+    _hasNextServer() {
+        return _currentServers && _currentServers.length > 1;
+    },
+
+    async _tryNextServer(seekSeconds = 0) {
+        if (!this._hasNextServer()) return false;
+        
+        // Buscar el servidor actual y saltar al siguiente
+        const currentUrl = document.getElementById('videoIframe').src || document.getElementById('videoPlayer').src;
+        const currentIndex = _currentServers.findIndex(s => s.url === currentUrl);
+        
+        const nextIndex = (currentIndex + 1) % _currentServers.length;
+        if (nextIndex === 0 && currentIndex !== -1) {
+            console.warn('[Player] Se han probado todos los servidores.');
+            return false;
+        }
+
+        const nextServer = _currentServers[nextIndex];
+        showToast(`Reintentando con: ${nextServer.name}...`, 'warning');
+        this._playSource(nextServer.url, seekSeconds);
+        return true;
     }
 };
 
