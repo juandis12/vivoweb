@@ -402,15 +402,22 @@ const invalidIds = new Set();
  */
 async function syncMissingMetadata() {
     if (!window.DB_CATALOG) window.DB_CATALOG = [];
+    
+    // Cargar IDs ya marcados como inválidos para no volver a intentar
+    try {
+        const storedInvalids = await VIVOTV_DB.getInvalidIds();
+        storedInvalids.forEach(id => invalidIds.add(id));
+    } catch(e) {}
+
     const knownIds = new Set(window.DB_CATALOG.map(i => i.tmdb_id?.toString()));
-    const allIds = Array.from(availableIds).filter(id => !knownIds.has(id));
+    const allIds = Array.from(availableIds).filter(id => !knownIds.has(id) && !invalidIds.has(id));
 
     if (allIds.length === 0) {
         window.isPriorityMetadataSynced = true;
         return;
     }
 
-    console.log(`[VivoTV] 🚀 Turbo Sync: Procesando ${allIds.length} títulos de forma progresiva...`);
+    console.log(`[VivoTV] 🚀 Turbo Sync: Procesando ${allIds.length} títulos (Saltando ${invalidIds.size} inválidos)...`);
 
     // --- FASE 1: MICRO-BLOQUE PRIORITARIO (Para Renderizado Instantáneo) ---
     // Tomamos los primeros 100 para llenar el Hero y la primera fila de inmediato (y tener datos suficientes para En Vivo)
@@ -489,9 +496,12 @@ async function syncMissingMetadata() {
         }
     }
 
-    // ✅ Persistir catálogo completo en IndexedDB al terminar el sync
-    await _saveCatalogToCache(window.DB_CATALOG || []);
-    console.log('[VivoTV] ✅ Turbo Sync Completo. Catálogo persistido en sesión.');
+    // ✅ Persistir catálogo completo e IDs inválidos en IndexedDB al terminar el sync
+    await Promise.all([
+        _saveCatalogToCache(window.DB_CATALOG || []),
+        VIVOTV_DB.saveInvalidIds(Array.from(invalidIds))
+    ]);
+    console.log('[VivoTV] ✅ Turbo Sync Completo. Catálogo e IDs inválidos persistidos.');
 
 }
 

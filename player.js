@@ -483,6 +483,10 @@ export const PLAYER_LOGIC = {
 
         const isDirectStream = /\.(mp4|m3u8|webm|ogg|ts)([?#]|$)/i.test(smartUrl);
 
+        // Limpiar errores previos
+        const oldError = container.querySelector('.content-error-overlay');
+        if (oldError) oldError.remove();
+
         if (isIframe && !isDirectStream) {
             video.classList.add('hidden');
             iframe.classList.remove('hidden');
@@ -503,12 +507,30 @@ export const PLAYER_LOGIC = {
             iframe.src = finalUrl;
             this.currentIsIframe = true;
             this._startIframeTracking(seekSeconds, iframe);
+            
+            if (loader) {
+                // Si después de 8 segundos no hemos ocultado el loader (o el usuario no interactúa),
+                // podría ser un error 404 o carga lenta.
+                this.iframeErrorTimer = setTimeout(() => {
+                    if (!iframe.src.includes('about:blank')) {
+                        // Verificación básica: Si vimeus.com retorna 404, a veces se queda en blanco.
+                        // Como no podemos leer el status code por CORS, ofrecemos el banner de ayuda.
+                        this.showContentError(container, this.currentType);
+                    }
+                }, 10000);
+            }
+
             if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
         } else {
             iframe.classList.add('hidden');
             video.classList.remove('hidden');
             iframe.src = '';
             this.currentIsIframe = false;
+
+            // Manejo de Errores en Video Directo
+            video.onerror = () => {
+                this.showContentError(container, this.currentType);
+            };
             
             // Forzar inicio automático silenciado (Muted Autoplay)
             video.muted = true;
@@ -1453,6 +1475,35 @@ export const PLAYER_LOGIC = {
         if (this.marathonTimer) clearInterval(this.marathonTimer);
         const overlay = document.querySelector('.marathon-overlay');
         if (overlay) overlay.classList.remove('visible');
+    },
+    
+    showContentError(container, type = 'movie') {
+        if (!container) return;
+        const contentTypeLabel = type === 'tv' ? 'serie' : (type === 'anime' ? 'anime' : 'película');
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'content-error-overlay';
+        overlay.innerHTML = `
+            <div class="content-error-icon">🎬</div>
+            <h2 class="content-error-title">Contenido no disponible</h2>
+            <p class="content-error-desc">
+                Lo sentimos, estamos solucionando problemas con esta ${contentTypeLabel}. 
+                Nuestros técnicos han sido notificados y estará disponible pronto.
+            </p>
+            <div class="content-error-actions">
+                <button class="btn-error-retry" onclick="location.reload()">Reintentar</button>
+                <button class="btn-error-report" onclick="this.textContent='✅ Reportado'">Reportar Fallo</button>
+            </div>
+        `;
+        
+        // Evitar duplicados
+        const exists = container.querySelector('.content-error-overlay');
+        if (!exists) container.appendChild(overlay);
+        
+        // Detener trackers
+        this._stopProgressTimer();
+        const loader = document.getElementById('playerLoader');
+        if (loader) loader.classList.add('hidden');
     }
 };
 

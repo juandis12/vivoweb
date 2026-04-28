@@ -15,8 +15,10 @@ export const CONFIG = {
         const h = window.location.hostname;
         const isLocal = h === 'localhost' || h === '127.0.0.1' || h.startsWith('192.168.');
         // En Vercel (cualquier dominio .vercel.app o dominio propio), el proxy es obligatorio.
-        return true; 
-    }
+        // En local, el proxy /api/tmdb no existe bajo Live Server (404), por lo que usamos llamada directa.
+        return !isLocal; 
+    },
+    TMDB_API_KEY: '743275e25bcea0a320b87d2af271a136' // Fallback para desarrollo local (sacada de Flutter)
 };
 
 // Instancia Única de Supabase (Importar desde aquí, no usar window)

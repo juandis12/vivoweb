@@ -4,8 +4,9 @@
  */
 
 const DB_NAME = 'vivotv_cache_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incrementar versión para el nuevo store
 const STORE_NAME = 'content_metadata';
+const INVALID_STORE = 'invalid_ids';
 
 export const VIVOTV_DB = {
     _db: null,
@@ -19,6 +20,9 @@ export const VIVOTV_DB = {
                 const db = event.target.result;
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
                     db.createObjectStore(STORE_NAME, { keyPath: 'tmdb_id' });
+                }
+                if (!db.objectStoreNames.contains(INVALID_STORE)) {
+                    db.createObjectStore(INVALID_STORE, { keyPath: 'id' });
                 }
             };
 
@@ -63,10 +67,32 @@ export const VIVOTV_DB = {
     async clear() {
         const db = await this.init();
         return new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.clear();
-            request.onsuccess = () => resolve();
+            const transaction = db.transaction([STORE_NAME, INVALID_STORE], 'readwrite');
+            transaction.objectStore(STORE_NAME).clear();
+            transaction.objectStore(INVALID_STORE).clear();
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = (event) => reject(event.target.error);
+        });
+    },
+
+    async saveInvalidIds(ids) {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([INVALID_STORE], 'readwrite');
+            const store = transaction.objectStore(INVALID_STORE);
+            ids.forEach(id => store.put({ id }));
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = (event) => reject(event.target.error);
+        });
+    },
+
+    async getInvalidIds() {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([INVALID_STORE], 'readonly');
+            const store = transaction.objectStore(INVALID_STORE);
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result.map(r => r.id));
             request.onerror = (event) => reject(event.target.error);
         });
     }

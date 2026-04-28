@@ -138,7 +138,8 @@ export const CATALOG_UI = {
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
-                <img src="${posterImg}" alt="${title}" loading="lazy">
+                <img src="${posterImg}" alt="${title}" loading="lazy" 
+                     onerror="this.onerror=null; this.src='https://images.weserv.nl/?url=ssl:placehold.jp/24/2a1b5e/ffffff/300x450.png?text=VIVO+TV';">
                 <div class="movie-card-title">${title}</div>
                 ${isWatched ? `
                     <div class="watched-badge watched-premium">

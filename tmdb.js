@@ -20,8 +20,18 @@ export const TMDB_SERVICE = {
         const isKids = currentProfile?.is_kids === true;
 
         const cleanPath = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-        const url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
-        url.searchParams.append('path', cleanPath);
+        let url;
+
+        if (CONFIG.USE_PROXY) {
+            // PRODUCCIÓN (Vercel): Usar el Proxy Serverless para ocultar la Key
+            url = new URL(window.location.origin + CONFIG.TMDB_PROXY_URL);
+            url.searchParams.append('path', cleanPath);
+        } else {
+            // DESARROLLO (Local): Llamada directa a TMDB para evitar 404 del proxy local
+            url = new URL(`https://api.themoviedb.org/3/${cleanPath}`);
+            url.searchParams.append('api_key', CONFIG.TMDB_API_KEY);
+            url.searchParams.append('language', 'es-ES');
+        }
 
         if (isKids) {
             url.searchParams.append('certification_country', 'US');
