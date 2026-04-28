@@ -4,6 +4,7 @@ import { showToast } from './utils.js';
 import { CATALOG_UI } from './ui.js'; // Solo se usa en funciones, pero evitamos import preventivo si es posible
 
 let _supabase = null;
+let _currentServers = [];
 export function setSupabase(client) { _supabase = client; }
 
 export const PLAYER_LOGIC = {
@@ -46,6 +47,60 @@ export const PLAYER_LOGIC = {
 
         this.sdksLoaded = true;
         console.log('[Player] SDKs listos.');
+    },
+
+    // UI: Selector de Servidores
+    showServerSelector(servers, seek = 0) {
+        _currentServers = servers;
+        let selector = document.getElementById('serverSelector');
+        if (!selector) {
+            selector = document.createElement('div');
+            selector.id = 'serverSelector';
+            selector.className = 'server-selector-overlay';
+            document.getElementById('playerContainer').appendChild(selector);
+        }
+
+        selector.innerHTML = `
+            <div class="selector-content">
+                <h3>Seleccionar Servidor</h3>
+                <div class="server-list">
+                    ${servers.map((s, idx) => `
+                        <button class="server-btn ${idx === 0 ? 'active' : ''}" 
+                                onclick="window.PLAYER_LOGIC.switchServer(${idx}, ${seek})">
+                            <span class="server-icon">📡</span>
+                            <div class="server-info">
+                                <span class="server-name">${s.name}</span>
+                                <span class="server-desc">${s.url.includes('vimeus') ? 'Recomendado' : 'Alternativo'}</span>
+                            </div>
+                        </button>
+                    `).join('')}
+                </div>
+                <button class="btn-close-selector" onclick="document.getElementById('serverSelector').classList.remove('visible')">Cerrar</button>
+            </div>
+        `;
+        
+        // Exponer función de cambio al objeto global para los clics en HTML inyectado
+        window.PLAYER_LOGIC.switchServer = (index, sSeconds) => {
+            const server = _currentServers[index];
+            if (!server) return;
+            
+            // UI Feedback
+            const btns = document.querySelectorAll('.server-btn');
+            btns.forEach((b, i) => b.classList.toggle('active', i === index));
+            
+            // Guardar progreso actual antes de cambiar
+            const video = document.getElementById('videoPlayer');
+            const currentTime = video ? video.currentTime : sSeconds;
+            
+            this._playSource(server.url, currentTime);
+            showToast(`Cambiando a ${server.name}...`, 'info');
+            
+            // Ocultar selector tras elegir
+            setTimeout(() => selector.classList.remove('visible'), 500);
+        };
+
+        // Mostrar con delay para animación
+        setTimeout(() => selector.classList.add('visible'), 100);
     },
 
     // Helper para formatear segundos a HH:MM:SS o MM:SS
@@ -278,12 +333,31 @@ export const PLAYER_LOGIC = {
 
     async _loadMovieSource(tmdbId, supabaseClient) {
         // En el esquema, tmdb_id es BigInt, lo pasamos como Number para compatibilidad
-        const { data, error } = await supabaseClient.from('video_sources').select('stream_url').eq('tmdb_id', Number(tmdbId)).maybeSingle();
-        if (error || !data?.stream_url) {
+        const { data, error } = await supabaseClient.from('video_sources')
+            .select('stream_url, stream_url_vidsrc, stream_url_2embed, stream_url_superembed')
+            .eq('tmdb_id', Number(tmdbId))
+            .maybeSingle();
+
+        if (error || !data) {
             showToast('Fuente no disponible.');
         } else {
             const progressObj = await this._getProgress(tmdbId, 'movie', 0, 0, supabaseClient);
-            this._playSource(data.stream_url, progressObj?.progress_seconds || 0);
+            const seek = progressObj?.progress_seconds || 0;
+
+            // Preparar servidores disponibles
+            const servers = [
+                { name: 'Vimeus (Principal)', url: data.stream_url },
+                { name: 'Servidor VIP 1', url: data.stream_url_vidsrc },
+                { name: 'Servidor VIP 2', url: data.stream_url_2embed },
+                { name: 'Servidor Directo', url: data.stream_url_superembed }
+            ].filter(s => s.url && s.url.trim() !== '');
+
+            if (servers.length > 1) {
+                this.showServerSelector(servers, seek);
+            }
+            
+            // Reproducir el primero por defecto
+            this._playSource(servers[0].url, seek);
         }
     },
 
@@ -346,14 +420,20 @@ export const PLAYER_LOGIC = {
             const [seasonData, dbEps] = await Promise.all([
                 TMDB_SERVICE.getSeasonDetails(this.currentTmdbId, seasonNum),
                 supabaseClient.from('series_episodes')
-                    .select('episode_number, stream_url')
+                    .select('episode_number, stream_url, stream_url_vidsrc, stream_url_2embed, stream_url_superembed')
                     .eq('tmdb_id', Number(this.currentTmdbId))
                     .eq('season_number', Number(seasonNum))
             ]);
 
             const episodes = (seasonData.episodes || []).map(ep => {
                 const dbEp = (dbEps.data || []).find(d => d.episode_number === ep.episode_number);
-                return { ...ep, stream_url: dbEp?.stream_url };
+                return { 
+                    ...ep, 
+                    stream_url: dbEp?.stream_url,
+                    stream_url_vidsrc: dbEp?.stream_url_vidsrc,
+                    stream_url_2embed: dbEp?.stream_url_2embed,
+                    stream_url_superembed: dbEp?.stream_url_superembed
+                };
             });
 
             this._renderEpisodes(seasonNum, episodes, supabaseClient);
@@ -444,7 +524,19 @@ export const PLAYER_LOGIC = {
             window.updateGlobalPlaybackStatus({ title: this.currentPlaybackTitle, type: 'tv' });
         }
 
-        this._playSource(ep.stream_url, seekSeconds);
+        // Preparar servidores para series
+        const servers = [
+            { name: 'Vimeus (Principal)', url: ep.stream_url },
+            { name: 'Servidor VIP 1', url: ep.stream_url_vidsrc },
+            { name: 'Servidor VIP 2', url: ep.stream_url_2embed },
+            { name: 'Servidor Directo', url: ep.stream_url_superembed }
+        ].filter(s => s.url && s.url.trim() !== '');
+
+        if (servers.length > 1) {
+            this.showServerSelector(servers, seekSeconds);
+        }
+
+        this._playSource(servers[0].url, seekSeconds);
     },
 
     async _playSource(url, seekSeconds = 0) {
