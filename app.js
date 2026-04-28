@@ -35,27 +35,6 @@ if (supabase) {
     setSupabase(supabase);
 }
 
-// ---- FUNCIONES DE DEBUG ----
-function fatalLog(msg) {
-    console.error(`💥 ${msg}`);
-}
-
-// Simple debug logger used throughout the app
-function logDebug(msg) {
-    console.debug(`[DEBUG] ${msg}`);
-}
-
-window.onerror = function(message, source, lineno, colno, error) {
-    fatalLog(`${message} at ${lineno}:${colno}`);
-};
-
-window.addEventListener('unhandledrejection', function(event) {
-    fatalLog(`Promise Rejection: ${event.reason}`);
-});
-
-// App cargada
-console.log('App.js cargado correctamente.');
-
 // ---- REFERENCIAS DOM ----
 // Movidas dentro de initAppForPage() para evitar problemas entre páginas
 let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit;

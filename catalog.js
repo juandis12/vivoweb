@@ -44,12 +44,34 @@ const _catalogState = {
     availableMovies: new Set(),
     availableSeries: new Set(),
     availableIds: new Set(),
+    maintenanceIds: new Set(),
     catalog: [],
 };
 
 export const availableMovies = _catalogState.availableMovies;
 export const availableSeries = _catalogState.availableSeries;
 export const availableIds    = _catalogState.availableIds;
+export const maintenanceIds  = _catalogState.maintenanceIds;
+
+// Exportar a window para acceso desde ui.js y otros módulos
+window.availableIds = _catalogState.availableIds;
+window.maintenanceIds = _catalogState.maintenanceIds;
+
+/**
+ * Reporta un ID que ha fallado (404 poster u otros errores críticos)
+ */
+window.reportMaintenanceId = function(id) {
+    if (!id) return;
+    const sId = id.toString();
+    if (_catalogState.maintenanceIds.has(sId)) return;
+    
+    _catalogState.maintenanceIds.add(sId);
+    
+    // Persistir en IndexedDB (usamos el almacén de IDs inválidos)
+    VIVOTV_DB.saveInvalidIds([sId]).catch(e => console.error('[Catalog] Error persistiendo ID roto:', e));
+    
+    console.log(`[Catalog] 🔧 ID ${sId} agregado a la lista de mantenimiento local.`);
+};
 
 // Getter único para DB_CATALOG (siempre sincronizado)
 export function getDBCatalog() { return _catalogState.catalog; }
@@ -66,6 +88,13 @@ window.DB_CATALOG = _catalogState.catalog;
 
 // Exportar al objeto window para acceso global
 window.isCatalogSyncing = false;
+
+// Cargar IDs en mantenimiento al iniciar el módulo
+VIVOTV_DB.getInvalidIds().then(ids => {
+    ids.forEach(id => _catalogState.maintenanceIds.add(id.toString()));
+    console.log(`[Catalog] 🛠️ Cargados ${ids.length} ítems en mantenimiento desde la base de datos.`);
+}).catch(e => console.warn('[Catalog] No se pudo cargar la lista de mantenimiento:', e));
+
 
 /**
  * Validador de tipos de contenido por página
@@ -176,7 +205,14 @@ export async function validateBatchAvailability(supabase, ids) {
  * Solo carga lo que hay en tu tabla 'content' para las filas de "Disponibles"
  */
 export async function fetchAvailableIds(supabase) {
-    if (!supabase || isSyncing) return;
+    // ─── CARGA DE MANTENIMIENTO (Local) ───────────────────────────
+    try {
+        const invalidIds = await VIVOTV_DB.getInvalidIds();
+        invalidIds.forEach(id => maintenanceIds.add(id.toString()));
+        window.maintenanceIds = maintenanceIds;
+    } catch (e) {
+        console.warn('[Catalog] Error cargando lista de mantenimiento:', e);
+    }
 
     // ─── FAST PATH: Caché persistente (IndexedDB) ───────────────────────────
     // Cargamos instantáneamente desde la base de datos local.

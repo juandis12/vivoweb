@@ -122,9 +122,13 @@ export const CATALOG_UI = {
     },
 
     createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {
+        const id = (item.id || item.tmdb_id)?.toString();
+        const maintenanceIds = window.maintenanceIds || new Set();
+        const isMaintenance = maintenanceIds.has(id);
+        
         const card = document.createElement('div');
-        card.className = `movie-card${isAvailable ? ' is-available' : ''}${rank ? ' ranked' : ''}`;
-        card.dataset.tmdbId = item.id || item.tmdb_id;
+        card.className = `movie-card${isAvailable && !isMaintenance ? ' is-available' : ''}${isMaintenance ? ' in-maintenance' : ''}${rank ? ' ranked' : ''}`;
+        card.dataset.tmdbId = id;
         card.dataset.type = type || item.content_type || item.media_type;
 
         const year   = (item.release_date || item.first_air_date || '').split('-')[0];
@@ -139,19 +143,31 @@ export const CATALOG_UI = {
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
                 <img src="${posterImg}" alt="${title}" loading="lazy" 
-                     onerror="this.onerror=null; this.src='https://images.weserv.nl/?url=ssl:placehold.jp/24/2a1b5e/ffffff/300x450.png?text=VIVO+TV';">
+                     onerror="if(window.reportMaintenanceId){ 
+                        const id = this.closest('.movie-card').dataset.tmdbId;
+                        this.closest('.movie-card').classList.add('in-maintenance');
+                        this.closest('.movie-card').classList.remove('is-available');
+                        const b = this.closest('.movie-card').querySelector('.badge-container');
+                        if(b) b.innerHTML = '<div class=\'maintenance-badge\'>EN MANTENIMIENTO</div>';
+                        window.reportMaintenanceId(id);
+                        this.src='https://images.weserv.nl/?url=ssl:placehold.jp/24/2a1b5e/ffffff/300x450.png?text=VIVO+TV+MANTENIMIENTO';
+                     }">
                 <div class="movie-card-title">${title}</div>
-                ${isWatched ? `
-                    <div class="watched-badge watched-premium">
-                        <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                        VISTO
-                    </div>
-                ` : (isAvailable ? `
-                    <div class="available-badge">
-                        <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
-                        DISPONIBLE
-                    </div>` : `
-                    <div class="coming-soon-badge">PRÓXIMAMENTE</div>`)}
+                <div class="badge-container">
+                    ${isMaintenance ? `
+                        <div class="maintenance-badge">EN MANTENIMIENTO</div>
+                    ` : (isWatched ? `
+                        <div class="watched-badge watched-premium">
+                            <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                            VISTO
+                        </div>
+                    ` : (isAvailable ? `
+                        <div class="available-badge">
+                            <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
+                            DISPONIBLE
+                        </div>` : `
+                        <div class="coming-soon-badge">PRÓXIMAMENTE</div>`))}
+                </div>
                 ${(progress !== null && progress > 0) && !isWatched ? `
                     <div class="card-progress-bar">
                         <div class="card-progress-fill" style="width: ${progress}%"></div>
@@ -160,7 +176,7 @@ export const CATALOG_UI = {
             </div>
             <div class="movie-tooltip">
                 <div class="movie-tooltip-actions">
-                    <button class="movie-tooltip-btn btn-play" title="Reproducir">▶</button>
+                    <button class="movie-tooltip-btn btn-play" title="Reproducir">${isMaintenance ? '🔧' : '▶'}</button>
                     <button class="movie-tooltip-btn btn-outline-rnd" title="Añadir a Mi Lista">+</button>
                 </div>
                 <div class="movie-tooltip-meta">
@@ -169,11 +185,18 @@ export const CATALOG_UI = {
                     <span class="badge-hd">HD</span>
                 </div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px;">${genresList}</div>
+                ${isMaintenance ? '<div style="color:var(--primary); font-weight:bold; margin-top:5px; font-size:0.7rem;">ESTAMOS ARREGLANDO ESTE TÍTULO</div>' : ''}
             </div>`;
 
-        const openDetail = () => window.dispatchEvent(
-            new CustomEvent('open-movie-detail', { detail: { tmdbId: item.id || item.tmdb_id, type } })
-        );
+        const openDetail = () => {
+            if (isMaintenance) {
+                window.showToast('Este título está en mantenimiento técnico.', 'info');
+                return;
+            }
+            window.dispatchEvent(
+                new CustomEvent('open-movie-detail', { detail: { tmdbId: id, type } })
+            );
+        };
 
         card.addEventListener('click', openDetail);
         card.querySelector('.movie-tooltip-btn').addEventListener('click', (e) => { e.stopPropagation(); openDetail(); });

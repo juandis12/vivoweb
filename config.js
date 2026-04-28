@@ -18,8 +18,25 @@ export const CONFIG = {
         // En local, el proxy /api/tmdb no existe bajo Live Server (404), por lo que usamos llamada directa.
         return !isLocal; 
     },
-    TMDB_API_KEY: '743275e25bcea0a320b87d2af271a136' // Fallback para desarrollo local (sacada de Flutter)
+    TMDB_API_KEY: '743275e25bcea0a320b87d2af271a136', // Fallback para desarrollo local (sacada de Flutter)
+    
+    // SEGURIDAD: Control de logs en consola
+    DEBUG: false
 };
+
+// ---- MOTOR DE SEGURIDAD (Consola Limpia) ----
+// Se ejecuta inmediatamente para silenciar logs de otros módulos
+if (!CONFIG.DEBUG) {
+    const noop = () => {};
+    console.log = noop;
+    console.debug = noop;
+    console.info = noop;
+    console.warn = noop; 
+}
+
+// Funciones globales seguras
+window.logDebug = (msg) => { if (CONFIG.DEBUG) console.debug(`[DEBUG] ${msg}`); };
+window.fatalLog = (msg) => { if (CONFIG.DEBUG) console.error(`💥 ${msg}`); };
 
 // Instancia Única de Supabase (Importar desde aquí, no usar window)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
