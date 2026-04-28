@@ -1782,52 +1782,7 @@ nav a.active::after { width: 24px; }
         inset 0 1.5px 2px rgba(255, 255, 255, 0.3);
 }
 
-.mobile-nav {
-    position: fixed; bottom: 0; left: 0; width: 100%;
-    background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    display: none; justify-content: space-around; align-items: center;
-    padding: 12px 0 25px 0; z-index: 1000;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.mobile-nav-item {
-    font-weight: 700;
-    flex: 1;
-    height: 100%;
-    z-index: 10;
-    transition: all 0.4s var(--ease-smooth);
-    -webkit-tap-highlight-color: transparent;
-    gap: 4px;
-}
-
-.mobile-nav-item span {
-    opacity: 0;
-    transform: translateY(5px);
-    transition: all 0.4s var(--ease-spring);
-    pointer-events: none;
-}
-
-.mobile-nav-item svg {
-    width: 24px;
-    height: 24px;
-    stroke-width: 2.2;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.mobile-nav-item.active {
-    color: #fff; /* Icono activo en blanco puro */
-}
-
-.mobile-nav-item.active span {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.mobile-nav-item.active svg {
-    transform: scale(1.1) translateY(-2px);
-    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.4));
-}
+/* El resto de estilos de navegación móvil se han movido al final del archivo para evitar conflictos */
 
 /* ================================================
    14. RESPONSIVE & MOBILE OPTIMIZATION
@@ -3513,33 +3468,43 @@ nav a.active::after { width: 24px; }
         font-size: 1.1rem;
     }
 
-    /* 3. Navegación Móvil Inferior (Tab Bar) */
+    /* 3. Navegación Móvil Inferior (Tab Bar Premium) */
     .mobile-nav {
         display: flex !important;
-        position: fixed; bottom: 0; left: 0; width: 100%;
-        background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
-        justify-content: space-around; align-items: center;
-        padding: 10px 0 25px 0; z-index: 10000;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        position: fixed; 
+        bottom: 0; 
+        left: 0; 
+        right: 0;
+        width: 100% !important;
+        height: 75px;
+        background: rgba(10, 10, 15, 0.95); 
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        justify-content: space-around; 
+        align-items: center;
+        padding: 0 0 15px 0; 
+        z-index: 99999;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0 !important; /* Eliminar redondeados que causan el recorte */
     }
     
     .mobile-nav-item {
         display: flex; flex-direction: column; align-items: center;
-        color: rgba(255, 255, 255, 0.4); text-decoration: none; font-size: 0.6rem;
-        gap: 5px; transition: 0.3s; flex: 1;
+        color: rgba(255, 255, 255, 0.5); text-decoration: none; font-size: 0.65rem;
+        gap: 6px; transition: 0.3s; flex: 1;
+        justify-content: center;
     }
     
-    .mobile-nav-item svg { width: 20px; height: 20px; fill: currentColor; }
+    .mobile-nav-item svg { width: 22px; height: 22px; fill: currentColor; }
     .mobile-nav-item.active { color: white; }
     .mobile-nav-item.active svg { color: var(--primary); transform: scale(1.1); }
-    .mobile-nav-item span { font-weight: 700; opacity: 0.7; }
+    .mobile-nav-item span { font-weight: 700; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
     .mobile-nav-item.active span { opacity: 1; }
     
     .mobile-nav-indicator {
-        position: absolute; top: -1px; height: 3px; background: var(--primary);
-        width: 15%; border-radius: 0 0 4px 4px; transition: 0.4s var(--ease-spring);
-        box-shadow: 0 0 15px var(--primary-glow);
+        position: absolute; top: 0; height: 3px; background: var(--primary);
+        width: 20%; border-radius: 0 0 10px 10px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 0 20px var(--primary-glow);
     }
 
     /* Ocultar elementos de escritorio */
