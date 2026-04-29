@@ -275,6 +275,7 @@ export const PLAYER_LOGIC = {
 
             const btnExit = document.getElementById('btnExitPlayer');
             btnExit.onclick = () => {
+                if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.detach();
                 this.toggleMiniPlayer(false);
                 playerContainer.classList.add('hidden');
                 videoPlayer.pause();
@@ -1596,6 +1597,7 @@ export const PLAYER_LOGIC = {
 
     closeModal() {
         console.log('[Player] Cerrando modal, salvando progreso...');
+        if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.detach();
         this.forceSaveCurrentProgress();
         this._stopProgressTimer();
         this._stopTrailer();

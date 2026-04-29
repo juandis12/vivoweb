@@ -19,6 +19,9 @@ const SocialPulse = {
     _tmdbId: null,
     _type: null,
     _isOpen: false,
+    _isMinimized: false,
+    _isDragging: false,
+    _dragOffset: { x: 0, y: 0 },
     _emojiPool: [],      // Pool de emojis flotantes activos
     _lastReaction: 0,    // Throttle
 
@@ -146,25 +149,80 @@ const SocialPulse = {
         bar.id = 'socialPulseBar';
         bar.innerHTML = `
             <div id="spFloatArea"></div>
-            <div class="sp-inner">
-                <div class="sp-reactions-row">
-                    ${REACTIONS.map(r => `
-                        <button class="sp-reaction-btn" data-sp-reaction="${r.id}" title="${r.label}">
-                            <span class="sp-emoji">${r.emoji}</span>
-                            <span class="sp-count">0</span>
+            <div class="sp-window">
+                <div class="sp-header" id="spDragHandle">
+                    <div class="sp-drag-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div class="sp-controls">
+                        <button class="sp-ctrl-btn" id="spBtnMinimize" title="Minimizar">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
                         </button>
-                    `).join('')}
+                        <button class="sp-ctrl-btn sp-ctrl-close" id="spBtnClose" title="Cerrar">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
                 </div>
-                <span id="spTotalReactions" class="sp-total">0 reacciones</span>
+                <div class="sp-inner">
+                    <div class="sp-reactions-row">
+                        ${REACTIONS.map(r => `
+                            <button class="sp-reaction-btn" data-sp-reaction="${r.id}" title="${r.label}">
+                                <span class="sp-emoji">${r.emoji}</span>
+                                <span class="sp-count">0</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="sp-footer">
+                        <span id="spTotalReactions" class="sp-total">0 reacciones</span>
+                    </div>
+                </div>
+                <button id="spBtnExpand" class="sp-expand-pill">
+                    <span class="sp-emoji">💬</span>
+                    <span>Reacciones</span>
+                </button>
             </div>
         `;
         document.body.appendChild(bar);
 
-        // Delegación de clicks
+        // --- Lógica de Arrastre (Dragging) ---
+        const handle = document.getElementById('spDragHandle');
+        handle.onmousedown = (e) => {
+            if (this._isMinimized) return;
+            this._isDragging = true;
+            this._dragOffset.x = e.clientX - bar.offsetLeft;
+            this._dragOffset.y = e.clientY - bar.offsetTop;
+            bar.classList.add('dragging');
+        };
+
+        document.onmousemove = (e) => {
+            if (!this._isDragging) return;
+            bar.style.left = `${e.clientX - this._dragOffset.x}px`;
+            bar.style.top = `${e.clientY - this._dragOffset.y}px`;
+            bar.style.bottom = 'auto';
+            bar.style.transform = 'none';
+        };
+
+        document.onmouseup = () => {
+            this._isDragging = false;
+            bar.classList.remove('dragging');
+        };
+
+        // --- Lógica de Controles ---
+        document.getElementById('spBtnMinimize').onclick = () => this.toggleMinimize(true);
+        document.getElementById('spBtnExpand').onclick = () => this.toggleMinimize(false);
+        document.getElementById('spBtnClose').onclick = () => this.detach();
+
+        // Delegación de clicks de reacciones
         bar.addEventListener('click', e => {
             const btn = e.target.closest('.sp-reaction-btn');
             if (btn) this._sendReaction(btn.dataset.spReaction);
         });
+    },
+
+    toggleMinimize(val) {
+        this._isMinimized = val;
+        const bar = document.getElementById('socialPulseBar');
+        if (bar) bar.classList.toggle('minimized', val);
     },
 
     _injectStyles() {
@@ -178,7 +236,7 @@ const SocialPulse = {
                 transform: translateX(-50%) translateY(120px);
                 z-index: 5000;
                 opacity: 0;
-                transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), opacity 0.4s ease;
+                transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), opacity 0.4s ease, left 0.1s linear, top 0.1s linear;
                 pointer-events: none;
             }
             #socialPulseBar.visible {
@@ -186,6 +244,82 @@ const SocialPulse = {
                 opacity: 1;
                 pointer-events: auto;
             }
+            #socialPulseBar.dragging { transition: none; opacity: 0.8; }
+            
+            .sp-window {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                background: linear-gradient(135deg, rgba(12,10,28,0.96), rgba(20,15,40,0.96));
+                border: 1px solid rgba(187,134,252,0.25);
+                border-radius: 16px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+                backdrop-filter: blur(24px);
+                overflow: hidden;
+            }
+
+            .sp-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                background: rgba(255,255,255,0.03);
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+                cursor: grab;
+                user-select: none;
+            }
+            .sp-header:active { cursor: grabbing; }
+
+            .sp-drag-indicator { display: flex; gap: 3px; }
+            .sp-drag-indicator span { width: 4px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 50%; }
+
+            .sp-controls { display: flex; gap: 6px; }
+            .sp-ctrl-btn {
+                background: rgba(255,255,255,0.08);
+                border: none;
+                color: white;
+                width: 24px; height: 24px;
+                border-radius: 6px;
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; transition: all 0.2s;
+            }
+            .sp-ctrl-btn:hover { background: rgba(255,255,255,0.15); }
+            .sp-ctrl-close:hover { background: #ff4b4b; }
+
+            .sp-inner {
+                padding: 12px 16px;
+                display: flex; flex-direction: column; align-items: center; gap: 8px;
+                transition: all 0.3s ease;
+            }
+
+            /* Modo Minimizado */
+            #socialPulseBar.minimized .sp-inner,
+            #socialPulseBar.minimized .sp-header {
+                display: none;
+            }
+            .sp-expand-pill {
+                display: none;
+                background: var(--vivotv-accent, #7B2FBE);
+                color: white;
+                border: none;
+                padding: 10px 18px;
+                border-radius: 30px;
+                font-family: 'Manrope', sans-serif;
+                font-weight: 800;
+                font-size: 0.8rem;
+                cursor: pointer;
+                box-shadow: 0 10px 20px rgba(123,47,190,0.4);
+                align-items: center; gap: 8px;
+                animation: spPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            #socialPulseBar.minimized .sp-expand-pill { display: flex; }
+            
+            @keyframes spPopIn {
+                from { transform: scale(0.5); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
+
+            .sp-footer { width: 100%; display: flex; justify-content: center; opacity: 0.5; }
             #spFloatArea {
                 position: absolute;
                 bottom: 100%;
