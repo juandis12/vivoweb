@@ -1060,8 +1060,13 @@ export const PLAYER_LOGIC = {
         // --- OPCIÓN C: CRONÓMETRO INTELIGENTE (Goodstream y otros) ---
         else {
             this.progressTimer = setInterval(() => {
-                // Solo avanzar si la pestaña es visible (Evita conteo falso)
-                if (document.visibilityState === 'visible') {
+                // Solo avanzar si:
+                // 1. La pestaña es visible
+                // 2. La ventana tiene el foco (evita conteo si está en segundo plano)
+                // 3. El modal del player sigue abierto
+                const isPlayerActive = document.getElementById('playerModal')?.classList.contains('active');
+                
+                if (document.visibilityState === 'visible' && document.hasFocus() && isPlayerActive) {
                     elapsed += 10;
                     doSaveProgress(elapsed);
                 }
