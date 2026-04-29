@@ -478,15 +478,20 @@ export const PLAYER_LOGIC = {
         const grid = document.getElementById('episodesGrid');
         grid.innerHTML = '';
 
+        // FIX: 'profile' no está en scope — leer desde localStorage igual que el resto de la app
+        const currentProfile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+
         // Obtener progreso de esta temporada
         let progressMap = {};
-        const { data: hist } = await supabaseClient.from('watch_history')
-            .select('episode_number, progress_seconds')
-            .eq('profile_id', profile.id)
-            .eq('tmdb_id', Number(this.currentTmdbId))
-            .eq('season_number', Number(seasonNum));
-        
-        (hist || []).forEach(h => progressMap[h.episode_number] = h);
+        if (currentProfile?.id) {
+            const { data: hist } = await supabaseClient.from('watch_history')
+                .select('episode_number, progress_seconds')
+                .eq('profile_id', currentProfile.id)
+                .eq('tmdb_id', Number(this.currentTmdbId))
+                .eq('season_number', Number(seasonNum));
+            
+            (hist || []).forEach(h => progressMap[h.episode_number] = h);
+        }
 
         const runtimeMap = {};
         episodes.forEach(e => runtimeMap[e.episode_number] = e.runtime || 45); // Fallback runtime
