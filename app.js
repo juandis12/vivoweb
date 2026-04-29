@@ -331,18 +331,18 @@ function initWatchPartyGuide() {
                 position: fixed; bottom: 100px; right: 30px;
                 width: 60px; height: 60px; border-radius: 20px;
                 background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
-                border: 2px solid rgba(56,189,248,0.5);
+                border: 2px solid rgba(187, 134, 252, 0.5);
                 backdrop-filter: blur(10px);
                 display: flex; align-items: center; justify-content: center;
                 cursor: pointer; z-index: 2147483647 !important; /* MÁXIMA PRIORIDAD */
-                box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(56,189,248,0.2);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(187, 134, 252, 0.2);
                 transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 pointer-events: auto !important;
             }
             .btn-help-floating:hover {
                 transform: scale(1.15) translateY(-5px);
-                border-color: rgba(56,189,248,1);
-                box-shadow: 0 15px 40px rgba(56,189,248,0.4);
+                border-color: rgba(187, 134, 252, 1);
+                box-shadow: 0 15px 40px rgba(187, 134, 252, 0.4);
             }
             .btn-help-floating img { width: 35px; height: 35px; object-fit: contain; }
             @media (max-width: 600px) {

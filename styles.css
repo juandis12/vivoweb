@@ -2,9 +2,10 @@
     /* Paleta Abyssal Navy & Vivid Primary (Stitch Sync) 🎬 */
     --bg-base: #060912; /* Abyssal Navy */
     --bg-surface: #0b122b;
-    --primary: #3ecf8e; /* Vivid Primary */
-    --primary-container: #1d4ed8;
-    --primary-glow: rgba(37, 99, 235, 0.4);
+    --primary: #bb86fc; /* Light Purple */
+    --primary-container: #9d4edd;
+    --primary-glow: rgba(187, 134, 252, 0.4);
+    --primary-dark: #7c3aed;
     --secondary: #facc15; /* Secondary Highlight (Vivid Yellow) */
     --tertiary: #7c3aed; /* Creative Violet */
     
