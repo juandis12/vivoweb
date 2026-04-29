@@ -363,7 +363,6 @@ export const PLAYER_LOGIC = {
     },
 
     async _loadMovieSource(tmdbId, supabaseClient) {
-        // En el esquema, tmdb_id es BigInt, lo pasamos como Number para compatibilidad
         const { data, error } = await supabaseClient.from('video_sources')
             .select('stream_url, stream_url_vidsrc, stream_url_2embed, stream_url_superembed')
             .eq('tmdb_id', Number(tmdbId))
@@ -375,7 +374,6 @@ export const PLAYER_LOGIC = {
             const progressObj = await this._getProgress(tmdbId, 'movie', 0, 0, supabaseClient);
             const seek = progressObj?.progress_seconds || 0;
 
-            // Preparar servidores disponibles
             const servers = [
                 { name: 'Vimeus (Principal)', url: data.stream_url },
                 { name: 'Servidor VIP 1', url: data.stream_url_vidsrc },
@@ -386,8 +384,14 @@ export const PLAYER_LOGIC = {
             if (servers.length > 1) {
                 this.showServerSelector(servers, seek);
             }
-            
-            // Reproducir el primero por defecto
+
+            // ── NEXT-GEN HOOKS ──
+            if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'movie');
+            if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
+                type: 'movie',
+                genre: this.movieData?.genres?.[0]?.id
+            });
+
             this._playSource(servers[0].url, seek);
         }
     },
@@ -1099,23 +1103,43 @@ export const PLAYER_LOGIC = {
                 });
             }, 10000);
         }
-        // --- OPCIÓN C: CRONÓMETRO INTELIGENTE (Goodstream y otros) ---
+        // --- OPCIÓN C: CRONÓMETRO INTELIGENTE (iframes sin SDK) ---
+        // BUG FIX: El timer anterior siempre contaba aunque el video estuviera pausado.
+        // No hay API para leer el estado de un iframe cross-origin, así que:
+        // 1. Escuchamos postMessage de pause/play que envíen algunos players.
+        // 2. Usamos un estimador: si _isPausedEst=true, no sumamos tiempo.
         else {
+            this._isPausedEst = false;
+
+            // Escuchar pause/play via postMessage (soportado por JWPlayer, Plyr, Flowplayer, etc.)
+            this._iframePauseHandler = (event) => {
+                const d = event.data;
+                if (!d) return;
+                const raw = typeof d === 'string' ? d : JSON.stringify(d);
+                if (/pause|stop|"paused":true/i.test(raw))  this._isPausedEst = true;
+                if (/play|resume|"paused":false/i.test(raw)) this._isPausedEst = false;
+            };
+            window.addEventListener('message', this._iframePauseHandler);
+
             this.progressTimer = setInterval(() => {
-                // Solo avanzar si:
-                // 1. La pestaña es visible
-                // 2. La ventana tiene el foco (evita conteo si está en segundo plano)
-                // 3. El modal del player sigue abierto
                 const isPlayerActive = document.getElementById('playerModal')?.classList.contains('active');
-                
-                if (document.visibilityState === 'visible' && document.hasFocus() && isPlayerActive) {
-                    elapsed += 10;
-                    doSaveProgress(elapsed);
-                }
+                const isVisible = document.visibilityState === 'visible';
+                // No contar si el iframe envió señal de pausa o la pestaña no es visible
+                if (!isPlayerActive || !isVisible || this._isPausedEst) return;
+                elapsed += 10;
+                doSaveProgress(elapsed);
             }, 10000);
         }
 
-        this._currentVisHandler = () => { if (document.hidden) doSaveProgress(elapsed); };
+        this._currentVisHandler = () => {
+            if (document.hidden) {
+                doSaveProgress(elapsed);
+                // Si va a segundo plano, pausar el estimador del iframe
+                if (this._isPausedEst !== undefined) this._isPausedEst = true;
+            } else {
+                if (this._isPausedEst !== undefined) this._isPausedEst = false;
+            }
+        };
         this._currentBeforeUnloadHandler = () => { doSaveProgress(elapsed); };
         document.addEventListener('visibilitychange', this._currentVisHandler);
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
@@ -1216,6 +1240,13 @@ export const PLAYER_LOGIC = {
         this.progressTimer = null;
         this._bingePromptShown = false;
 
+        // Limpiar listener de pausa de iframes (Option C)
+        if (this._iframePauseHandler) {
+            window.removeEventListener('message', this._iframePauseHandler);
+            this._iframePauseHandler = null;
+            this._isPausedEst = false;
+        }
+
         // Limpiar Telemetría al detener
         if (window.updateGlobalPlaybackStatus) {
             window.updateGlobalPlaybackStatus(null);
@@ -1237,14 +1268,32 @@ export const PLAYER_LOGIC = {
         const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         if (!profile) return;
 
-        // Limpiar el ID si viene como string
         const finalTmdbId = Number(tmdbId);
         if (isNaN(finalTmdbId)) return;
-
-        // Solo guardar si hay progreso real
         if (seconds < 0) return;
 
-        console.log(`[Player] Guardando progreso: ${finalTmdbId} -> ${seconds}s`);
+        // ── FIX: Cálculo del estado "VISTO" ──
+        // Obtener la duración del video actual para calcular el porcentaje.
+        // Para streams directos la obtenemos del elemento <video>.
+        // Para iframes la estimamos con un límite de tiempo conocido (si existe).
+        let isWatched = false;
+        const video = document.getElementById('videoPlayer');
+        let totalDuration = video && !video.classList.contains('hidden') && video.duration > 0
+            ? video.duration
+            : (this._estimatedDuration || 0);
+
+        if (totalDuration > 60) {
+            const pct = seconds / totalDuration;
+            // Marcar como visto al 90% — igual que Flutter y la lógica de la Web
+            isWatched = pct >= 0.9;
+        } else {
+            // Sin duración confiable: marcar como visto si lleva > 80 min en películas
+            // o > 18 min en series (un episodio estándar de 20 min)
+            const threshold = (type === 'movie') ? 4800 : 1080;
+            isWatched = seconds >= threshold;
+        }
+
+        console.log(`[Player] Guardando progreso: ${finalTmdbId} -> ${seconds}s | visto: ${isWatched}`);
 
         const { error } = await supabaseClient.from('watch_history').upsert({
             user_id: this.currentUserId,
@@ -1254,6 +1303,7 @@ export const PLAYER_LOGIC = {
             season_number: Number(season) || 0,
             episode_number: Number(episode) || 0,
             progress_seconds: Math.floor(seconds),
+            is_watched: isWatched,
             last_watched: new Date().toISOString()
         }, { 
             onConflict: 'profile_id,tmdb_id,season_number,episode_number' 
@@ -1261,6 +1311,17 @@ export const PLAYER_LOGIC = {
 
         if (error) {
             console.error('[Player] Error al guardar progreso:', error);
+        }
+
+        // Si quedó marcado como visto, actualizar el badge en la UI sin recargar
+        if (isWatched) {
+            const badges = document.querySelectorAll(`[data-tmdb="${finalTmdbId}"] .watched-badge, [data-id="${finalTmdbId}"] .watched-badge`);
+            badges.forEach(b => b.classList.remove('hidden'));
+
+            // Track logro de contenido completado
+            if (window.ACHIEVEMENTS) {
+                window.ACHIEVEMENTS.track('complete_content', { type, tmdb_id: finalTmdbId });
+            }
         }
     },
 
