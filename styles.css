@@ -829,12 +829,36 @@ nav a.active::after { width: 24px; }
     position: relative;
     aspect-ratio: 2/3;
     border-radius: var(--radius-md);
-    overflow: visible; /* Importante para el expand */
-    background: var(--surface-container);
+    overflow: hidden;
     cursor: pointer;
-    transition: transform 0.4s var(--ease-netflix), box-shadow 0.4s;
-    user-select: none;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: var(--surface-container);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    perspective: 1000px;
     z-index: 1;
+}
+
+.movie-card-inner:hover {
+    transform: scale(1.08) translateY(-10px) rotateX(5deg) rotateY(5deg);
+    border-color: var(--vivotv-accent, #7B2FBE);
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.6),
+        0 0 20px rgba(123, 47, 190, 0.3);
+    z-index: 10;
+}
+
+.movie-card-inner::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(0,0,0,0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.movie-card-inner:hover::after {
+    opacity: 1;
 }
 
 .movie-card:hover {
