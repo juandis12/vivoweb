@@ -1889,3 +1889,37 @@ document.addEventListener('visibilitychange', () => {
         }
     }
 });
+
+// ================================================
+// SPA HANDLER: RE-INICIALIZAR UI TRAS CAMBIO DE PÁGINA
+// ================================================
+window.addEventListener('vivotv:page-changed', async (e) => {
+    console.log('[SPA] Página cambiada detectada, re-sincronizando UI...');
+    
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const searchB = document.getElementById('searchBox');
+        const navM = document.getElementById('mainNav');
+        const uProfile = document.getElementById('userProfile');
+        const mobN = document.querySelector('.mobile-nav');
+
+        if (searchB) searchB.classList.remove('hidden');
+        if (navM) navM.classList.remove('hidden');
+        if (uProfile) uProfile.classList.remove('hidden');
+        if (mobN) mobN.classList.remove('hidden');
+
+        initNavbarScroll();
+        
+        if (typeof populatePageContent === 'function') {
+            await populatePageContent();
+        }
+
+        if (typeof updateProfileUI === 'function') {
+            updateProfileUI();
+        }
+    } catch (err) {
+        console.warn('[SPA Sync] Error sincronizando página:', err);
+    }
+});
