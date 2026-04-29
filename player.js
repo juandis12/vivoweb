@@ -560,6 +560,15 @@ export const PLAYER_LOGIC = {
             window.updateGlobalPlaybackStatus({ title: this.currentPlaybackTitle, type: 'tv' });
         }
 
+        // ── NEXT-GEN HOOKS ──
+        // Social Pulse: mostrar barra de reacciones en tiempo real
+        if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'tv');
+        // Achievements: trackear reproducción de episodio
+        if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
+            type: 'tv',
+            genre: this.seriesData?.genres?.[0]?.id
+        });
+
         // Preparar servidores para series
         const servers = [
             { name: 'Vimeus (Principal)', url: ep.stream_url },

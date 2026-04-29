@@ -26,6 +26,12 @@ import {
 } from './auth.js';
 
 import { WatchPartyGuide } from './watch-party-guide.js';
+import { AchievementsEngine } from './achievements.js';
+import { SocialPulse } from './social-pulse.js';
+
+// Exponer SocialPulse globalmente para que player.js pueda usarlo
+window.SOCIAL_PULSE = SocialPulse;
+window.ACHIEVEMENTS = AchievementsEngine;
 
 
 
@@ -652,7 +658,7 @@ async function toDashboard(user, profile) {
 
         // --- FASE 4: AUTO JOIN WATCH PARTY DESPUÉS DEL LOGIN ---
         if (typeof pendingPartyId !== 'undefined' && pendingPartyId) {
-            const capturedPartyId = pendingPartyId; // CLAVE: Capturar la variable antes de que sea borrada por el hilo principal
+            const capturedPartyId = pendingPartyId;
             import('./watch-party-ui.js').then(module => {
                 console.log('[App] Resolviendo invitación a Watch Party:', capturedPartyId);
                 module.joinPartyFromUrl(capturedPartyId);
@@ -660,6 +666,29 @@ async function toDashboard(user, profile) {
             pendingPartyId = null;
             sessionStorage.removeItem('vivotv_pending_party_id');
         }
+
+        // ── NEXT-GEN: Inicializar módulos futuristas ──────────────────────────
+        // Lanzar en paralelo sin bloquear el dashboard
+        const _profileId = currentProfile?.id;
+        if (_profileId) {
+            // 1. Achievements Engine
+            AchievementsEngine.init(supabase, _profileId).catch(e =>
+                console.warn('[App] Achievements Engine no disponible:', e)
+            );
+
+            // 2. Social Pulse (se activa cuando el player llama window.SOCIAL_PULSE.attach)
+            SocialPulse.init(supabase, _profileId);
+
+            // 3. Ambient FX + Vibe Engine (carga dinámica para no bloquear)
+            import('./ambient-fx.js').then(m => m.AmbientGlow?.init?.()).catch(() => {});
+            import('./vibe-engine.js').then(m => m.VibeEngine?.init?.()).catch(() => {});
+        }
+
+        // Disparar evento para módulos externos
+        window.dispatchEvent(new CustomEvent('vivotv:dashboard-ready', {
+            detail: { profile: currentProfile }
+        }));
+
     } catch (e) {
         console.error('[Dashboard] Error en inicialización:', e);
     }
