@@ -1335,8 +1335,20 @@ nav a.active::after { width: 24px; }
 
 /* Grilla de Detalles Estilo Stitch */
 .modal-details-grid {
-    display: grid; grid-template-columns: 1fr 320px; gap: 100px; padding: 80px;
+    display: grid; 
+    grid-template-columns: 1fr 350px; 
+    gap: 60px; 
+    padding: 80px;
     background: #0b122b;
+    position: relative;
+}
+
+@media (max-width: 1100px) {
+    .modal-details-grid {
+        grid-template-columns: 1fr 300px;
+        gap: 40px;
+        padding: 60px;
+    }
 }
 
 .section-label {
@@ -1393,7 +1405,23 @@ nav a.active::after { width: 24px; }
 }
 
 /* Sidebar Premium Information */
-.details-side-col { display: flex; flex-direction: column; gap: 40px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.05); }
+.details-side-col { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 40px; 
+    padding-left: 20px; 
+    border-left: 1px solid rgba(255,255,255,0.05); 
+}
+
+@media (max-width: 900px) {
+    .details-side-col {
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        padding-top: 40px;
+    }
+}
+
 .info-block { display: flex; flex-direction: column; gap: 8px; padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .info-label { font-size: 0.8rem; color: rgba(255,255,255,0.3); text-transform: uppercase; font-weight: 800; letter-spacing: 2px; }
 .info-value { font-size: 1.1rem; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
@@ -1407,6 +1435,15 @@ nav a.active::after { width: 24px; }
     margin-top: 20px; font-size: 1rem;
 }
 .btn-share:hover { transform: translateY(-5px); filter: brightness(1.15); box-shadow: 0 20px 40px rgba(37, 99, 235, 0.4); }
+
+@media (max-width: 600px) {
+    .btn-share {
+        width: 100%;
+        padding: 16px;
+        font-size: 1.1rem;
+        border-radius: 14px;
+    }
+}
 
 /* SECCIÓN EPISODIOS (MODAL SERIES) */
 .series-episodes-section { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 60px; grid-column: span 2; }
@@ -1783,10 +1820,13 @@ nav a.active::after { width: 24px; }
 }
 
 @media (max-width: 900px) {
-    .modal-body { 
+    .modal-details-grid { 
         grid-template-columns: 1fr; 
-        padding: 20px;
-        gap: 20px;
+        padding: 40px;
+        gap: 40px;
+    }
+    .series-episodes-section {
+        grid-column: span 1;
     }
     .modal-poster { display: none; }
     .modal-info h2 { font-size: 1.8rem; }
@@ -1848,7 +1888,7 @@ nav a.active::after { width: 24px; }
         height: 36px;
         background: rgba(0,0,0,0.5);
     }
-    .modal-body { padding: 60px 20px 100px; }
+    .modal-details-grid { padding: 40px 20px 100px; }
     .player-container { border-radius: 8px; margin-top: 10px; }
 
     /* Grid de Contenido */
