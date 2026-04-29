@@ -482,9 +482,9 @@ export const PLAYER_LOGIC = {
         let progressMap = {};
         const { data: hist } = await supabaseClient.from('watch_history')
             .select('episode_number, progress_seconds')
-            .eq('user_id', this.currentUserId)
-            .eq('tmdb_id', String(this.currentTmdbId))
-            .eq('season_number', seasonNum);
+            .eq('profile_id', profile.id)
+            .eq('tmdb_id', Number(this.currentTmdbId))
+            .eq('season_number', Number(seasonNum));
         
         (hist || []).forEach(h => progressMap[h.episode_number] = h);
 
@@ -1191,22 +1191,35 @@ export const PLAYER_LOGIC = {
 
     async _saveProgress(tmdbId, type, season, episode, seconds, supabaseClient) {
         if (!supabaseClient || !this.currentUserId) return;
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) return;
         
         const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         if (!profile) return;
 
-        await supabaseClient.from('watch_history').upsert({
-            user_id: user.id,
-            profile_id: profile.id, // Fase 3
-            tmdb_id: Number(tmdbId), // Esquema: integer
-            type,
-            season_number: season || 0,
-            episode_number: episode || 0,
-            progress_seconds: seconds,
+        // Limpiar el ID si viene como string
+        const finalTmdbId = Number(tmdbId);
+        if (isNaN(finalTmdbId)) return;
+
+        // Solo guardar si hay progreso real
+        if (seconds < 0) return;
+
+        console.log(`[Player] Guardando progreso: ${finalTmdbId} -> ${seconds}s`);
+
+        const { error } = await supabaseClient.from('watch_history').upsert({
+            user_id: this.currentUserId,
+            profile_id: profile.id,
+            tmdb_id: finalTmdbId,
+            type: type || 'movie',
+            season_number: Number(season) || 0,
+            episode_number: Number(episode) || 0,
+            progress_seconds: Math.floor(seconds),
             last_watched: new Date().toISOString()
-        }, { onConflict: 'user_id,profile_id,tmdb_id,type,season_number,episode_number' });
+        }, { 
+            onConflict: 'profile_id,tmdb_id,season_number,episode_number' 
+        });
+
+        if (error) {
+            console.error('[Player] Error al guardar progreso:', error);
+        }
     },
 
     async _getProgress(tmdbId, type, season, episode, supabaseClient) {
@@ -1214,16 +1227,17 @@ export const PLAYER_LOGIC = {
         const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
         if (!profile) return null;
 
+        const finalTmdbId = Number(tmdbId);
+
         let query = supabaseClient.from('watch_history')
             .select('progress_seconds')
-            .eq('user_id', this.currentUserId)
-            .eq('profile_id', profile.id) // Fase 3
-            .eq('tmdb_id', String(tmdbId))
-            .eq('type', type)
-            .eq('season_number', season || 0)
-            .eq('episode_number', episode || 0);
+            .eq('profile_id', profile.id)
+            .eq('tmdb_id', finalTmdbId)
+            .eq('season_number', Number(season) || 0)
+            .eq('episode_number', Number(episode) || 0);
         
-        const { data } = await query.maybeSingle();
+        const { data, error } = await query.maybeSingle();
+        if (error) console.error('[Player] Error al obtener progreso:', error);
         return data;
     },
 

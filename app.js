@@ -603,6 +603,10 @@ async function toDashboard(user, profile) {
     if (dashS) dashS.classList.remove('hidden');
     if (navM) navM.classList.remove('hidden');
     if (mobN) mobN.classList.remove('hidden');
+    
+    // Asegurar que la búsqueda sea visible en todas las pestañas (Web)
+    const searchB = document.getElementById('searchBox');
+    if (searchB) searchB.classList.remove('hidden');
 
     // Sincronizar perfil
     currentProfile = profile || JSON.parse(localStorage.getItem('vivotv_current_profile'));
