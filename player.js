@@ -752,10 +752,15 @@ export const PLAYER_LOGIC = {
                 video.src = smartUrl;
 
                 video.addEventListener('loadedmetadata', () => {
-                    video.play().catch(e => {
-                        console.warn("[Player] Autoplay bloqueado, requiere clic inicial:", e);
-                        if (loader) loader.innerHTML = '<div class="play-hint">▶ CARGANDO SEÑAL...</div>';
-                    });
+                    // TV BOX FIX: En Video Beam/TV Box el autoplay puede bloquearse
+                    // aunque el video esté en mute. Forzamos play() con manejo visual.
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            console.warn("[Player] Autoplay bloqueado en TV Box, mostrando play hint:", e);
+                            if (loader) loader.innerHTML = '<div class="play-hint" onclick="document.getElementById(\'videoPlayer\').play();this.remove();" style="cursor:pointer;display:flex;align-items:center;gap:12px;font-size:22px;">▶ Toca para reproducir</div>';
+                        });
+                    }
 
                     if (seekSeconds > 0) {
                         // Intentar seek inmediato
@@ -773,14 +778,12 @@ export const PLAYER_LOGIC = {
                             } else {
                                 // El servidor no soporta Range Requests — seek no funciona
                                 console.warn(`[Player] ⚠️ Servidor no soporta seek (actual=${actual}s, expected=${expected}s)`);
-                                // Intentar una vez más por si el stream aún estaba buffering
                                 video.currentTime = seekSeconds;
                                 setTimeout(() => {
                                     const actual2 = Math.floor(video.currentTime);
                                     if (Math.abs(actual2 - expected) < 5) {
                                         showToast("Reanudando desde donde te quedaste...", "info");
                                     } else {
-                                        // Informar al usuario sin romper la reproducción
                                         showToast(`▶ Reproduciendo desde el inicio (el servidor no permite reanudar)`, "warning");
                                         console.warn('[Player] ❌ Seek no disponible en este servidor de streaming.');
                                     }
@@ -789,6 +792,31 @@ export const PLAYER_LOGIC = {
                         }, 800);
                     }
                 }, { once: true });
+
+                // TV BOX SAFE MODE WEB: Si el video se estanca por > 6 segundos
+                // (stalled/waiting), intentar el siguiente servidor automáticamente.
+                // Causa principal de pantalla negra en TV Box: codec no soportado
+                // o buffer insuficiente con el decodificador de hardware.
+                let _stallTimer = null;
+                const _onStall = () => {
+                    if (_stallTimer) clearTimeout(_stallTimer);
+                    _stallTimer = setTimeout(() => {
+                        if (video.readyState < 3 && !video.ended) {
+                            console.warn('[Player] 📺 TV Box: Stream estancado > 6s. Intentando servidor alternativo...');
+                            this._tryNextServer(video.currentTime || seekSeconds).then(success => {
+                                if (!success) {
+                                    // Si no hay más servidores, recargamos el mismo con parámetros limpios
+                                    console.warn('[Player] Sin más servidores, recargando stream...');
+                                    video.load();
+                                    video.play().catch(() => {});
+                                }
+                            });
+                        }
+                    }, 6000);
+                };
+                video.addEventListener('stalled', _onStall);
+                video.addEventListener('waiting', _onStall);
+                video.addEventListener('playing', () => { if (_stallTimer) clearTimeout(_stallTimer); });
 
                 if (loader) setTimeout(() => loader.classList.add('hidden'), 2000);
                 this._startVideoTracking(video, seekSeconds, true);
