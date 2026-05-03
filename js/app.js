@@ -40,6 +40,37 @@ if (supabase) {
 window.VIVOTV_TOGGLE_FAVORITE = (tmdbId, type, btn) => PLAYER_LOGIC.toggleFavorite(supabase, tmdbId, type, btn);
 let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit;
 
+function initDOMReferences() {
+    authSection = document.getElementById('authSection');
+    dashSection = document.getElementById('dashboardSection');
+    loginForm = document.getElementById('loginForm');
+    emailEl = document.getElementById('email');
+    usernameEl = document.getElementById('username');
+    passwordEl = document.getElementById('password');
+    btnSubmit = document.getElementById('btnSubmit');
+    btnText = document.getElementById('btnText');
+    btnLoader = document.getElementById('btnLoader');
+    authError = document.getElementById('authError');
+    toggleLink = document.getElementById('toggleAuthMode');
+    userProfile = document.getElementById('userProfile');
+    mainNav = document.getElementById('mainNav');
+    mobileNav = document.querySelector('.mobile-nav');
+    btnLogout = document.getElementById('btnLogout');
+    userNameEl = document.getElementById('userName');
+    userAvatar = document.getElementById('userAvatar');
+    searchBox = document.getElementById('searchBox');
+    searchInput = document.getElementById('searchInput');
+    btnClear = document.getElementById('btnClearSearch');
+    btnFav = document.getElementById('btnFavorite');
+    btnPass = document.getElementById('btnTogglePassword');
+    authTitle = document.getElementById('authTitle');
+    authSubtitle = document.getElementById('authSubtitle');
+    exitModal = document.getElementById('exitModal');
+    btnSwitchProfile = document.getElementById('btnSwitchProfile');
+    btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
+    btnCancelExit = document.getElementById('btnCancelExit');
+}
+
 
 
 let isLoginMode = !window.location.pathname.includes('registro.html');
