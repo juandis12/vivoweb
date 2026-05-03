@@ -155,10 +155,11 @@ export const CATALOG_UI = {
         const isWatched = progress && progress >= 95;
 
         const isFav = window.VIVOTV_FAVORITES?.has(id);
+        const altText = `Ver ${type === 'tv' ? 'serie' : 'película'} ${title} online gratis en HD - VIVOTV`;
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
-                <img src="${posterImg}" alt="${title}" loading="lazy" 
+                <img src="${posterImg}" alt="${altText}" loading="lazy" 
                      onerror="if(window.reportMaintenanceId){ 
                         const id = this.closest('.movie-card').dataset.tmdbId;
                         this.closest('.movie-card').classList.add('in-maintenance');

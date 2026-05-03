@@ -3246,8 +3246,8 @@ nav a.active::after {
     }
 
     .movies-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 12px;
     }
 
     .grid-header {
@@ -3274,11 +3274,12 @@ nav a.active::after {
 
     /* Carruseles */
     .catalog-row {
-        margin-bottom: 25px;
+        margin-bottom: 40px; /* Más espacio para evitar saturación */
     }
 
     .row-header h2 {
-        font-size: 1.1rem;
+        font-size: 1.25rem;
+        letter-spacing: -0.5px;
     }
 }
 

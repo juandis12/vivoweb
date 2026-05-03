@@ -35,13 +35,23 @@ const SocialPulse = {
 
     // Llamar cuando empieza a reproducirse un contenido
     attach(tmdbId, type) {
+        if (!this._supabase || !this._profileId) {
+            console.warn('[SocialPulse] ⚠️ No se puede activar sin Supabase o ProfileId');
+            return;
+        }
         this._tmdbId = tmdbId;
         this._type = type;
         this._subscribeRealtime();
         this._updateCounter();
 
         const el = document.getElementById('socialPulseBar');
-        if (el) el.classList.add('visible');
+        if (el) {
+            el.classList.add('visible');
+            this.toggleMinimize(false); // Asegurar que esté abierto
+            console.log('[SocialPulse] 🚀 Interfaz de reacciones ACTIVADA');
+        } else {
+            console.error('[SocialPulse] ❌ No se encontró el elemento #socialPulseBar en el DOM');
+        }
     },
 
     detach() {
@@ -233,7 +243,7 @@ const SocialPulse = {
             #socialPulseBar {
                 position: fixed;
                 bottom: 30px; right: 30px;
-                z-index: 11000;
+                z-index: 20000; /* Prioridad absoluta sobre el player modal */
                 opacity: 0;
                 transform: translateY(120px);
                 transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), opacity 0.4s ease, right 0.1s linear, top 0.1s linear;
@@ -242,7 +252,7 @@ const SocialPulse = {
             #socialPulseBar.visible {
                 transform: translateY(0);
                 opacity: 1;
-                pointer-events: auto;
+                pointer-events: auto !important;
             }
             #socialPulseBar.dragging { transition: none; opacity: 0.8; }
             
