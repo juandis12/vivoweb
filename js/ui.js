@@ -173,17 +173,18 @@ export const CATALOG_UI = {
                 <div class="badge-container">
                     ${isMaintenance ? `
                         <div class="maintenance-badge">EN MANTENIMIENTO</div>
-                    ` : (isWatched ? `
-                        <div class="watched-badge watched-premium">
+                    ` : `
+                        <div class="watched-badge watched-premium ${isWatched ? '' : 'hidden'}">
                             <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                             VISTO
                         </div>
-                    ` : (isAvailable ? `
-                        <div class="available-badge">
-                            <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
-                            DISPONIBLE
-                        </div>` : `
-                        <div class="coming-soon-badge">PRÓXIMAMENTE</div>`))}
+                        ${!isWatched ? (isAvailable ? `
+                            <div class="available-badge">
+                                <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
+                                DISPONIBLE
+                            </div>` : `
+                            <div class="coming-soon-badge">PRÓXIMAMENTE</div>`) : ''}
+                    `}
                 </div>
                 ${(progress !== null && progress > 0) && !isWatched ? `
                     <div class="card-progress-bar">

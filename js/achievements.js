@@ -35,9 +35,28 @@ const AchievementsEngine = {
     async init(supabaseClient, profileId) {
         this._supabase = supabaseClient;
         this._profileId = profileId;
+        
+        // Reiniciar estado local para evitar carry-over entre perfiles
+        this._state = {
+            xp: 0,
+            unlocked: [],
+            stats: {
+                plays: 0,
+                genres: [],
+                episode_streak: 0,
+                completed: 0,
+                anime_completed: 0,
+                movies_watched: 0
+            }
+        };
+
         await this._loadState();
         this._injectHUD();
         this._injectStyles();
+        
+        // Forzar refresco del HUD con el nuevo estado cargado
+        this._refreshHUD();
+        
         console.log('[Achievements] 🏆 Engine inicializado para perfil:', profileId);
     },
 
@@ -52,8 +71,12 @@ const AchievementsEngine = {
             if (data) {
                 this._state.xp = data.xp || 0;
                 this._state.unlocked = data.unlocked_ids || [];
-                this._state.stats = data.stats || {};
+                this._state.stats = data.stats || this._state.stats;
                 console.log(`[Achievements] ✅ Datos cargados desde Cloud: ${this._state.xp} XP`);
+            } else {
+                // Si no hay datos (perfil nuevo), asegurar estado limpio
+                this._state.xp = 0;
+                this._state.unlocked = [];
             }
         } catch (e) {
             console.warn('[Achievements] Error al cargar estado, usando LocalStorage:', e);
@@ -63,7 +86,11 @@ const AchievementsEngine = {
     },
 
     async _saveState() {
+        const user = (await this._supabase.auth.getUser()).data.user;
+        if (!user) return;
+
         const payload = {
+            user_id: user.id,
             profile_id: this._profileId,
             xp: this._state.xp,
             unlocked_ids: this._state.unlocked,

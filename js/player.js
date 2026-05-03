@@ -724,12 +724,17 @@ export const PLAYER_LOGIC = {
             // Forzar inicio automático silenciado (Muted Autoplay)
             video.muted = true;
 
-            // Listener para fin de video (Solo streams directos y si es TV)
-            if (isDirectStream && this.currentType === 'tv') {
+            // Listener para fin de video (Solo streams directos)
+            if (isDirectStream) {
                 video.onended = () => {
-                    this._getNextEpisode().then(nextEp => {
-                        if (nextEp) this._showMarathonCountdown(nextEp, _supabase);
-                    });
+                    // Forzar guardado como visto al terminar
+                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(video.duration), _supabase);
+                    
+                    if (this.currentType === 'tv') {
+                        this._getNextEpisode().then(nextEp => {
+                            if (nextEp) this._showNextEpisodePrompt(nextEp);
+                        });
+                    }
                 };
             }
 
@@ -1036,6 +1041,11 @@ export const PLAYER_LOGIC = {
                 skipBtn?.classList.remove('active');
             }
         };
+
+        // Guardar progreso al pausar video nativo
+        video.onpause = () => {
+            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(video.currentTime), _supabase);
+        };
     },
 
     _startIframeTracking(seekSeconds = 0, targetIframe = null) {
@@ -1054,7 +1064,8 @@ export const PLAYER_LOGIC = {
         let lastSavedElapsed = -1;
 
         const doSaveProgress = (currentSecs) => {
-            if (currentSecs > 0 && Math.abs(currentSecs - lastSavedElapsed) >= 10) {
+            // Umbral reducido de 10s a 2s para precisión "Netflix Style"
+            if (currentSecs > 0 && Math.abs(currentSecs - lastSavedElapsed) >= 2) {
                 this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(currentSecs), _supabase);
                 lastSavedElapsed = currentSecs;
 
@@ -1331,8 +1342,12 @@ export const PLAYER_LOGIC = {
 
         // Si quedó marcado como visto, actualizar el badge en la UI sin recargar
         if (isWatched) {
-            const badges = document.querySelectorAll(`[data-tmdb="${finalTmdbId}"] .watched-badge, [data-id="${finalTmdbId}"] .watched-badge`);
-            badges.forEach(b => b.classList.remove('hidden'));
+            const cards = document.querySelectorAll(`[data-tmdb="${finalTmdbId}"], [data-id="${finalTmdbId}"]`);
+            cards.forEach(card => {
+                card.querySelector('.watched-badge')?.classList.remove('hidden');
+                card.querySelector('.available-badge')?.classList.add('hidden');
+                card.querySelector('.card-progress-bar')?.classList.add('hidden');
+            });
 
             // Track logro de contenido completado
             if (window.ACHIEVEMENTS) {
