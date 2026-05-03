@@ -353,7 +353,7 @@ function initWatchPartyGuide() {
         style.id = 'watchPartyStyleFix';
         style.textContent = `
             .btn-help-floating {
-                position: fixed; bottom: 100px; right: 30px;
+                position: fixed; bottom: 105px; right: 30px;
                 width: 60px; height: 60px; border-radius: 20px;
                 background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
                 border: 2px solid rgba(187, 134, 252, 0.5);

@@ -53,9 +53,10 @@ const AchievementsEngine = {
                 this._state.xp = data.xp || 0;
                 this._state.unlocked = data.unlocked_ids || [];
                 this._state.stats = data.stats || {};
+                console.log(`[Achievements] ✅ Datos cargados desde Cloud: ${this._state.xp} XP`);
             }
         } catch (e) {
-            // Tabla aún no existe — usar localStorage como fallback
+            console.warn('[Achievements] Error al cargar estado, usando LocalStorage:', e);
             const cached = localStorage.getItem(`vivotv_achievements_${this._profileId}`);
             if (cached) this._state = JSON.parse(cached);
         }
@@ -70,8 +71,11 @@ const AchievementsEngine = {
             updated_at: new Date().toISOString(),
         };
         try {
-            await this._supabase.from('user_achievements').upsert(payload, { onConflict: 'profile_id' });
+            const { error } = await this._supabase.from('user_achievements').upsert(payload, { onConflict: 'profile_id' });
+            if (error) throw error;
+            console.log('[Achievements] ☁️ Sincronización exitosa con la nube.');
         } catch (e) {
+            console.warn('[Achievements] Falló sincronización con la nube, guardando localmente:', e);
             localStorage.setItem(`vivotv_achievements_${this._profileId}`, JSON.stringify(this._state));
         }
         this._refreshHUD();
@@ -248,7 +252,7 @@ const AchievementsEngine = {
         s.textContent = `
             /* HUD Button */
             #achHudBtn {
-                position: fixed; bottom: 150px; right: 20px; z-index: 1000;
+                position: fixed; bottom: 180px; right: 30px; z-index: 1000;
                 display: flex; align-items: center; gap: 8px;
                 padding: 10px 16px; border-radius: 50px;
                 background: linear-gradient(135deg, rgba(187,134,252,0.18), rgba(103,58,183,0.28));
