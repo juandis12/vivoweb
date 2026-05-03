@@ -3561,6 +3561,79 @@ nav a.active::after {
     text-shadow: 0 0 20px rgba(229, 9, 20, 0.3);
 }
 
+/* --- BINGE ENGINE UI (MEJORA 1) --- */
+.binge-control-btn {
+    position: absolute;
+    bottom: 100px;
+    right: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #000;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    z-index: 12000;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(10px);
+}
+
+.binge-control-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    transform: scale(1.05) translateY(-5px);
+}
+
+.binge-control-btn.active {
+    display: flex;
+    animation: bingePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes bingePopIn {
+    from { transform: translateX(100px) scale(0.8); opacity: 0; }
+    to { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+#btnNextEp {
+    bottom: 180px;
+    background: var(--primary);
+    color: white;
+}
+
+/* --- MINI CHAT (MEJORA 3) --- */
+.sp-chat-container {
+    margin-top: 10px;
+    height: 150px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: none;
+}
+
+.sp-chat-msg {
+    font-size: 0.75rem;
+    animation: msgIn 0.3s ease-out;
+}
+
+.sp-chat-user { font-weight: 800; color: var(--primary); margin-right: 5px; }
+.sp-chat-text { color: rgba(255, 255, 255, 0.85); }
+
+@keyframes msgIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
 /* SMART CONTROLS (SKIP INTRO / NEXT EP / PIP) */
 .skip-intro-btn,
 .next-episode-btn {

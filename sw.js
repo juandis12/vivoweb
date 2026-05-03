@@ -63,3 +63,11 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
+// Mensajes del Cliente para Pre-fetch (Mejora 4)
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'PREFETCH_POSTERS') {
+        caches.open(CACHE_NAME).then(cache => {
+            event.data.urls.forEach(url => cache.add(url).catch(() => {}));
+        });
+    }
+});

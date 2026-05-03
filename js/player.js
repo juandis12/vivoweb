@@ -381,7 +381,8 @@ export const PLAYER_LOGIC = {
                 this.showServerSelector(servers, seek);
             }
 
-            // ── NEXT-GEN HOOKS ──
+            // Binge Watch & Social
+            BingeEngine.loadContentMetadata(tmdbId, 'movie');
             if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'movie');
             if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
                 type: 'movie',

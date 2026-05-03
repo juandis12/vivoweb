@@ -718,6 +718,22 @@ async function toDashboard(user, profile) {
             import('./vibe-engine.js').then(m => m.VibeEngine?.init?.()).catch(() => {});
         }
 
+        // 4. Sorpréndeme Logic (Mejora 5)
+        const btnSurprise = document.getElementById('btnSurprise');
+        if (btnSurprise) {
+            btnSurprise.onclick = (e) => {
+                e.preventDefault();
+                const all = window.DB_CATALOG || [];
+                if (all.length > 0) {
+                    const random = all[Math.floor(Math.random() * all.length)];
+                    const id = random.tmdb_id || random.id;
+                    const type = random.content_type || (random.media_type === 'tv' ? 'tv' : 'movie');
+                    PLAYER_LOGIC.openDetail(id, type, supabase);
+                    showToast('🎬 ¡Aquí tienes algo especial!', 'success');
+                }
+            };
+        }
+
         // Disparar evento para módulos externos
         window.dispatchEvent(new CustomEvent('vivotv:dashboard-ready', {
             detail: { profile: currentProfile }

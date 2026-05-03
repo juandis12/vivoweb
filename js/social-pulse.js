@@ -71,12 +71,25 @@ const SocialPulse = {
             .channel(`social_pulse_${this._tmdbId}`)
             .on('broadcast', { event: 'reaction' }, ({ payload }) => {
                 if (payload.profile_id !== this._profileId) {
-                    // Reacción de otro usuario — mostrar emoji flotante
                     this._spawnFloatingEmoji(payload.emoji, true);
                     this._bumpCounter(payload.reaction_id);
                 }
             })
+            .on('broadcast', { event: 'chat' }, ({ payload }) => {
+                this._addChatMessage(payload.username, payload.text);
+            })
             .subscribe();
+    },
+
+    _addChatMessage(username, text) {
+        const container = document.getElementById('spChatContainer');
+        if (!container) return;
+        const msg = document.createElement('div');
+        msg.className = 'sp-chat-msg';
+        msg.innerHTML = `<span class="sp-chat-user">${username}</span> <span class="sp-chat-text">${text}</span>`;
+        container.appendChild(msg);
+        container.scrollTop = container.scrollHeight;
+        if (container.children.length > 20) container.removeChild(container.children[0]);
     },
 
     async _sendReaction(reactionId) {
@@ -182,6 +195,12 @@ const SocialPulse = {
                             </button>
                         `).join('')}
                     </div>
+                    <div id="spChatContainer" class="sp-chat-container">
+                        <div class="sp-chat-msg"><span class="sp-chat-user">Sistema</span> <span class="sp-chat-text">¡Bienvenido al chat en vivo!</span></div>
+                    </div>
+                    <div class="sp-chat-input-row">
+                        <input type="text" id="spChatInput" placeholder="Di algo..." maxlength="50">
+                    </div>
                     <div class="sp-footer">
                         <span id="spTotalReactions" class="sp-total">0 reacciones</span>
                     </div>
@@ -221,6 +240,26 @@ const SocialPulse = {
         document.getElementById('spBtnMinimize').onclick = () => this.toggleMinimize(true);
         document.getElementById('spBtnExpand').onclick = () => this.toggleMinimize(false);
         document.getElementById('spBtnClose').onclick = () => this.detach();
+
+        // Lógica de Chat
+        const chatInput = document.getElementById('spChatInput');
+        if (chatInput) {
+            chatInput.onkeypress = (e) => {
+                if (e.key === 'Enter' && chatInput.value.trim()) {
+                    const text = chatInput.value.trim();
+                    const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
+                    const username = profile?.name || 'Anon';
+                    
+                    this._channel.send({
+                        type: 'broadcast',
+                        event: 'chat',
+                        payload: { username, text }
+                    });
+                    this._addChatMessage('Tú', text);
+                    chatInput.value = '';
+                }
+            };
+        }
 
         // Delegación de clicks de reacciones
         bar.addEventListener('click', e => {

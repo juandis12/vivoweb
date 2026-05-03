@@ -58,6 +58,7 @@ export const LAYOUT = {
                     <a href="series.html" id="navSeries">Series</a>
                     <a href="anime.html" id="navAnime">Anime</a>
                     <a href="live.html" id="navLive">En Vivo</a>
+                    <a href="#" id="btnSurprise" style="color:var(--primary); font-weight:800;">✨ Sorpréndeme</a>
                     <a href="milista.html" id="linkMyList">Mi Lista</a>
                 </nav>
                 <div class="user-actions">
