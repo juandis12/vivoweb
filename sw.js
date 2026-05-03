@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vivotv-cache-v5';
+const CACHE_NAME = 'vivotv-cache-v6';
 const ASSETS_TO_CACHE = [
     './',
     'index.html',
@@ -39,6 +39,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
     
+    // Ignorar imágenes externas de TMDB para evitar errores de CORS en el SW
+    if (event.request.url.includes('image.tmdb.org')) return;
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {

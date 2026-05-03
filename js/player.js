@@ -286,7 +286,9 @@ export const PLAYER_LOGIC = {
             }
 
             // Aplicar Interfaz Adaptativa (XPTV Style)
-            CATALOG_UI.applyAdaptiveTheme(TMDB_SERVICE.getImageUrl(details.backdrop_path));
+            if (details.backdrop_path) {
+                CATALOG_UI.applyAdaptiveTheme(`${CONFIG.TMDB_IMAGE_HERO}${details.backdrop_path}`);
+            }
 
             this.checkIfFavorite(supabaseClient);
         } catch (err) {

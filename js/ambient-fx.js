@@ -77,7 +77,8 @@ const AmbientGlow = {
     _extractColors(imageUrl) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.src = imageUrl;
+        // Añadir cache-buster para evitar problemas de CORS con imágenes cacheadas
+        img.src = imageUrl.includes('?') ? `${imageUrl}&v=${Date.now()}` : `${imageUrl}?v=${Date.now()}`;
         img.onload = () => {
             try {
                 this._ctx.drawImage(img, 0, 0, 8, 12);
@@ -193,6 +194,7 @@ const TiltCards = {
     },
 
     _onMove(e) {
+        if (!e.target || typeof e.target.closest !== 'function') return;
         const card = e.target.closest('.movie-card');
         if (!card) {
             if (this._activeCard) this._resetCard(this._activeCard);
@@ -228,8 +230,10 @@ const TiltCards = {
     },
 
     _onLeave(e) {
-        const card = e.target.closest('.movie-card');
-        if (card) this._resetCard(card);
+        if (e.target && typeof e.target.closest === 'function') {
+            const card = e.target.closest('.movie-card');
+            if (card) this._resetCard(card);
+        }
     },
 
     _resetCard(card) {
@@ -248,6 +252,7 @@ const CinematicModal = {
     init() {
         // Escuchar cuando se abre el modal de detalle
         document.addEventListener('click', (e) => {
+            if (!e.target || typeof e.target.closest !== 'function') return;
             const card = e.target.closest('.movie-card');
             if (!card) return;
 

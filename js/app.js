@@ -798,11 +798,11 @@ function toAuth() {
 
     if (!isAuthPage) { window.location.href = 'index.html'; return; }
 
-    const authSection = document.getElementById('authSection');
-    const dashSection = document.getElementById('dashboardSection');
-    const userProfile = document.getElementById('userProfile');
-    const mainNav = document.getElementById('mainNav');
-    const mobileNav = document.querySelector('.mobile-nav');
+    authSection = document.getElementById('authSection');
+    dashSection = document.getElementById('dashboardSection');
+    userProfile = document.getElementById('userProfile');
+    mainNav = document.getElementById('mainNav');
+    mobileNav = document.querySelector('.mobile-nav');
 
     if (authSection) authSection.classList.remove('hidden');
     if (dashSection) dashSection.classList.add('hidden');
