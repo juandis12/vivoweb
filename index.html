@@ -85,12 +85,10 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Epilogue:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap"
         rel="stylesheet">
 
-    <!-- VivoWeb Layout Engine (Fase 10X) -->
-    <script type="module" src="./layout.js"></script>
-    <script type="module">
-        import { LAYOUT } from './layout.js';
-        if (LAYOUT) LAYOUT.init();
-    </script>
+    <!-- Core App (Modular v2.0) -->
+    <script type="module" src="./js/layout.js"></script>
+    <script type="module" src="./js/app.js?v=wp5"></script>
+
     <!-- Script de Emergencia para iOS (iPhone 13 Fix) -->
     <script>
         function updateVH() {
@@ -679,7 +677,7 @@
     </div>
 
     <!-- App principal (catálogo, carruseles, búsqueda) -->
-    <script src="app.js?v=wp5" type="module"></script>
+    <script src="./js/app.js?v=wp5" type="module"></script>
     <!-- Registro de PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {

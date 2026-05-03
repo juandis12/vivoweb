@@ -1,7 +1,8 @@
 import { CONFIG } from './config.js';
 import { TMDB_SERVICE } from './tmdb.js';
 import { showToast } from './utils.js';
-import { CATALOG_UI } from './ui.js'; // Solo se usa en funciones, pero evitamos import preventivo si es posible
+import { VIVOTV_DB } from './db.js';
+import { StreamService } from './services/StreamService.js';
 
 let _supabase = null;
 let _currentServers = [];
@@ -124,16 +125,7 @@ export const PLAYER_LOGIC = {
 
     // Helper para formatear segundos a HH:MM:SS o MM:SS
     formatTime(seconds) {
-        if (!seconds || isNaN(seconds)) return '00:00';
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-        
-        let res = '';
-        if (hrs > 0) res += (hrs < 10 ? '0' + hrs : hrs) + ':';
-        res += (mins < 10 ? '0' + mins : mins) + ':';
-        res += (secs < 10 ? '0' + secs : secs);
-        return res;
+        return StreamService.formatTime(seconds);
     },
 
     _stopTrailer() {

@@ -1,15 +1,18 @@
-const CACHE_NAME = 'vivotv-cache-v1';
+const CACHE_NAME = 'vivotv-cache-v4';
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/app.js',
-    '/layout.js',
-    '/ui.js',
-    '/config.js',
-    '/catalog.js',
-    '/auth.js',
-    '/assets/no-poster.png'
+    './',
+    'index.html',
+    'styles.css',
+    'js/app.js',
+    'js/layout.js',
+    'js/ui.js',
+    'js/config.js',
+    'js/catalog.js',
+    'js/auth.js',
+    'js/db.js',
+    'js/services/AuthService.js',
+    'js/services/StreamService.js',
+    'assets/no-poster.png'
 ];
 
 // Instalación: Cachear recursos críticos

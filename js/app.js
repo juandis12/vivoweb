@@ -17,17 +17,12 @@ import {
     loadGridData
 } from './catalog.js';
 
-import { 
-    initAuth, 
-    startHeartbeat, 
-    stopHeartbeat, 
-    checkConcurrentSessions, 
-    setCurrentProfile 
-} from './auth.js';
+import { AuthService } from './services/AuthService.js';
 
 import { WatchPartyGuide } from './watch-party-guide.js';
 import { AchievementsEngine } from './achievements.js';
 import { SocialPulse } from './social-pulse.js';
+import { startHeartbeat, stopHeartbeat } from './auth.js';
 
 // Exponer SocialPulse globalmente para que player.js pueda usarlo
 window.SOCIAL_PULSE = SocialPulse;
@@ -210,56 +205,49 @@ async function fetchAvailableIds() {
     await syncCatalog(supabase);
 }
 
-let isAuthInitializing = false;
 async function initializeVivotvApp() {
-    // Protección global contra doble inicialización (Guerra de Instancias)
-    if (window.VIVOTV_AUTH_INITIALIZED) return;
-    if (isAuthInitializing) return;
-    isAuthInitializing = true;
-    
-    console.log('[VivoTV] 🚀 Inicializando motor unificado...');
-    
-    // Configurar el listener de cambios
-    const { user, profile: authProfile } = await initAuth((event, session, profile) => {
-        console.log(`[VivoTV] 📡 Cambio de estado detectado: ${event}`);
-        
-        // El bloqueo !window.VIVOTV_AUTH_INITIALIZED causaba que los inicios de sesión rápidos fueran ignorados.
-        // Ahora permitimos que el evento SIGNED_IN dispare el dashboard incluso durante el arranque.
-        if (event === 'SIGNED_IN' && session) {
-            toDashboard(session.user, profile);
-        } else if (event === 'SIGNED_OUT') {
-            toAuth();
-        }
-    });
+    if (window.VIVOTV_APP_INITIALIZED) return;
+    window.VIVOTV_APP_INITIALIZED = true;
 
-    // Manejar estado inicial
-    if (user) {
-        console.log('[VivoTV] ✅ Sesión recuperada.');
-        
-        // --- MOTOR DE PERFILES 10X: Forzar selección de perfil al abrir/entrar ---
-        // Usamos sessionStorage para que si el usuario cierra la pestaña o abre una nueva,
-        // siempre se le pregunte "¿Quién está viendo?", cumpliendo con el estándar Netflix.
-        const isProfileChosenInSession = sessionStorage.getItem('vivotv_profile_chosen') === 'true';
+    console.log('[VivoTV] 🚀 Inicializando sistema modular...');
+
+    try {
+        const { user, profile } = await AuthService.initialize((event, session, profile) => {
+            console.log(`[VivoTV] 📡 Estado Auth: ${event}`);
+            if (event === 'SIGNED_OUT') {
+                window.location.href = 'index.html';
+            }
+        });
+
+        if (!user) {
+            if (!window.location.pathname.includes('index.html') && !window.location.pathname.includes('registro.html')) {
+                window.location.href = 'index.html';
+            }
+            return;
+        }
+
+        // --- MOTOR DE PERFILES: Selección obligatoria ---
+        const isProfileChosen = sessionStorage.getItem('vivotv_profile_chosen') === 'true';
         const isOnProfilesPage = window.location.pathname.includes('profiles.html');
 
-        if (!isProfileChosenInSession && !isOnProfilesPage) {
-            console.log('[VivoTV] 🔀 Redirigiendo a perfiles (Selección obligatoria)');
+        if (!isProfileChosen && !isOnProfilesPage) {
             window.location.href = 'profiles.html';
             return;
         }
 
-        await toDashboard(user, authProfile);
-    } else {
-        console.log('[VivoTV] ℹ️ Sin sesión activa.');
-        toAuth();
-    }
-    
-    window.VIVOTV_AUTH_INITIALIZED = true;
-    isAuthInitializing = false;
+        // Si estamos en el dashboard, cargar contenido
+        if (window.location.pathname.includes('dashboard.html')) {
+            await toDashboard(user, profile);
+        }
 
-    // --- LISTENERS DE SINCRONIZACIÓN REALTIME (Fase Connect) ---
+    } catch (error) {
+        console.error('[App] Error crítico de inicialización:', error);
+        showToast('Error al conectar con el servidor', 'error');
+    }
+
     _setupGlobalSyncListeners();
 }
+
 
 /**
  * CONFIGURACIÓN DE LISTENERS REALTIME PARA UI
@@ -593,22 +581,29 @@ function updateProfileUI() {
     }
 }
 
+/**
+ * Muestra la sección de autenticación y oculta el resto
+ */
+
 async function toDashboard(user, profile) {
     if (!user) return;
     
     console.log(`[VivoTV] ⚡ Preparando Dashboard para: ${user.email}`);
     
     // Referencias frescas para evitar fallos por SPA
-    const authS = document.getElementById('authSection');
-    const dashS = document.getElementById('dashboardSection');
-    const navM = document.getElementById('mainNav');
-    const mobN = document.querySelector('.mobile-nav');
+    authSection = document.getElementById('authSection');
+    dashSection = document.getElementById('dashboardSection');
+    navM = document.getElementById('mainNav');
+    mobileNav = document.querySelector('.mobile-nav');
 
-    // Ocultar Auth de inmediato para evitar que el botón siga girando
-    if (authS) authS.classList.add('hidden');
-    if (dashS) dashS.classList.remove('hidden');
+    // Ocultar Auth de inmediato
+    if (authSection) authSection.classList.add('hidden');
+    if (dashSection) dashSection.classList.remove('hidden');
     if (navM) navM.classList.remove('hidden');
-    if (mobN) mobN.classList.remove('hidden');
+    if (mobileNav) mobileNav.classList.remove('hidden');
+    
+    // Inyectar guía de Watch Party si es necesario
+    injectWatchPartyGuide();
     
     // Asegurar que la búsqueda sea visible en todas las pestañas (Web)
     const searchB = document.getElementById('searchBox');
@@ -760,6 +755,9 @@ async function renderDBCategoryRows() {
 window.renderDBCategoryRows = renderDBCategoryRows;
 
 function toAuth() {
+    // Asegurar que las referencias DOM estén listas (especialmente para llamadas rápidas desde AuthService)
+    if (typeof initDOMReferences === 'function' && !authSection) initDOMReferences();
+
     // Ya no hacemos sessionStorage.clear() aquí para evitar borrar el perfil al cargar.
 
     const isAuthPage = window.location.pathname.endsWith('index.html') ||
@@ -803,81 +801,72 @@ function stopHeroRotation() { if (heroRotationTimer) { clearInterval(heroRotatio
 // ================================================
 // GESTIÓN DE EVENTOS: LOGIN / REGISTRO / PERFILES
 // ================================================
-function setupAuthListeners() {
-    const loginForm = document.getElementById('loginForm');
-    const toggleLink = document.getElementById('toggleAuthMode');
-    const btnPass = document.getElementById('btnTogglePass');
-    const passwordEl = document.getElementById('password');
-    const eyeIcon = document.getElementById('eyeIcon');
-    const emailEl = document.getElementById('email');
-    const usernameEl = document.getElementById('username');
+const handleAuthAction = async (e) => {
+    console.log('[Auth] Disparando acción de autenticación...');
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    setLoading(true);
+    const authError = document.getElementById('authError');
+    if (authError) authError.classList.add('hidden');
 
-    const handleAuthAction = async (e) => {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
+    try {
+        const email = emailEl?.value.trim();
+        const password = passwordEl?.value;
         
-        setLoading(true);
-        const authError = document.getElementById('authError');
-        if (authError) authError.classList.add('hidden');
-
-        try {
-            const email = emailEl?.value.trim();
-            const password = passwordEl?.value;
-            
-            if (!email || !password) {
-                throw new Error('Por favor, completa todos los campos.');
-            }
-
-            if (isLoginMode) {
-                console.log('[Auth] Intentando Login via Supabase...');
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) throw error;
-            } else {
-                console.log('[Auth] Intentando Registro via Supabase...');
-                const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
-                const { error } = await supabase.auth.signUp({ 
-                    email, 
-                    password,
-                    options: { data: { username: username, name: username } }
-                });
-                if (error) throw error;
-                
-                // ÉXITO REGISTRO: UI Minimalista
-                const authCard = document.querySelector('.auth-card');
-                if (authCard) {
-                    authCard.innerHTML = `
-                        <div class="registration-success-ui">
-                            <div class="success-icon">📩</div>
-                            <h3>¡Correo enviado!</h3>
-                            <p>Revisa tu bandeja de entrada en: <strong>${email}</strong></p>
-                            <button class="btn btn-primary btn-block" onclick="window.location.reload()">Regresar</button>
-                        </div>
-                    `;
-                }
-                showToast('📩 Revisa tu correo para activar la cuenta.', 'success');
-            }
-        } catch (err) {
-            console.error('[Auth Error]:', err.message);
-            const authError = document.getElementById('authError');
-            if (authError) {
-                authError.textContent = mapError(err.message);
-                authError.classList.remove('hidden');
-            }
-            showToast(mapError(err.message), 'error');
-        } finally {
-            setLoading(false);
+        if (!email || !password) {
+            throw new Error('Por favor, completa todos los campos.');
         }
-    };
 
+        if (isLoginMode) {
+            console.log('[Auth] Login via AuthService...');
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+        } else {
+            console.log('[Auth] Registro via AuthService...');
+            const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
+            const { error } = await supabase.auth.signUp({ 
+                email, 
+                password,
+                options: { data: { username: username, name: username } }
+            });
+            if (error) throw error;
+            
+            const authCard = document.querySelector('.auth-card');
+            if (authCard) {
+                authCard.innerHTML = `
+                    <div class="registration-success-ui">
+                        <div class="success-icon">📩</div>
+                        <h3>¡Correo enviado!</h3>
+                        <p>Revisa tu bandeja de entrada en: <strong>${email}</strong></p>
+                        <button class="btn btn-primary btn-block" onclick="window.location.reload()">Regresar</button>
+                    </div>
+                `;
+            }
+            showToast('📩 Revisa tu correo para activar la cuenta.', 'success');
+        }
+    } catch (err) {
+        console.error('[Auth Error]:', err.message);
+        const authError = document.getElementById('authError');
+        if (authError) {
+            authError.textContent = err.message;
+            authError.classList.remove('hidden');
+        }
+        showToast(err.message, 'error');
+    } finally {
+        setLoading(false);
+    }
+};
+
+function setupAuthListeners() {
     if (btnSubmit) {
         btnSubmit.onclick = handleAuthAction;
     }
 
     if (loginForm) {
         loginForm.onsubmit = handleAuthAction;
-        // Permitir Enter para enviar
         loginForm.onkeydown = (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 handleAuthAction(e);
@@ -889,6 +878,7 @@ function setupAuthListeners() {
         btnPass.onclick = () => {
             const isPass = passwordEl.type === 'password';
             passwordEl.type = isPass ? 'text' : 'password';
+            const eyeIcon = document.getElementById('eyeIcon');
             if (eyeIcon) {
                 eyeIcon.innerHTML = isPass 
                     ? '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.01-.16c0-1.66-1.34-3-3-3l-.16.01z"/>'
@@ -1538,10 +1528,7 @@ const stopDragging = (e) => {
 document.addEventListener('mouseup', stopDragging);
 document.addEventListener('mouseleave', stopDragging);
 
-// --- INICIALIZACIÓN DE PÁGINA DE HISTORIAL (Fase Historial) ---
-// ================================================
-// SPA ENGINE: RE-INICIALIZACIÓN DE PÁGINA
-// ================================================
+
 function initAppForPage() {
     const path = window.location.pathname;
     fatalLog(`[SPA Engine] Inicializando página: ${path}`);
@@ -1551,34 +1538,7 @@ function initAppForPage() {
     stopHeartbeat();
 
     // Obtener referencias DOM dinámicamente (Esenciales en cada cambio de innerHTML)
-    authSection = document.getElementById('authSection');
-    dashSection = document.getElementById('dashboardSection');
-    loginForm = document.getElementById('loginForm');
-    emailEl = document.getElementById('email');
-    usernameEl = document.getElementById('username');
-    passwordEl = document.getElementById('password');
-    btnSubmit = document.getElementById('btnSubmit');
-    btnText = document.getElementById('btnText');
-    btnLoader = document.getElementById('btnLoader');
-    authError = document.getElementById('authError');
-    toggleLink = document.getElementById('toggleAuthMode');
-    userProfile = document.getElementById('userProfile');
-    mainNav = document.getElementById('mainNav');
-    mobileNav = document.querySelector('.mobile-nav');
-    btnLogout = document.getElementById('btnLogout');
-    userNameEl = document.getElementById('userName');
-    userAvatar = document.getElementById('userAvatar');
-    searchBox = document.getElementById('searchBox');
-    searchInput = document.getElementById('searchInput');
-    btnClear = document.getElementById('btnClearSearch');
-    btnFav = document.getElementById('btnAddToMyList');
-    btnPass = document.getElementById('btnTogglePass');
-    authTitle = document.getElementById('authTitle');
-    authSubtitle = document.getElementById('authSubtitle');
-    exitModal = document.getElementById('exitModal');
-    btnSwitchProfile = document.getElementById('btnSwitchProfile');
-    btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
-    btnCancelExit = document.getElementById('btnCancelExit');
+    initDOMReferences();
 
     try {
         setupAuthListeners();
@@ -1923,3 +1883,44 @@ window.addEventListener('vivotv:page-changed', async (e) => {
         console.warn('[SPA Sync] Error sincronizando página:', err);
     }
 });
+
+// ================================================
+// BOOTSTRAP: PUNTO DE ENTRADA ÚNICO
+// ================================================
+(async function bootstrap() {
+    console.log('%c VIVOTV %c 🚀 Modo Modular v2.0 ', 'background: #bb86fc; color: #000; font-weight: bold; padding: 2px 5px; border-radius: 3px 0 0 3px;', 'background: #1e293b; color: #fff; padding: 2px 5px; border-radius: 0 3px 3px 0;');
+    
+    try {
+        // 1. Inicializar referencias del DOM
+        initDOMReferences();
+        
+        // 2. Inicializar AuthService
+        console.log('[Bootstrap] Inicializando AuthService...');
+        await AuthService.initialize((event, session, profile) => {
+            console.log(`[Auth Event] ${event}`);
+            if (session && profile) {
+                toDashboard(session.user, profile);
+            } else {
+                if (window.location.pathname.includes('profiles.html')) return;
+                toAuth();
+            }
+        });
+
+        // 3. Inicializar componentes globales
+        initNavbarScroll();
+        initMobileNavIndicator();
+        initMagicSlide();
+        setupExitModalListeners();
+
+        // 4. Vincular eventos de Auth si estamos en la sección de login
+        if (btnSubmit) {
+            btnSubmit.onclick = handleAuthAction;
+        }
+        if (loginForm) {
+            loginForm.onsubmit = handleAuthAction;
+        }
+
+    } catch (err) {
+        console.error('[Bootstrap Error] Fallo crítico en el arranque:', err);
+    }
+})();
