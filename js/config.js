@@ -21,20 +21,22 @@ export const CONFIG = {
     TMDB_API_KEY: '743275e25bcea0a320b87d2af271a136', // Fallback para desarrollo local (sacada de Flutter)
     
     // SEGURIDAD: Control de logs en consola
-    DEBUG: true
+    DEBUG: false
 };
 
-// ---- MOTOR DE SEGURIDAD (Consola Limpia) ----
-// En producción, podrías habilitar esto, pero por ahora lo dejamos libre para depuración.
-/*
-if (!CONFIG.DEBUG) {
-    const noop = () => {};
-    console.log = noop;
-    console.debug = noop;
-    console.info = noop;
-    console.warn = noop; 
-}
-*/
+// ---- MOTOR DE SEGURIDAD Y LIMPIEZA DE CONSOLA ----
+const originalWarn = console.warn;
+console.warn = function(...args) {
+    if (typeof args[0] === 'string' && args[0].includes('Multiple GoTrueClient instances')) return;
+    originalWarn.apply(console, args);
+};
+
+const originalLog = console.log;
+console.log = function(...args) {
+    // Silenciar logs de inicialización repetitivos si no estamos en modo debug profundo
+    if (typeof args[0] === 'string' && (args[0].includes('[SPA Engine]') || args[0].includes('[Bootstrap]')) && !CONFIG.DEBUG) return;
+    originalLog.apply(console, args);
+};
 
 // Funciones globales seguras
 window.logDebug = (msg) => { if (CONFIG.DEBUG) console.debug(`[DEBUG] ${msg}`); };
@@ -42,4 +44,11 @@ window.fatalLog = (msg) => { if (CONFIG.DEBUG) console.error(`💥 ${msg}`); };
 
 // Instancia Única de Supabase (Importar desde aquí, no usar window)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-export const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+export const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'vivotv-auth-session' // Key única para evitar advertencias de colisión
+    }
+});
