@@ -387,6 +387,7 @@ export const PLAYER_LOGIC = {
             }
 
             // Binge Watch & Social
+            this._estimatedDuration = (this.movieData?.runtime || 120) * 60;
             BingeEngine.loadContentMetadata(tmdbId, 'movie');
             if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'movie');
             if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
@@ -494,6 +495,7 @@ export const PLAYER_LOGIC = {
                 .select('episode_number, progress_seconds')
                 .eq('profile_id', currentProfile.id)
                 .eq('tmdb_id', Number(this.currentTmdbId))
+                .eq('type', 'tv')
                 .eq('season_number', Number(seasonNum));
             
             (hist || []).forEach(h => progressMap[h.episode_number] = h);
@@ -521,8 +523,10 @@ export const PLAYER_LOGIC = {
                     ${(() => {
                         const prog = progressMap[ep.episode_number];
                         if (!prog) return '';
-                        const totalSecs = (ep.runtime || 45) * 60;
-                        const isFullyWatched = prog.progress_seconds > (totalSecs * 0.90); // Fase Precision: 90%
+                        // Intentar obtener duración real del episodio, o el promedio de la serie, o 45m
+                        const runtime = ep.runtime || (this.seriesData?.episode_run_time?.[0]) || 45;
+                        const totalSecs = runtime * 60;
+                        const isFullyWatched = prog.progress_seconds > (totalSecs * 0.85); // Fase Precision: 85%
                         
                         if (isFullyWatched) {
                             return `<div class="watched-badge watched-premium"><svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VISTO</div>`;
@@ -567,6 +571,7 @@ export const PLAYER_LOGIC = {
         }
 
         // ── NEXT-GEN HOOKS ──
+        this._estimatedDuration = (ep.runtime || (this.seriesData?.episode_run_time?.[0]) || 45) * 60;
         // Social Pulse: mostrar barra de reacciones en tiempo real
         import('./binge-engine.js').then(m => m.BingeEngine.loadContentMetadata(tmdbId, 'tv'));
         if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'tv');
@@ -960,14 +965,16 @@ export const PLAYER_LOGIC = {
             }
         };
 
-        // Backup de salvado cada 15s (Alta Precisión solicitada por usuario)
-        this.progressTimer = setInterval(() => { if (!video.paused) doSave(); }, 15000);
+        // Backup de salvado cada 5s (Alta Precisión - Solicitud de Usuario)
+        this.progressTimer = setInterval(() => { if (!video.paused) doSave(); }, 5000);
 
         // Visibility & Unload Tracking (Asegura guardar telemetría si cierran ventana o minimizan)
         this._currentVisHandler = () => { if (document.hidden) doSave(); };
         this._currentBeforeUnloadHandler = () => { doSave(); };
+        this._currentPageHideHandler = () => { doSave(); };
         document.addEventListener('visibilitychange', this._currentVisHandler);
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
+        window.addEventListener('pagehide', this._currentPageHideHandler);
 
         // Guardado al pausar (Event Driven)
         // Guardado al terminar + Siguiente Episodio
@@ -1086,7 +1093,7 @@ export const PLAYER_LOGIC = {
                     this._checkBingeWatch(elapsed, duration);
                 }
             }
-        }, 10000);
+        }, 5000);
             };
             if (typeof YT !== 'undefined' && YT.Player) initYT();
             else window.onYouTubeIframeAPIReady = initYT;
@@ -1104,7 +1111,7 @@ export const PLAYER_LOGIC = {
                         this._checkBingeWatch(elapsed, duration);
                     });
                 });
-            }, 10000);
+            }, 5000);
         }
         // --- OPCIÓN C: CRONÓMETRO INTELIGENTE (iframes sin SDK) ---
         // BUG FIX: El timer anterior siempre contaba aunque el video estuviera pausado.
@@ -1129,9 +1136,9 @@ export const PLAYER_LOGIC = {
                 const isVisible = document.visibilityState === 'visible';
                 // No contar si el iframe envió señal de pausa o la pestaña no es visible
                 if (!isPlayerActive || !isVisible || this._isPausedEst) return;
-                elapsed += 10;
+                elapsed += 5;
                 doSaveProgress(elapsed);
-            }, 10000);
+            }, 5000);
         }
 
         this._currentVisHandler = () => {
@@ -1144,8 +1151,10 @@ export const PLAYER_LOGIC = {
             }
         };
         this._currentBeforeUnloadHandler = () => { doSaveProgress(elapsed); };
+        this._currentPageHideHandler = () => { doSaveProgress(elapsed); };
         document.addEventListener('visibilitychange', this._currentVisHandler);
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
+        window.addEventListener('pagehide', this._currentPageHideHandler);
     },
 
     /**
@@ -1263,6 +1272,10 @@ export const PLAYER_LOGIC = {
             window.removeEventListener('beforeunload', this._currentBeforeUnloadHandler);
             this._currentBeforeUnloadHandler = null;
         }
+        if (this._currentPageHideHandler) {
+            window.removeEventListener('pagehide', this._currentPageHideHandler);
+            this._currentPageHideHandler = null;
+        }
     },
 
     async _saveProgress(tmdbId, type, season, episode, seconds, supabaseClient) {
@@ -1287,12 +1300,12 @@ export const PLAYER_LOGIC = {
 
         if (totalDuration > 60) {
             const pct = seconds / totalDuration;
-            // Marcar como visto al 90% — igual que Flutter y la lógica de la Web
-            isWatched = pct >= 0.9;
+            // Marcar como visto al 85% — Compensamos créditos largos
+            isWatched = pct >= 0.85;
         } else {
-            // Sin duración confiable: marcar como visto si lleva > 80 min en películas
-            // o > 18 min en series (un episodio estándar de 20 min)
-            const threshold = (type === 'movie') ? 4800 : 1080;
+            // Sin duración confiable: marcar como visto si lleva > 60 min en películas
+            // o > 15 min en series (un episodio estándar de 20 min)
+            const threshold = (type === 'movie') ? 3600 : 900;
             isWatched = seconds >= threshold;
         }
 
