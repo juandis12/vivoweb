@@ -388,7 +388,7 @@ export const PLAYER_LOGIC = {
 
             // Binge Watch & Social
             this._estimatedDuration = (this.movieData?.runtime || 120) * 60;
-            BingeEngine.loadContentMetadata(tmdbId, 'movie');
+            import('./binge-engine.js').then(m => m.BingeEngine.loadContentMetadata(tmdbId, 'movie'));
             if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'movie');
             if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
                 type: 'movie',
