@@ -624,21 +624,21 @@ async function toDashboard(user, profile) {
     // Referencias frescas para evitar fallos por SPA
     authSection = document.getElementById('authSection');
     dashSection = document.getElementById('dashboardSection');
-    navM = document.getElementById('mainNav');
+    mainNav = document.getElementById('mainNav');
     mobileNav = document.querySelector('.mobile-nav');
 
     // Ocultar Auth de inmediato
     if (authSection) authSection.classList.add('hidden');
     if (dashSection) dashSection.classList.remove('hidden');
-    if (navM) navM.classList.remove('hidden');
+    if (mainNav) mainNav.classList.remove('hidden');
     if (mobileNav) mobileNav.classList.remove('hidden');
     
     // Inyectar guía de Watch Party si es necesario
     injectWatchPartyGuide();
     
     // Asegurar que la búsqueda sea visible en todas las pestañas (Web)
-    const searchB = document.getElementById('searchBox');
-    if (searchB) searchB.classList.remove('hidden');
+    searchBox = document.getElementById('searchBox');
+    if (searchBox) searchBox.classList.remove('hidden');
 
     // Sincronizar perfil
     currentProfile = profile || JSON.parse(localStorage.getItem('vivotv_current_profile'));
@@ -1891,15 +1891,15 @@ window.addEventListener('vivotv:page-changed', async (e) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const searchB = document.getElementById('searchBox');
-        const navM = document.getElementById('mainNav');
-        const uProfile = document.getElementById('userProfile');
-        const mobN = document.querySelector('.mobile-nav');
+        searchBox = document.getElementById('searchBox');
+        mainNav = document.getElementById('mainNav');
+        userProfile = document.getElementById('userProfile');
+        mobileNav = document.querySelector('.mobile-nav');
 
-        if (searchB) searchB.classList.remove('hidden');
-        if (navM) navM.classList.remove('hidden');
-        if (uProfile) uProfile.classList.remove('hidden');
-        if (mobN) mobN.classList.remove('hidden');
+        if (searchBox) searchBox.classList.remove('hidden');
+        if (mainNav) mainNav.classList.remove('hidden');
+        if (userProfile) userProfile.classList.remove('hidden');
+        if (mobileNav) mobileNav.classList.remove('hidden');
 
         initNavbarScroll();
         
