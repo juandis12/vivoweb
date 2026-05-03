@@ -7,7 +7,12 @@ import { CATALOG_UI } from './ui.js';
 
 let _supabase = null;
 let _currentServers = [];
-export function setSupabase(client) { _supabase = client; }
+export function setSupabase(client) { 
+    _supabase = client; 
+    import('./binge-engine.js').then(m => {
+        m.BingeEngine.init(PLAYER_LOGIC, _supabase);
+    });
+}
 
 export const PLAYER_LOGIC = {
     hls: null,
@@ -563,6 +568,7 @@ export const PLAYER_LOGIC = {
 
         // ── NEXT-GEN HOOKS ──
         // Social Pulse: mostrar barra de reacciones en tiempo real
+        import('./binge-engine.js').then(m => m.BingeEngine.loadContentMetadata(tmdbId, 'tv'));
         if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'tv');
         // Achievements: trackear reproducción de episodio
         if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
