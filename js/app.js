@@ -22,7 +22,7 @@ import { AuthService } from './services/AuthService.js';
 import { WatchPartyGuide } from './watch-party-guide.js';
 import { AchievementsEngine } from './achievements.js';
 import { SocialPulse } from './social-pulse.js';
-import { startHeartbeat, stopHeartbeat } from './auth.js';
+import { startHeartbeat, stopHeartbeat, checkConcurrentSessions } from './auth.js';
 
 // Exponer SocialPulse globalmente para que player.js pueda usarlo
 window.SOCIAL_PULSE = SocialPulse;
@@ -405,15 +405,15 @@ async function populatePageContent() {
     console.log('[SPA Engine] 🧬 Iniciando sincronización de base de datos...');
     
     try {
-        // 1. Sincronizar catálogo de Supabase (CRÍTICO para todas las páginas, incluido Live)
-        await syncCatalog(supabase); 
+        // 1 & 1b. Sincronizar catálogo y favoritos en PARALELO para máxima velocidad
+        console.log('[SPA Engine] ⚡ Ejecutando carga paralela de metadatos...');
+        const [catalogResult, favoritesResult] = await Promise.allSettled([
+            syncCatalog(supabase),
+            currentProfile ? supabase.from('user_favorites').select('tmdb_id').eq('profile_id', currentProfile.id) : Promise.resolve({ data: [] })
+        ]);
 
-        // 1b. Cargar favoritos en caché para la UI
-        if (currentProfile) {
-            const { data: fv } = await supabase.from('user_favorites').select('tmdb_id').eq('profile_id', currentProfile.id);
-            if (fv) {
-                window.VIVOTV_FAVORITES = new Set(fv.map(f => f.tmdb_id.toString()));
-            }
+        if (favoritesResult.status === 'fulfilled' && favoritesResult.value.data) {
+            window.VIVOTV_FAVORITES = new Set(favoritesResult.value.data.map(f => f.tmdb_id.toString()));
         }
 
         // 2. Evitar poblar carruseles/hero si estamos en la sección En Vivo (tiene su propio controlador)
@@ -677,7 +677,7 @@ async function toDashboard(user, profile) {
     try {
         // --- NUEVO: CORAZÓN DE SESIÓN (Máx 2 Dispositivos - Fase 3) ---
         startHeartbeat();
-        checkConcurrentSessions();
+        checkConcurrentSessions(); // Se ejecuta en background para no bloquear el renderizado inicial
         
         // Poblar contenido inicial
         await populatePageContent();
@@ -829,6 +829,17 @@ function startHeroRotation() {
     }, 8000);
 }
 function stopHeroRotation() { if (heroRotationTimer) { clearInterval(heroRotationTimer); heroRotationTimer = null; } }
+
+function injectWatchPartyGuide() {
+    console.log('[VivoTV] 💡 Inicializando Guía de Watch Party...');
+    try {
+        const guide = new WatchPartyGuide();
+        // Aquí podrías decidir si mostrarla automáticamente
+        // guide.show();
+    } catch (e) {
+        console.warn('Error al inyectar guía:', e);
+    }
+}
 // ================================================
 // GESTIÓN DE EVENTOS: LOGIN / REGISTRO / PERFILES
 // ================================================
@@ -1930,8 +1941,15 @@ window.addEventListener('vivotv:page-changed', async (e) => {
         await AuthService.initialize((event, session, profile) => {
             console.log(`[Auth Event] ${event}`);
             if (session && profile) {
-                toDashboard(session.user, profile);
+                // EVITAR DUPLICADOS: Solo cargar Dashboard si no está ya cargado o si el perfil cambió
+                const currentLoadedProfile = window.VIVOTV_CURRENT_LOADED_PROFILE;
+                if (!window.VIVOTV_DASHBOARD_LOADED || (currentLoadedProfile && currentLoadedProfile !== profile.id)) {
+                    window.VIVOTV_DASHBOARD_LOADED = true;
+                    window.VIVOTV_CURRENT_LOADED_PROFILE = profile.id;
+                    toDashboard(session.user, profile);
+                }
             } else {
+                window.VIVOTV_DASHBOARD_LOADED = false;
                 if (window.location.pathname.includes('profiles.html')) return;
                 toAuth();
             }

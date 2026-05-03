@@ -3,6 +3,7 @@ import { TMDB_SERVICE } from './tmdb.js';
 import { showToast } from './utils.js';
 import { VIVOTV_DB } from './db.js';
 import { StreamService } from './services/StreamService.js';
+import { CATALOG_UI } from './ui.js';
 
 let _supabase = null;
 let _currentServers = [];
