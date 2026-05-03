@@ -6,11 +6,13 @@
 export const BingeEngine = {
     _activeTimestamps: null,
     _player: null,
+    _supabase: null,
     _isSkipIntroShown: false,
     _isNextEpShown: false,
 
-    init(player) {
+    init(player, supabase) {
         this._player = player;
+        this._supabase = supabase;
         this._reset();
     },
 
@@ -26,18 +28,34 @@ export const BingeEngine = {
      * @param {string} tmdbId 
      * @param {string} type 'movie' | 'tv'
      */
-    async loadContentMetadata(tmdbId, type, season = null, episode = null) {
+    async loadContentMetadata(tmdbId, type) {
         this._reset();
         
-        // Simulación de carga (En producción vendría de Supabase 'content_metadata')
-        // Por defecto: Intro 0-90s, Créditos: últimos 30s
-        this._activeTimestamps = {
-            intro_start: 0,
-            intro_end: 85,
-            credits_start: 0.95, // Porcentaje si no hay tiempo fijo
-        };
+        if (!this._supabase) return;
 
-        console.log('[BingeEngine] 🍿 Metadatos cargados:', tmdbId);
+        try {
+            const { data, error } = await this._supabase
+                .from('vivotv_content_metadata')
+                .select('*')
+                .eq('tmdb_id', tmdbId)
+                .eq('content_type', type)
+                .single();
+
+            if (!error && data) {
+                this._activeTimestamps = data;
+                console.log('[BingeEngine] ✅ Metadatos reales cargados:', tmdbId);
+            } else {
+                // Fallback a valores genéricos si no hay metadata específica
+                this._activeTimestamps = {
+                    intro_start: 0,
+                    intro_end: 85,
+                    credits_start_pct: 0.95
+                };
+                console.log('[BingeEngine] 💡 Usando valores genéricos para:', tmdbId);
+            }
+        } catch (e) {
+            console.warn('[BingeEngine] Error cargando metadata:', e);
+        }
     },
 
     /**
@@ -55,7 +73,7 @@ export const BingeEngine = {
         }
 
         // 2. Lógica Next Episode
-        const creditsStart = duration * this._activeTimestamps.credits_start;
+        const creditsStart = duration * (this._activeTimestamps.credits_start_pct || 0.95);
         if (currentTime >= creditsStart) {
             this._showNextEpisode();
         } else {
