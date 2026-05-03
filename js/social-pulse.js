@@ -233,7 +233,7 @@ const SocialPulse = {
             #socialPulseBar {
                 position: fixed;
                 bottom: 30px; right: 30px;
-                z-index: 5000;
+                z-index: 11000;
                 opacity: 0;
                 transform: translateY(120px);
                 transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), opacity 0.4s ease, right 0.1s linear, top 0.1s linear;
