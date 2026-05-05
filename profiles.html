@@ -10,6 +10,68 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="VIVOTV">
     <title>¿Quién está viendo? | VIVOTV</title>
+    <!-- CSS de la Intro de Bienvenida (Netflix Style) -->
+    <style id="welcomeIntroStyles">
+        .welcome-intro {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0b122b;
+            z-index: 20000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .welcome-intro.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .welcome-avatar-w {
+            width: 150px;
+            height: 150px;
+            border-radius: 4px;
+            overflow: hidden;
+            transform: scale(0.5);
+            opacity: 0;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .welcome-intro.active .welcome-avatar-w {
+            animation: netflix-zoom 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .welcome-name {
+            margin-top: 30px;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: 'Inter', sans-serif;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .welcome-intro.active .welcome-name {
+            animation: fade-up-welcome 0.8s ease-out 0.4s forwards;
+        }
+
+        @keyframes netflix-zoom {
+            0% { transform: scale(0.5); opacity: 0; }
+            30% { opacity: 1; }
+            100% { transform: scale(1.4); opacity: 1; }
+        }
+
+        @keyframes fade-up-welcome {
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
@@ -966,6 +1028,14 @@
 </head>
 
 <body class="selection-mode" id="bodyRoot">
+    <!-- Intro de Bienvenida -->
+    <div id="welcomeIntro" class="welcome-intro">
+        <div id="welcomeAvatar" class="welcome-avatar-w">
+            <!-- Se llena dinámicamente -->
+        </div>
+        <div id="welcomeName" class="welcome-name"></div>
+    </div>
+
     <!-- Contenedor de Selección Normal (Antiguos) -->
     <div class="profile-container" id="selectionContainer">
         <h1 id="mainTitle">¿Quién está viendo?</h1>
@@ -1634,11 +1704,35 @@
                 console.warn('[Sync] Falló la actualización de metadatos:', e);
             }
 
-            // --- SESIÓN PERSISTENTE (Fase 2: Usabilidad) ---
-            localStorage.removeItem('vivotv_current_profile');
+            // --- ANIMACIÓN DE BIENVENIDA (NETFLIX STYLE) ---
+            const welcomeOverlay = document.getElementById('welcomeIntro');
+            const welcomeAvatar  = document.getElementById('welcomeAvatar');
+            const welcomeName    = document.getElementById('welcomeName');
+
+            // Preparar el avatar para la intro
+            if (p.avatar_url) {
+                let displayUrl = p.avatar_url;
+                if (!displayUrl.startsWith('http') && !displayUrl.startsWith('assets/avatars/')) {
+                    displayUrl = `assets/avatars/${displayUrl}`;
+                }
+                welcomeAvatar.innerHTML = `<img src="${displayUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+                welcomeAvatar.className = 'welcome-avatar-w';
+            } else {
+                welcomeAvatar.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;color:white;">${p.name[0]}</div>`;
+                welcomeAvatar.className = `welcome-avatar-w ${p.color || 'color-1'}`;
+            }
+
+            welcomeName.textContent = p.name;
+            welcomeOverlay.classList.add('active');
+
+            // Guardar sesión
             localStorage.setItem('vivotv_current_profile', JSON.stringify(p));
             sessionStorage.setItem('vivotv_profile_chosen', 'true');
-            window.location.href = 'index.html';
+
+            // Esperar a que la animación termine antes de redirigir
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 2200);
         };
 
         window.manageProfilePin = async (id) => {
