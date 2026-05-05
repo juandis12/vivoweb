@@ -125,12 +125,17 @@ export const CATALOG_UI = {
         const fragment = document.createDocumentFragment();
         const _ids = (availableIds instanceof Set) ? availableIds : (window.availableIds || new Set());
         
-        items.forEach(item => {
+        const isRankedSection = containerId === 'trendingCarousel';
+        
+        items.forEach((item, index) => {
             if (!item.poster_path && !item.poster_url) return;
             const type = typeOverride || item.content_type || item.media_type || (containerId.toLowerCase().includes('tv') ? 'tv' : 'movie');
             const id = item.id || item.tmdb_id;
             const isAvail = id ? _ids.has(id.toString()) : false;
-            const card = this.createMovieCard(item, type, isAvail);
+            
+            // Pasar el rank solo si es la sección de tendencias
+            const rank = isRankedSection ? (index + 1) : null;
+            const card = this.createMovieCard(item, type, isAvail, rank);
             fragment.appendChild(card);
         });
         container.appendChild(fragment);
@@ -180,8 +185,8 @@ export const CATALOG_UI = {
                         </div>
                         ${!isWatched ? (isAvailable ? `
                             <div class="available-badge">
-                                <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 
-                                DISPONIBLE
+                                ${rank ? '' : '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'} 
+                                ${rank ? 'RECIÉN AGREGADO' : 'DISPONIBLE'}
                             </div>` : `
                             <div class="coming-soon-badge">PRÓXIMAMENTE</div>`) : ''}
                     `}

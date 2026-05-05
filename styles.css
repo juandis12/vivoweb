@@ -121,6 +121,14 @@ body.loaded {
     pointer-events: all !important;
 }
 
+/* Ajuste de contenedor para que el número 1 no se corte */
+#trendingCarousel {
+    padding-left: 80px !important;
+    padding-bottom: 30px;
+    padding-top: 20px;
+    overflow: visible !important;
+}
+
 /* Fix: Bloqueo de scroll cuando el modal está abierto */
 .no-scroll {
     overflow: hidden !important;
@@ -1143,14 +1151,14 @@ nav a.active::after {
 }
 
 .row-title {
-    font-size: 1.75rem;
-    font-weight: 900;
+    font-size: 1.45rem; /* Más elegante y cercano a la foto */
+    font-weight: 800;
     color: #fff;
     display: flex;
     align-items: center;
     gap: 14px;
-    letter-spacing: -0.02em;
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    letter-spacing: -0.01em;
+    margin-bottom: 5px;
 }
 
 .row-accent {
@@ -1507,43 +1515,70 @@ nav a.active::after {
     will-change: transform;
 }
 
-/* Estilo para Fila de Tendencias (Netflix Top 10) */
 .movie-card.ranked {
-    margin-left: 45px; /* Espacio para el número gigante */
+    margin-left: 95px; /* Ajuste fino de solapamiento */
     overflow: visible !important;
+    position: relative;
+    box-shadow: -15px 0 30px rgba(0, 0, 0, 0.8); /* Sombra profunda para solapar el número */
 }
 
 .rank-number {
     position: absolute;
-    left: -55px;
-    bottom: -15px;
-    font-size: 160px;
+    left: -105px;
+    bottom: -25px;
+    font-size: 260px; /* Tamaño masivo como en la foto */
     font-weight: 900;
     line-height: 1;
     z-index: -1;
-    color: #0b122b; /* Fondo oscuro */
-    -webkit-text-stroke: 4px rgba(255, 255, 255, 0.5);
-    transition: all 0.4s ease;
+    color: transparent; /* Hueco por dentro */
+    -webkit-text-stroke: 6px #555; /* Borde gris definido */
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     pointer-events: none;
     font-family: 'Inter', sans-serif;
+    letter-spacing: -15px; /* Números más compactos */
+    opacity: 0.8;
 }
 
 .movie-card.ranked:hover .rank-number {
-    transform: scale(0.8) translateX(-10px);
-    opacity: 0.5;
-    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.3);
+    transform: scale(0.9) translateX(-20px);
+    -webkit-text-stroke-color: #fff; /* Brilla al hacer hover */
+    opacity: 1;
+}
+
+/* Badges inferiores específicos para el ranking */
+.movie-card.ranked .badge-container {
+    top: auto;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.movie-card.ranked .available-badge {
+    position: relative;
+    top: 0;
+    left: 0;
+    background: #e50914 !important; /* Rojo vibrante Netflix */
+    border-radius: 2px;
+    width: 100%;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 900; /* Extra bold estilo Netflix */
+    padding: 5px 0;
+    letter-spacing: 0.5px;
 }
 
 @media (max-width: 768px) {
     .movie-card.ranked {
-        margin-left: 30px;
+        margin-left: 55px;
     }
     .rank-number {
-        font-size: 100px;
-        left: -35px;
-        bottom: -10px;
-        -webkit-text-stroke: 2px rgba(255, 255, 255, 0.5);
+        font-size: 150px;
+        left: -60px;
+        bottom: -15px;
+        -webkit-text-stroke: 3px #555;
+        letter-spacing: -8px;
     }
 }
 
