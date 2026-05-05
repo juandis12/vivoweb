@@ -194,7 +194,14 @@ export const CATALOG_UI = {
                 
                 <!-- Netflix-style Hover Info -->
                 <div class="movie-info-mini">
-                    <div class="mini-title">${title}</div>
+                    <div class="mini-actions">
+                        <button class="mini-btn btn-play">${isMaintenance ? '🔧' : '▶'}</button>
+                        <button class="mini-btn btn-add-fav ${isFav ? 'added-to-list' : ''}" 
+                                onclick="event.stopPropagation(); window.VIVOTV_TOGGLE_FAVORITE('${id}', '${type}', this)">
+                            ${isFav ? '✓' : '+'}
+                        </button>
+                        <button class="mini-btn btn-more-info">▼</button>
+                    </div>
                     <div class="mini-meta">
                         <span class="match">${rating} Match</span>
                         <span class="year">${year}</span>
@@ -202,23 +209,6 @@ export const CATALOG_UI = {
                     </div>
                     <div class="mini-genres">${genresList}</div>
                 </div>
-            </div>
-            <div class="movie-tooltip">
-                <div class="movie-tooltip-actions">
-                    <button class="movie-tooltip-btn btn-play" title="Reproducir">${isMaintenance ? '🔧' : '▶'}</button>
-                    <button class="movie-tooltip-btn btn-outline-rnd btn-add-fav ${isFav ? 'added-to-list' : ''}" 
-                            title="${isFav ? 'Eliminar de Mi Lista' : 'Añadir a Mi Lista'}"
-                            onclick="event.stopPropagation(); window.VIVOTV_TOGGLE_FAVORITE('${id}', '${type}', this)">
-                        ${isFav ? '✓' : '+'}
-                    </button>
-                </div>
-                <div class="movie-tooltip-meta">
-                    <span class="movie-tooltip-rating">${rating} Match</span>
-                    <span class="movie-tooltip-year">${year}</span>
-                    <span class="badge-hd">HD</span>
-                </div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px;">${genresList}</div>
-                ${isMaintenance ? '<div style="color:var(--primary); font-weight:bold; margin-top:5px; font-size:0.7rem;">ESTAMOS ARREGLANDO ESTE TÍTULO</div>' : ''}
             </div>`;
 
         const openDetail = () => {
@@ -232,7 +222,13 @@ export const CATALOG_UI = {
         };
 
         card.addEventListener('click', openDetail);
-        card.querySelector('.movie-tooltip-btn').addEventListener('click', (e) => { e.stopPropagation(); openDetail(); });
+        const moreInfoBtn = card.querySelector('.btn-more-info');
+        if (moreInfoBtn) {
+            moreInfoBtn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                openDetail(); 
+            });
+        }
 
         return card;
     },
