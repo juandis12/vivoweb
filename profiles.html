@@ -114,14 +114,19 @@
         .profile-name-input {
             background: transparent;
             border: none;
-            color: #fff;
-            font-size: 1.3rem;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
             text-align: center;
             width: 100%;
-            font-weight: 700;
+            font-weight: 400;
             padding: 5px;
             border-radius: 4px;
             pointer-events: none;
+            transition: color 0.4s ease;
+        }
+
+        .profile-item:hover .profile-name-input {
+            color: #fff;
         }
 
         .admin-mode .profile-name-input {
@@ -621,9 +626,11 @@
             }
 
             .btn-vtv {
-                width: 100%;
-                padding: 12px;
+                width: auto;
+                padding: 10px 25px;
                 font-size: 0.8rem;
+                border: 1px solid grey;
+                color: grey;
             }
 
             #btnLogoutGlobal {

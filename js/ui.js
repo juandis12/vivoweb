@@ -191,6 +191,17 @@ export const CATALOG_UI = {
                         <div class="card-progress-fill" style="width: ${progress}%"></div>
                     </div>
                 ` : ''}
+                
+                <!-- Netflix-style Hover Info -->
+                <div class="movie-info-mini">
+                    <div class="mini-title">${title}</div>
+                    <div class="mini-meta">
+                        <span class="match">${rating} Match</span>
+                        <span class="year">${year}</span>
+                        <span class="hd-label">HD</span>
+                    </div>
+                    <div class="mini-genres">${genresList}</div>
+                </div>
             </div>
             <div class="movie-tooltip">
                 <div class="movie-tooltip-actions">
