@@ -205,20 +205,8 @@ button {
 }
 
 /* --- CAROUSEL ZOOM (Netflix-ification) --- */
-.carousel {
-    display: flex;
-    gap: 8px;
-    padding: 20px 0;
-    overflow-x: auto;
-    scroll-behavior: smooth;
-    scrollbar-width: none; /* Firefox */
-}
 
-.carousel::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
-}
-
-/* Bloque duplicado eliminado */
+/* Carousel unificado en la sección 9 */
 
 /* Skeleton Loaders */
 .skeleton-grid {
@@ -1155,13 +1143,14 @@ nav a.active::after {
 }
 
 .row-title {
-    font-size: 1.6rem;
-    font-weight: 800;
+    font-size: 1.75rem;
+    font-weight: 900;
     color: #fff;
     display: flex;
     align-items: center;
-    gap: 12px;
-    letter-spacing: -0.01em;
+    gap: 14px;
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
 .row-accent {
@@ -1485,11 +1474,10 @@ nav a.active::after {
     overflow-x: auto;
     padding: 60px var(--side-padding) 140px;
     /* Incrementado para evitar cortes superiores */
-    margin-bottom: -100px;
+    margin-bottom: -60px;
     scroll-behavior: smooth;
     scrollbar-width: none;
     flex: 1;
-    overflow-y: visible;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     cursor: grab;
@@ -1511,10 +1499,52 @@ nav a.active::after {
     aspect-ratio: 2/3;
     border-radius: 6px;
     background: #141414;
-    transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1), z-index 0.4s;
+    transform: scale(1);
+    transition: transform 0.45s var(--ease-netflix), z-index 0.45s;
     cursor: pointer;
     position: relative;
     overflow: visible;
+    will-change: transform;
+}
+
+/* Estilo para Fila de Tendencias (Netflix Top 10) */
+.movie-card.ranked {
+    margin-left: 45px; /* Espacio para el número gigante */
+    overflow: visible !important;
+}
+
+.rank-number {
+    position: absolute;
+    left: -55px;
+    bottom: -15px;
+    font-size: 160px;
+    font-weight: 900;
+    line-height: 1;
+    z-index: -1;
+    color: #0b122b; /* Fondo oscuro */
+    -webkit-text-stroke: 4px rgba(255, 255, 255, 0.5);
+    transition: all 0.4s ease;
+    user-select: none;
+    pointer-events: none;
+    font-family: 'Inter', sans-serif;
+}
+
+.movie-card.ranked:hover .rank-number {
+    transform: scale(0.8) translateX(-10px);
+    opacity: 0.5;
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+    .movie-card.ranked {
+        margin-left: 30px;
+    }
+    .rank-number {
+        font-size: 100px;
+        left: -35px;
+        bottom: -10px;
+        -webkit-text-stroke: 2px rgba(255, 255, 255, 0.5);
+    }
 }
 
 @media (min-width: 1024px) {
@@ -1540,7 +1570,6 @@ nav a.active::after {
     height: 100%;
     object-fit: cover;
     display: block;
-    transform: none !important; /* Evita cualquier recorte diagonal */
     filter: none;
 }
 
@@ -1549,8 +1578,8 @@ nav a.active::after {
 }
 
 .movie-card:hover {
-    transform: scale(1.35) translateY(-5%);
-    z-index: 500;
+    transform: scale(1.4) translateY(-10px) !important;
+    z-index: 1000 !important;
 }
 
 .movie-card:hover .movie-card-inner {
@@ -1632,7 +1661,13 @@ nav a.active::after {
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.btn-more-info {
+    margin-left: auto;
+    font-size: 0.8rem !important;
 }
 
 .match { color: #46d369; font-weight: 800; }
@@ -1764,6 +1799,36 @@ nav a.active::after {
     box-shadow: 0 2px 8px rgba(229, 9, 20, 0.5);
     pointer-events: none;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.coming-soon-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    background: rgba(15, 23, 42, 0.8) !important;
+    backdrop-filter: blur(8px);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 10;
+}
+
+.maintenance-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    background: rgba(245, 158, 11, 0.9);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
 /* Bloque de badge antiguo eliminado para evitar conflictos */
@@ -2037,92 +2102,7 @@ nav a.active::after {
 }
 
 /* Badges de Disponibilidad */
-.available-badge {
-    background: #e50914;
-    color: white;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
-}
-
-/* --- SISTEMA DE ETIQUETAS (BADGES) PREMIUM --- */
-.badge-container {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    pointer-events: none;
-}
-
-.coming-soon-badge {
-    background: rgba(15, 23, 42, 0.75) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    color: rgba(255, 255, 255, 0.9);
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.coming-soon-badge::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    background: #fbbf24;
-    /* Color ámbar de espera */
-    border-radius: 50%;
-    display: inline-block;
-    box-shadow: 0 0 8px #fbbf24;
-}
-
-.available-badge {
-    background: linear-gradient(135deg, #e11d48, #9f1239) !important;
-    color: white;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 8px 16px rgba(225, 29, 72, 0.3);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.available-badge svg {
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
-}
-
-.maintenance-badge {
-    background: rgba(245, 158, 11, 0.9);
-    color: white;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3);
-}
+/* Badges unificados en sección 9.1 */
 
 .rating-imdb {
     color: #f5c518;
