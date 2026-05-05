@@ -101,6 +101,7 @@ body {
 .page-transition-overlay.active {
     opacity: 1;
     pointer-events: all;
+    z-index: 99999;
 }
 
 /* Animación de entrada suave (Netflix Style) */
@@ -112,6 +113,12 @@ body {
 
 body.loaded {
     opacity: 1;
+}
+
+/* Seguridad: Asegurar que el login siempre sea visible e interactuable */
+.page-auth, .page-auth body {
+    opacity: 1 !important;
+    pointer-events: all !important;
 }
 
 /* Fix: Bloqueo de scroll cuando el modal está abierto */
