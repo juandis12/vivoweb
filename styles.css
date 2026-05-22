@@ -1530,19 +1530,21 @@ nav a.active::after {
     font-weight: 900;
     line-height: 1;
     z-index: -1;
-    color: transparent; /* Hueco por dentro */
-    -webkit-text-stroke: 6px #555; /* Borde gris definido */
+    color: #0b0d19; /* Relleno oscuro translúcido para integración perfecta con el fondo */
+    -webkit-text-stroke: 5px #4f5b73; /* Borde refinado metálico */
+    text-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     pointer-events: none;
-    font-family: 'Inter', sans-serif;
-    letter-spacing: -15px; /* Números más compactos */
-    opacity: 0.8;
+    font-family: 'Epilogue', sans-serif; /* Tipografía pesada y geométrica premium */
+    letter-spacing: -18px; /* Números más compactos y estilizados */
+    opacity: 0.95;
 }
 
 .movie-card.ranked:hover .rank-number {
-    transform: scale(0.9) translateX(-20px);
-    -webkit-text-stroke-color: #fff; /* Brilla al hacer hover */
+    transform: scale(0.92) translateX(-15px);
+    -webkit-text-stroke-color: #bb86fc; /* Brilla en el acento púrpura icónico en hover */
+    color: #121424;
     opacity: 1;
 }
 
@@ -1577,8 +1579,8 @@ nav a.active::after {
         font-size: 150px;
         left: -60px;
         bottom: -15px;
-        -webkit-text-stroke: 3px #555;
-        letter-spacing: -8px;
+        -webkit-text-stroke: 3px #4f5b73;
+        letter-spacing: -10px;
     }
 }
 
@@ -1613,7 +1615,7 @@ nav a.active::after {
 }
 
 .movie-card:hover {
-    transform: scale(1.4) translateY(-10px) !important;
+    transform: scale(1.25) translateY(-8px) !important;
     z-index: 1000 !important;
 }
 
@@ -1621,20 +1623,24 @@ nav a.active::after {
     box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 20px rgba(187, 134, 252, 0.2);
 }
 
-/* Info Mini que aparece en el Hover */
+/* Info Mini que aparece en el Hover (Glassmorphism Premium) */
 .movie-info-mini {
     position: absolute;
     top: 98%;
     left: 0;
     right: 0;
-    background: #181818;
+    background: rgba(15, 15, 20, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     padding: 12px;
-    border-radius: 0 0 6px 6px;
+    border-radius: 0 0 8px 8px;
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    border-top: none;
     opacity: 0;
     transform: translateY(-10px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     pointer-events: none;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
     z-index: 501;
 }
 
@@ -5767,4 +5773,89 @@ nav a.active::after {
         transform: translateY(-200px) scale(1);
         opacity: 0;
     }
+}
+
+/* --- GENRE FILTERS CHIPS (FASE PREMIUM) --- */
+.genre-filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0 35px 0;
+    padding: 0;
+    list-style: none;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.genre-filter-chip {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    padding: 8px 18px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+}
+
+.genre-filter-chip:hover {
+    background: rgba(187, 134, 252, 0.1);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(187, 134, 252, 0.25);
+    transform: translateY(-2px);
+}
+
+.genre-filter-chip.active {
+    background: linear-gradient(135deg, var(--primary), var(--primary-container));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(187, 134, 252, 0.35);
+    transform: translateY(-2px);
+}
+
+.genre-filter-chip:active {
+    transform: translateY(0);
+}
+
+/* Transiciones fluidas para ocultar/mostrar tarjetas filtradas */
+.movie-card.hidden-by-filter {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transform: scale(0.8) !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+}
+
+/* Centralización de estilos inline para peliculas.html y subpáginas */
+.load-more-wrapper {
+    text-align: center;
+    margin-top: 40px;
+    margin-bottom: 80px;
+}
+
+.seo-content-block {
+    padding: 40px var(--side-padding);
+    opacity: 0.8;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 60px;
+}
+
+.seo-content-block h2 {
+    font-size: 1.2rem;
+    color: var(--primary);
+    margin-bottom: 15px;
 }

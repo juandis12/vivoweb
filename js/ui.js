@@ -151,6 +151,16 @@ export const CATALOG_UI = {
         card.dataset.tmdbId = id;
         card.dataset.type = type || item.content_type || item.media_type;
 
+        // Extraer y asignar IDs de géneros para el filtrado en cliente
+        const genresArr = item.genres || item.genre_ids || [];
+        let genreIds = [];
+        if (Array.isArray(genresArr)) {
+            genreIds = genresArr.map(g => typeof g === 'object' ? g.id : g).filter(Boolean);
+        } else if (typeof genresArr === 'string') {
+            genreIds = genresArr.split(',').map(g => parseInt(g.trim())).filter(Boolean);
+        }
+        card.dataset.genres = genreIds.join(',');
+
         const year   = (item.release_date || item.first_air_date || '').split('-')[0];
         const rating = item.vote_average ? item.vote_average.toFixed(1) : (item.rating || '9.5');
         const title  = (item.title || item.name || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -258,25 +268,18 @@ export const CATALOG_UI = {
         if (!container) return;
         container.innerHTML = '';
         const fragment = document.createDocumentFragment();
+        const _ids = (availableIds instanceof Set) ? availableIds : (window.availableIds || new Set());
+
         results.forEach((item, index) => {
-            const isAvail = availableIds.has(item.id.toString());
-            const type = item.media_type || (item.title ? 'movie' : 'tv');
-            const card = this.createTop10Card(item, index + 1, isAvail, type);
+            const id = item.id || item.tmdb_id;
+            const isAvail = id ? _ids.has(id.toString()) : false;
+            const type = item.media_type || item.content_type || (item.title ? 'movie' : 'tv');
+            
+            // Invocar createMovieCard con el rango del ranking (index + 1) para activar .ranked y .rank-number
+            const card = this.createMovieCard(item, type, isAvail, index + 1);
             fragment.appendChild(card);
         });
         container.appendChild(fragment);
-    },
-
-    createTop10Card(item, rank, isAvailable, type) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'top-10-card';
-        const num = document.createElement('div');
-        num.className = 'top-10-number';
-        num.textContent = rank;
-        const card = this.createMovieCard(item, type, isAvailable);
-        wrapper.appendChild(num);
-        wrapper.appendChild(card);
-        return wrapper;
     },
 
     async renderSimilar(id, type, availableIds) {

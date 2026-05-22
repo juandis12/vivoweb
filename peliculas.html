@@ -184,10 +184,22 @@
         </div>
 
         <!-- SECCIÓN: TODAS LAS PELÍCULAS (GRILLA) -->
-        <section class="movies-grid-container" style="margin-top: 80px; padding: 0 var(--side-padding);">
-            <header class="grid-header" style="margin-bottom: 30px;">
-                <h2 class="grid-title" style="font-size: 2rem;">📂 Todas las Películas</h2>
+        <section class="movies-grid-container">
+            <header class="grid-header">
+                <h2 class="grid-title">📂 Todas las Películas</h2>
                 <p class="text-muted">Explora nuestro catálogo completo disponible en tu biblioteca.</p>
+                
+                <!-- Barra de chips para filtrado por género interactivo -->
+                <ul class="genre-filters-container" id="genreFilters">
+                    <li><button class="genre-filter-chip active" data-genre-id="all">🎬 Todos</button></li>
+                    <li><button class="genre-filter-chip" data-genre-id="28">💥 Acción</button></li>
+                    <li><button class="genre-filter-chip" data-genre-id="35">😂 Comedia</button></li>
+                    <li><button class="genre-filter-chip" data-genre-id="27">👻 Terror</button></li>
+                    <li><button class="genre-filter-chip" data-genre-id="878">🚀 Ciencia Ficción</button></li>
+                    <li><button class="genre-filter-chip" data-genre-id="14">✨ Fantasía</button></li>
+                    <li><button class="genre-filter-chip" data-genre-id="12">🧭 Aventura</button></li>
+                    <li><button class="genre-filter-chip" data-genre-id="18">🎭 Drama</button></li>
+                </ul>
             </header>
             
             <div id="gridContainer" class="movies-grid"></div>
@@ -195,12 +207,12 @@
                 <div class="loader"></div>
             </div>
 
-            <div style="text-align: center; margin-top: 40px; margin-bottom: 80px;">
+            <div class="load-more-wrapper">
                 <button id="btnLoadMore" class="btn btn-outline">Cargar más películas</button>
             </div>
             <!-- SEO CONTENT BLOCK -->
-            <section class="seo-content-block" style="padding: 40px var(--side-padding); opacity: 0.8; font-size: 0.9rem; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 60px;">
-                <h2 style="font-size: 1.2rem; color: var(--primary); margin-bottom: 15px;">Catálogo de Películas Online Gratis en HD</h2>
+            <section class="seo-content-block">
+                <h2>Catálogo de Películas Online Gratis en HD</h2>
                 <p>En el catálogo de <strong>VIVOTV</strong> encontrarás la mejor selección para <strong>ver películas online gratis</strong> en español latino y subtituladas. Nuestra biblioteca incluye desde los grandes éxitos de taquilla hasta joyas del cine independiente, todo disponible en calidad HD y sin necesidad de suscripciones costosas.</p>
                 <p>Navega por nuestras categorías de <strong>acción, comedia, terror y ciencia ficción</strong>. Actualizamos nuestra lista de <strong>estrenos 2024</strong> semanalmente para que siempre tengas contenido nuevo que disfrutar. Además, todas nuestras películas son compatibles con dispositivos móviles y smart TVs a través del navegador, ofreciendo una experiencia de cine en casa impecable.</p>
                 <p>Regístrate ahora para acceder a funciones avanzadas como la reanudación de reproducción y la creación de listas de favoritos personalizadas. No pierdas más tiempo buscando enlaces de baja calidad; en VIVOTV la calidad 4K y la velocidad de carga son nuestra prioridad.</p>
@@ -327,6 +339,76 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./js/app.js?v=wp5"></script>
+    
+    <!-- Lógica de Filtrado por Género Dinámico en Cliente -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridContainer = document.getElementById('gridContainer');
+            const genreFilters = document.getElementById('genreFilters');
+            if (!gridContainer || !genreFilters) return;
+
+            let activeGenreId = 'all';
+
+            // Función para aplicar el filtro actual a todas las tarjetas de la cuadrícula
+            const applyFilter = () => {
+                const cards = gridContainer.querySelectorAll('.movie-card');
+                let visibleCount = 0;
+
+                cards.forEach(card => {
+                    if (activeGenreId === 'all') {
+                        card.classList.remove('hidden-by-filter');
+                        visibleCount++;
+                    } else {
+                        const genresAttr = card.dataset.genres || '';
+                        const genres = genresAttr ? genresAttr.split(',') : [];
+                        if (genres.includes(activeGenreId)) {
+                            card.classList.remove('hidden-by-filter');
+                            visibleCount++;
+                        } else {
+                            card.classList.add('hidden-by-filter');
+                        }
+                    }
+                });
+
+                // Si no hay resultados visibles en este filtro, mostrar un mensaje amigable
+                let noResultsMsg = gridContainer.querySelector('.no-filter-results-msg');
+                if (visibleCount === 0 && cards.length > 0) {
+                    if (!noResultsMsg) {
+                        noResultsMsg = document.createElement('p');
+                        noResultsMsg.className = 'no-filter-results-msg text-muted';
+                        noResultsMsg.style.textAlign = 'center';
+                        noResultsMsg.style.gridColumn = '1 / -1';
+                        noResultsMsg.style.padding = '40px 0';
+                        noResultsMsg.style.fontSize = '1.1rem';
+                        noResultsMsg.textContent = 'No hay títulos disponibles para este género en la lista actual. Prueba cargando más películas.';
+                        gridContainer.appendChild(noResultsMsg);
+                    }
+                } else if (noResultsMsg) {
+                    noResultsMsg.remove();
+                }
+            };
+
+            // Escuchar clics en los chips de filtro
+            genreFilters.addEventListener('click', (e) => {
+                const chip = e.target.closest('.genre-filter-chip');
+                if (!chip) return;
+
+                // Cambiar estado activo en la UI
+                genreFilters.querySelectorAll('.genre-filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+
+                activeGenreId = chip.dataset.genreId;
+                applyFilter();
+            });
+
+            // MutationObserver para aplicar automáticamente el filtro activo cuando se inyectan nuevas tarjetas (como "Cargar más")
+            const observer = new MutationObserver(() => {
+                applyFilter();
+            });
+
+            observer.observe(gridContainer, { childList: true });
+        });
+    </script>
 </body>
 </html>

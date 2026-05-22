@@ -27,10 +27,37 @@ export async function initAuth(onAuthChange) {
     supabase.auth.onAuthStateChange(async (event, session) => {
         console.log(`[VivoTV] 🔑 Auth Event: ${event}`);
         
+        if (event === 'PASSWORD_RECOVERY') {
+            safeCallback(event, session, null);
+            return;
+        }
+        
         if (session?.user) {
             // Sincronizar perfil local si existe
             const up = localStorage.getItem('vivotv_current_profile');
             currentProfile = up ? JSON.parse(up) : null;
+            
+            // Sincronización en caliente si no hay perfil local pero sí global en metadatos
+            if (!currentProfile && session.user.user_metadata?.last_profile_id) {
+                const lastPid = session.user.user_metadata.last_profile_id;
+                console.log(`[Sync Event] Buscando perfil global (${lastPid}) en caliente...`);
+                try {
+                    const { data: profileData, error } = await supabase
+                        .from('vivotv_profiles')
+                        .select('*')
+                        .eq('id', lastPid)
+                        .single();
+                    
+                    if (profileData && !error) {
+                        currentProfile = profileData;
+                        localStorage.setItem('vivotv_current_profile', JSON.stringify(profileData));
+                        console.log(`[Sync Event] Perfil global recuperado en caliente: ${profileData.name}`);
+                    }
+                } catch (e) {
+                    console.warn('[Sync Event] Error al recuperar perfil global en caliente:', e);
+                }
+            }
+            
             safeCallback(event, session, currentProfile);
         } else if (event === 'SIGNED_OUT') {
             currentProfile = null;

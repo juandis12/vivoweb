@@ -15,34 +15,53 @@ import { showToast } from '../utils.js';
 export const AuthService = {
     user: null,
     profile: null,
+    initPromise: null,
+    onStateChangeCallbacks: [],
 
     /**
      * Inicializa la autenticación y configura listeners globales.
      */
     async initialize(onStateChange) {
-        const { user, profile } = await initAuth((event, session, currentProfile) => {
-            this.user = session?.user || null;
-            this.profile = currentProfile;
-            
-            if (onStateChange) {
-                onStateChange(event, session, currentProfile);
-            }
-
-            if (event === 'SIGNED_IN') {
-                this.startSessionMonitoring();
-            } else if (event === 'SIGNED_OUT') {
-                this.stopSessionMonitoring();
-            }
-        });
-
-        this.user = user;
-        this.profile = profile;
-
-        if (this.user) {
-            this.startSessionMonitoring();
+        if (onStateChange && !this.onStateChangeCallbacks.includes(onStateChange)) {
+            this.onStateChangeCallbacks.push(onStateChange);
         }
 
-        return { user, profile };
+        if (this.initPromise) {
+            return this.initPromise;
+        }
+
+        this.initPromise = (async () => {
+            const { user, profile } = await initAuth((event, session, currentProfile) => {
+                this.user = session?.user || null;
+                this.profile = currentProfile;
+                
+                // Ejecutar todos los callbacks registrados en la cola
+                this.onStateChangeCallbacks.forEach(callback => {
+                    try {
+                        callback(event, session, currentProfile);
+                    } catch (e) {
+                        console.error('[AuthService] Error en callback de estado:', e);
+                    }
+                });
+
+                if (event === 'SIGNED_IN') {
+                    this.startSessionMonitoring();
+                } else if (event === 'SIGNED_OUT') {
+                    this.stopSessionMonitoring();
+                }
+            });
+
+            this.user = user;
+            this.profile = profile;
+
+            if (this.user) {
+                this.startSessionMonitoring();
+            }
+
+            return { user, profile };
+        })();
+
+        return this.initPromise;
     },
 
     /**

@@ -28,8 +28,14 @@ import { startHeartbeat, stopHeartbeat, checkConcurrentSessions } from './auth.j
 window.SOCIAL_PULSE = SocialPulse;
 window.ACHIEVEMENTS = AchievementsEngine;
 
-
-
+// Función segura local para logs críticos y evitar errores de referencia
+const fatalLog = (msg) => {
+    if (typeof window.fatalLog === 'function') {
+        window.fatalLog(msg);
+    } else {
+        console.error(`💥 ${msg}`);
+    }
+};
 
 // Usar instancia única centralizada
 if (supabase) {
@@ -38,7 +44,7 @@ if (supabase) {
 
 // ---- REFERENCIAS DOM ----
 window.VIVOTV_TOGGLE_FAVORITE = (tmdbId, type, btn) => PLAYER_LOGIC.toggleFavorite(supabase, tmdbId, type, btn);
-let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit;
+let authSection, dashSection, loginForm, emailEl, usernameEl, passwordEl, btnSubmit, btnText, btnLoader, authError, toggleLink, userProfile, mainNav, mobileNav, btnLogout, userNameEl, userAvatar, searchBox, searchInput, btnClear, btnFav, btnPass, authTitle, authSubtitle, exitModal, btnSwitchProfile, btnLogoutConfirm, btnCancelExit, forgotPasswordBtn;
 
 function initDOMReferences() {
     authSection = document.getElementById('authSection');
@@ -62,18 +68,20 @@ function initDOMReferences() {
     searchInput = document.getElementById('searchInput');
     btnClear = document.getElementById('btnClearSearch');
     btnFav = document.getElementById('btnFavorite');
-    btnPass = document.getElementById('btnTogglePassword');
+    btnPass = document.getElementById('btnTogglePass');
     authTitle = document.getElementById('authTitle');
     authSubtitle = document.getElementById('authSubtitle');
     exitModal = document.getElementById('exitModal');
     btnSwitchProfile = document.getElementById('btnSwitchProfile');
     btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
     btnCancelExit = document.getElementById('btnCancelExit');
+    forgotPasswordBtn = document.getElementById('forgotPassword');
 }
 
 
 
 let isLoginMode = !window.location.pathname.includes('registro.html');
+let authMode = window.location.pathname.includes('registro.html') ? 'register' : 'login';
 let heroItems   = [];
 let searchTimeout   = null;
 let lastSearchResults = [];
@@ -245,6 +253,10 @@ async function initializeVivotvApp() {
     try {
         const { user, profile } = await AuthService.initialize((event, session, profile) => {
             console.log(`[VivoTV] 📡 Estado Auth: ${event}`);
+            if (event === 'PASSWORD_RECOVERY') {
+                showResetPasswordForm();
+                return;
+            }
             if (event === 'SIGNED_OUT') {
                 window.location.href = 'index.html';
             }
@@ -842,6 +854,137 @@ function toAuth() {
     TMDB_SERVICE.getImagesForAuthBg().then(CATALOG_UI.renderAuthBg);
 }
 
+function hideSplashScreen() {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+        console.log('[VivoTV] 🌅 Ocultando splash screen...');
+        splash.style.transition = 'opacity 0.8s ease, visibility 0.8s';
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+        splash.style.pointerEvents = 'none';
+        setTimeout(() => splash.style.display = 'none', 1000);
+    }
+}
+
+function toForgotPasswordMode() {
+    authMode = 'forgot';
+    if (authTitle) authTitle.textContent = 'Recuperar Contraseña';
+    if (authSubtitle) authSubtitle.textContent = 'Ingresa tu correo electrónico para recibir un enlace de recuperación';
+    
+    // Ocultar campo de contraseña y enlace de "¿Olvidaste tu contraseña?"
+    const passGroup = passwordEl ? passwordEl.closest('.input-group') : null;
+    if (passGroup) passGroup.classList.add('hidden');
+    
+    const forgotContainer = document.querySelector('.forgot-link-container');
+    if (forgotContainer) forgotContainer.classList.add('hidden');
+    
+    // Cambiar botón principal
+    if (btnText) btnText.textContent = 'Enviar Enlace';
+    
+    // Cambiar texto de cambio de modo
+    const authToggle = document.querySelector('.auth-toggle');
+    if (authToggle) {
+        authToggle.innerHTML = '¿Recordaste tu contraseña? <a href="#" id="backToLogin">Inicia sesión</a>';
+        const backToLoginBtn = document.getElementById('backToLogin');
+        if (backToLoginBtn) {
+            backToLoginBtn.onclick = (e) => {
+                e.preventDefault();
+                toLoginMode();
+            };
+        }
+    }
+    
+    // Limpiar errores
+    if (authError) authError.classList.add('hidden');
+}
+
+function toLoginMode() {
+    authMode = 'login';
+    if (authTitle) authTitle.textContent = 'Inicia Sesión';
+    if (authSubtitle) authSubtitle.textContent = 'Disfruta de tus canales en vivo y catálogo premium';
+    
+    // Mostrar campo de contraseña y enlace de "¿Olvidaste tu contraseña?"
+    const passGroup = passwordEl ? passwordEl.closest('.input-group') : null;
+    if (passGroup) passGroup.classList.remove('hidden');
+    
+    const forgotContainer = document.querySelector('.forgot-link-container');
+    if (forgotContainer) forgotContainer.classList.remove('hidden');
+    
+    // Cambiar botón principal
+    if (btnText) btnText.textContent = 'Iniciar Sesión';
+    
+    // Cambiar texto de cambio de modo
+    const authToggle = document.querySelector('.auth-toggle');
+    if (authToggle) {
+        authToggle.innerHTML = '¿No tienes cuenta? <a href="registro.html" id="toggleAuthMode">Regístrate gratis</a>';
+    }
+    
+    // Limpiar errores
+    if (authError) authError.classList.add('hidden');
+}
+
+function showResetPasswordForm() {
+    authMode = 'reset';
+    
+    // Mostrar la pantalla de login/auth por si está oculta
+    if (typeof initDOMReferences === 'function' && !authSection) initDOMReferences();
+    if (authSection) authSection.classList.remove('hidden');
+    if (dashSection) dashSection.classList.add('hidden');
+    if (userProfile) userProfile.classList.add('hidden');
+    if (mainNav)     mainNav.classList.add('hidden');
+    if (mobileNav) {
+        mobileNav.classList.add('hidden');
+        mobileNav.style.display = 'none';
+    }
+    
+    if (authTitle) authTitle.textContent = 'Crea una nueva contraseña';
+    if (authSubtitle) authSubtitle.textContent = 'Elige una contraseña segura de al menos 6 caracteres';
+    
+    // Reconstruir el formulario dinámicamente para el restablecimiento de contraseña
+    if (loginForm) {
+        loginForm.innerHTML = `
+            <div class="input-group">
+                <label for="password">Nueva Contraseña</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" required placeholder="Mínimo 6 caracteres" minlength="6" autocomplete="new-password">
+                    <button type="button" class="btn-toggle-pass" id="btnTogglePass" aria-label="Ver contraseña">
+                        <svg id="eyeIcon" viewBox="0 0 24 24" width="18" fill="currentColor">
+                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="confirmPassword">Confirmar Nueva Contraseña</label>
+                <div class="password-wrapper">
+                    <input type="password" id="confirmPassword" required placeholder="Repite la contraseña" minlength="6" autocomplete="new-password">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">
+                <span id="btnText">Actualizar Contraseña</span>
+                <span class="loader hidden" id="btnLoader"></span>
+            </button>
+            
+            <p id="authError" class="error-msg hidden"></p>
+        `;
+        
+        // Volver a enlazar referencias del DOM del nuevo formulario
+        initDOMReferences();
+        setupAuthListeners();
+        
+        // Enlazar evento de revelar contraseña del nuevo botón
+        const newBtnPass = document.getElementById('btnTogglePass');
+        const newPasswordEl = document.getElementById('password');
+        if (newBtnPass && newPasswordEl) {
+            newBtnPass.onclick = () => {
+                const isPass = newPasswordEl.type === 'password';
+                newPasswordEl.type = isPass ? 'text' : 'password';
+            };
+        }
+    }
+}
+
 // HERO rotation
 let heroRotationTimer, heroCurrentIndex = 0;
 function startHeroRotation() {
@@ -879,18 +1022,79 @@ const handleAuthAction = async (e) => {
     if (authError) authError.classList.add('hidden');
 
     try {
-        const email = emailEl?.value.trim();
-        const password = passwordEl?.value;
-        
-        if (!email || !password) {
-            throw new Error('Por favor, completa todos los campos.');
-        }
-
-        if (isLoginMode) {
+        if (authMode === 'forgot') {
+            const email = emailEl?.value.trim();
+            if (!email) {
+                throw new Error('Por favor, ingresa tu correo electrónico.');
+            }
+            console.log('[Auth] Enviando correo de recuperación...');
+            const { error } = await supabase.auth.resetPasswordForEmail(email, { 
+                redirectTo: window.location.origin + window.location.pathname 
+            });
+            if (error) throw error;
+            
+            const authCard = document.querySelector('.auth-card');
+            if (authCard) {
+                authCard.innerHTML = `
+                    <div class="registration-success-ui">
+                        <div class="success-icon">📩</div>
+                        <h3>¡Enlace enviado!</h3>
+                        <p>Revisa tu bandeja de entrada en: <strong>${email}</strong> para restablecer tu contraseña.</p>
+                        <button class="btn btn-primary btn-block" onclick="window.location.reload()">Regresar</button>
+                    </div>
+                `;
+            }
+            showToast('📩 Enlace de recuperación enviado al correo.', 'success');
+        } else if (authMode === 'reset') {
+            const password = passwordEl?.value;
+            const confirmPassword = document.getElementById('confirmPassword')?.value;
+            
+            if (!password || !confirmPassword) {
+                throw new Error('Por favor, completa todos los campos.');
+            }
+            if (password !== confirmPassword) {
+                throw new Error('Las contraseñas no coinciden.');
+            }
+            if (password.length < 6) {
+                throw new Error('La contraseña debe tener al menos 6 caracteres.');
+            }
+            
+            console.log('[Auth] Restableciendo contraseña...');
+            const { error } = await supabase.auth.updateUser({ password });
+            if (error) throw error;
+            
+            const authCard = document.querySelector('.auth-card');
+            if (authCard) {
+                authCard.innerHTML = `
+                    <div class="registration-success-ui">
+                        <div class="success-icon">✅</div>
+                        <h3>Contraseña Actualizada</h3>
+                        <p>Tu contraseña ha sido actualizada con éxito. Serás redirigido al inicio de sesión en unos segundos.</p>
+                    </div>
+                `;
+            }
+            showToast('✅ Contraseña actualizada con éxito.', 'success');
+            setTimeout(async () => {
+                await supabase.auth.signOut();
+                localStorage.removeItem('vivotv_current_profile');
+                sessionStorage.removeItem('vivotv_profile_chosen');
+                window.location.reload();
+            }, 3000);
+        } else if (authMode === 'login') {
+            const email = emailEl?.value.trim();
+            const password = passwordEl?.value;
+            if (!email || !password) {
+                throw new Error('Por favor, completa todos los campos.');
+            }
             console.log('[Auth] Login via AuthService...');
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
         } else {
+            const email = emailEl?.value.trim();
+            const password = passwordEl?.value;
+            if (!email || !password) {
+                throw new Error('Por favor, completa todos los campos.');
+            }
             console.log('[Auth] Registro via AuthService...');
             const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
             const { error } = await supabase.auth.signUp({ 
@@ -937,6 +1141,13 @@ function setupAuthListeners() {
             if (e.key === 'Enter' && !e.shiftKey) {
                 handleAuthAction(e);
             }
+        };
+    }
+
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.onclick = (e) => {
+            e.preventDefault();
+            toForgotPasswordMode();
         };
     }
 
@@ -1964,13 +2175,24 @@ window.addEventListener('vivotv:page-changed', async (e) => {
         console.log('[Bootstrap] Inicializando AuthService...');
         await AuthService.initialize((event, session, profile) => {
             console.log(`[Auth Event] ${event}`);
-            if (session && profile) {
-                // EVITAR DUPLICADOS: Solo cargar Dashboard si no está ya cargado o si el perfil cambió
-                const currentLoadedProfile = window.VIVOTV_CURRENT_LOADED_PROFILE;
-                if (!window.VIVOTV_DASHBOARD_LOADED || (currentLoadedProfile && currentLoadedProfile !== profile.id)) {
-                    window.VIVOTV_DASHBOARD_LOADED = true;
-                    window.VIVOTV_CURRENT_LOADED_PROFILE = profile.id;
-                    toDashboard(session.user, profile);
+            if (event === 'PASSWORD_RECOVERY') {
+                showResetPasswordForm();
+                return;
+            }
+            if (session) {
+                if (profile) {
+                    // EVITAR DUPLICADOS: Solo cargar Dashboard si no está ya cargado o si el perfil cambió
+                    const currentLoadedProfile = window.VIVOTV_CURRENT_LOADED_PROFILE;
+                    if (!window.VIVOTV_DASHBOARD_LOADED || (currentLoadedProfile && currentLoadedProfile !== profile.id)) {
+                        window.VIVOTV_DASHBOARD_LOADED = true;
+                        window.VIVOTV_CURRENT_LOADED_PROFILE = profile.id;
+                        toDashboard(session.user, profile);
+                    }
+                } else {
+                    window.VIVOTV_DASHBOARD_LOADED = false;
+                    if (!window.location.pathname.includes('profiles.html')) {
+                        window.location.href = 'profiles.html';
+                    }
                 }
             } else {
                 window.VIVOTV_DASHBOARD_LOADED = false;
@@ -1992,8 +2214,12 @@ window.addEventListener('vivotv:page-changed', async (e) => {
         if (loginForm) {
             loginForm.onsubmit = handleAuthAction;
         }
+        
+        // Ocultar splash screen
+        hideSplashScreen();
 
     } catch (err) {
         console.error('[Bootstrap Error] Fallo crítico en el arranque:', err);
+        hideSplashScreen();
     }
 })();
