@@ -221,31 +221,50 @@ export const PLAYER_LOGIC = {
 
             const btnPlay = document.getElementById('btnModalPlay');
             btnPlay.onclick = async () => {
-                this._stopTrailer();
-                // Asegurar SDKs antes de cualquier reproducción
-                await this._ensureVideoSDKs();
+                try {
+                    this._stopTrailer();
+                    // Asegurar SDKs antes de cualquier reproducción
+                    await this._ensureVideoSDKs();
 
-                if (type === 'tv' || details.media_type === 'tv') {
-                    // SI ES SERIE: BUSCAR ÚLTIMO VISTO O E1 PARA PLAY INMEDIATO
-                    const targetEp = this.lastSeriesProgress || { season_number: 1, episode_number: 1 };
-                    const { data: epData } = await supabaseClient.from('series_episodes')
-                        .select('stream_url')
-                        .eq('tmdb_id', Number(tmdbId))
-                        .eq('season_number', targetEp.season_number)
-                        .eq('episode_number', targetEp.episode_number)
-                        .maybeSingle();
+                    if (type === 'tv' || details.media_type === 'tv') {
+                        // SI ES SERIE: BUSCAR ÚLTIMO VISTO O E1 PARA PLAY INMEDIATO
+                        const targetEp = this.lastSeriesProgress || { season_number: 1, episode_number: 1 };
+                        const { data: dbData } = await supabaseClient.from('series_episodes')
+                            .select('stream_url, stream_url_vidsrc, stream_url_2embed, stream_url_superembed')
+                            .eq('tmdb_id', Number(tmdbId))
+                            .eq('season_number', targetEp.season_number)
+                            .eq('episode_number', targetEp.episode_number)
+                            .maybeSingle();
 
-                    if (epData) {
+                        const isAnime = details.genres?.some(g => g.id === 16) && (details.original_language === 'ja' || details.origin_country?.includes('JP'));
+                        const endpoint = isAnime ? 'anime' : 'serie';
+
+                        let epData = dbData;
+                        if (!epData) {
+                            console.log(`[Player] Episodio no encontrado en Supabase. Autogenerando fallback para TMDB ${tmdbId} S${targetEp.season_number}E${targetEp.episode_number}...`);
+                            epData = {
+                                stream_url: `https://vimeus.com/e/${endpoint}?tmdb=${tmdbId}&se=${targetEp.season_number}&ep=${targetEp.episode_number}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`,
+                                stream_url_vidsrc: `https://vidsrc.xyz/embed/tv?tmdb=${tmdbId}&season=${targetEp.season_number}&episode=${targetEp.episode_number}`,
+                                stream_url_2embed: `https://www.2embed.cc/embedtv/${tmdbId}&s=${targetEp.season_number}&e=${targetEp.episode_number}`,
+                                stream_url_superembed: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${targetEp.season_number}&e=${targetEp.episode_number}`
+                            };
+                        } else {
+                            // Rellenar campos faltantes
+                            if (!epData.stream_url) epData.stream_url = `https://vimeus.com/e/${endpoint}?tmdb=${tmdbId}&se=${targetEp.season_number}&ep=${targetEp.episode_number}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`;
+                            if (!epData.stream_url_vidsrc) epData.stream_url_vidsrc = `https://vidsrc.xyz/embed/tv?tmdb=${tmdbId}&season=${targetEp.season_number}&episode=${targetEp.episode_number}`;
+                            if (!epData.stream_url_2embed) epData.stream_url_2embed = `https://www.2embed.cc/embedtv/${tmdbId}&s=${targetEp.season_number}&e=${targetEp.episode_number}`;
+                            if (!epData.stream_url_superembed) epData.stream_url_superembed = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${targetEp.season_number}&e=${targetEp.episode_number}`;
+                        }
+
                         this.currentSeason = targetEp.season_number;
                         this.currentEpisode = targetEp.episode_number;
-                        this._playEpisode(tmdbId, targetEp.season_number, epData, supabaseClient, targetEp.progress_seconds || 0);
+                        await this._playEpisode(tmdbId, targetEp.season_number, epData, supabaseClient, targetEp.progress_seconds || 0);
                     } else {
-                        // Fallback si no hay stream: scroll a la lista
-                        seriesInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        showToast('Selecciona un episodio disponible');
+                        await this._loadMovieSource(tmdbId, supabaseClient);
                     }
-                } else {
-                    await this._loadMovieSource(tmdbId, supabaseClient);
+                } catch (err) {
+                    console.error('[Player] Error al iniciar reproducción:', err);
+                    showToast('Error al iniciar reproducción: ' + err.message, 'error');
                 }
             };
             
@@ -278,6 +297,8 @@ export const PLAYER_LOGIC = {
                 playerContainer.classList.add('hidden');
                 videoPlayer.pause();
                 videoIframe.src = '';
+                videoIframe.onload = null;
+                this._stopProgressTimer();
                 const helpBtn = document.getElementById('watchPartyHelpBtn');
                 if (helpBtn) helpBtn.style.display = 'flex';
             };
@@ -369,34 +390,50 @@ export const PLAYER_LOGIC = {
             .eq('tmdb_id', Number(tmdbId))
             .maybeSingle();
 
-        if (error || !data) {
-            showToast('Fuente no disponible.');
+        let movieData = data;
+        if (error || !movieData) {
+            console.log(`[Player] Película no encontrada en Supabase. Autogenerando enlaces de fallback para TMDB ${tmdbId}...`);
+            movieData = {
+                stream_url: `https://vimeus.com/e/movie?tmdb=${tmdbId}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`,
+                stream_url_vidsrc: `https://vidsrc.xyz/embed/movie/${tmdbId}`,
+                stream_url_2embed: `https://www.2embed.cc/embed/${tmdbId}`,
+                stream_url_superembed: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`
+            };
         } else {
-            const progressObj = await this._getProgress(tmdbId, 'movie', 0, 0, supabaseClient);
-            const seek = progressObj?.progress_seconds || 0;
-
-            const servers = [
-                { name: 'Vimeus (Principal)', url: data.stream_url },
-                { name: 'Servidor VIP 1', url: data.stream_url_vidsrc },
-                { name: 'Servidor VIP 2', url: data.stream_url_2embed },
-                { name: 'Servidor Directo', url: data.stream_url_superembed }
-            ].filter(s => s.url && s.url.trim() !== '');
-
-            if (servers.length > 1) {
-                this.showServerSelector(servers, seek);
-            }
-
-            // Binge Watch & Social
-            this._estimatedDuration = (this.movieData?.runtime || 120) * 60;
-            import('./binge-engine.js').then(m => m.BingeEngine.loadContentMetadata(tmdbId, 'movie'));
-            if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'movie');
-            if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
-                type: 'movie',
-                genre: this.movieData?.genres?.[0]?.id
-            });
-
-            this._playSource(servers[0].url, seek);
+            if (!movieData.stream_url) movieData.stream_url = `https://vimeus.com/e/movie?tmdb=${tmdbId}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`;
+            if (!movieData.stream_url_vidsrc) movieData.stream_url_vidsrc = `https://vidsrc.xyz/embed/movie/${tmdbId}`;
+            if (!movieData.stream_url_2embed) movieData.stream_url_2embed = `https://www.2embed.cc/embed/${tmdbId}`;
+            if (!movieData.stream_url_superembed) movieData.stream_url_superembed = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`;
         }
+
+        const progressObj = await this._getProgress(tmdbId, 'movie', 0, 0, supabaseClient);
+        const seek = progressObj?.progress_seconds || 0;
+
+        const sanitizeUrl = (url) => url ? url.trim() : '';
+
+        const rawServers = [
+            { name: 'Vimeus (Principal)', url: sanitizeUrl(movieData.stream_url) },
+            { name: 'Servidor VIP 1', url: sanitizeUrl(movieData.stream_url_vidsrc) },
+            { name: 'Servidor VIP 2', url: sanitizeUrl(movieData.stream_url_2embed) },
+            { name: 'Servidor Directo', url: sanitizeUrl(movieData.stream_url_superembed) }
+        ].filter(s => s.url && s.url.trim() !== '');
+
+        let servers = [...rawServers];
+
+        if (servers.length > 1) {
+            this.showServerSelector(servers, seek);
+        }
+
+        // Binge Watch & Social
+        this._estimatedDuration = (this.movieData?.runtime || 120) * 60;
+        import('./binge-engine.js').then(m => m.BingeEngine.loadContentMetadata(tmdbId, 'movie'));
+        if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.attach(tmdbId, 'movie');
+        if (window.ACHIEVEMENTS) window.ACHIEVEMENTS.track('play_video', {
+            type: 'movie',
+            genre: this.movieData?.genres?.[0]?.id
+        });
+
+        this._playSource(servers[0].url, seek);
     },
 
     async renderSeriesInfo(data, supabaseClient) {
@@ -463,14 +500,17 @@ export const PLAYER_LOGIC = {
                     .eq('season_number', Number(seasonNum))
             ]);
 
+            const isAnime = this.seriesData?.genres?.some(g => g.id === 16) && (this.seriesData?.original_language === 'ja' || this.seriesData?.origin_country?.includes('JP'));
+            const endpoint = isAnime ? 'anime' : 'serie';
+
             const episodes = (seasonData.episodes || []).map(ep => {
                 const dbEp = (dbEps.data || []).find(d => d.episode_number === ep.episode_number);
                 return { 
                     ...ep, 
-                    stream_url: dbEp?.stream_url,
-                    stream_url_vidsrc: dbEp?.stream_url_vidsrc,
-                    stream_url_2embed: dbEp?.stream_url_2embed,
-                    stream_url_superembed: dbEp?.stream_url_superembed
+                    stream_url: dbEp?.stream_url || `https://vimeus.com/e/${endpoint}?tmdb=${this.currentTmdbId}&se=${seasonNum}&ep=${ep.episode_number}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`,
+                    stream_url_vidsrc: dbEp?.stream_url_vidsrc || `https://vidsrc.xyz/embed/tv?tmdb=${this.currentTmdbId}&season=${seasonNum}&episode=${ep.episode_number}`,
+                    stream_url_2embed: dbEp?.stream_url_2embed || `https://www.2embed.cc/embedtv/${this.currentTmdbId}&s=${seasonNum}&e=${ep.episode_number}`,
+                    stream_url_superembed: dbEp?.stream_url_superembed || `https://multiembed.mov/?video_id=${this.currentTmdbId}&tmdb=1&s=${seasonNum}&e=${ep.episode_number}`
                 };
             });
 
@@ -582,12 +622,16 @@ export const PLAYER_LOGIC = {
         });
 
         // Preparar servidores para series
-        const servers = [
-            { name: 'Vimeus (Principal)', url: ep.stream_url },
-            { name: 'Servidor VIP 1', url: ep.stream_url_vidsrc },
-            { name: 'Servidor VIP 2', url: ep.stream_url_2embed },
-            { name: 'Servidor Directo', url: ep.stream_url_superembed }
+        const sanitizeUrl = (url) => url ? url.trim() : '';
+
+        const rawServers = [
+            { name: 'Vimeus (Principal)', url: sanitizeUrl(ep.stream_url) },
+            { name: 'Servidor VIP 1', url: sanitizeUrl(ep.stream_url_vidsrc) },
+            { name: 'Servidor VIP 2', url: sanitizeUrl(ep.stream_url_2embed) },
+            { name: 'Servidor Directo', url: sanitizeUrl(ep.stream_url_superembed) }
         ].filter(s => s.url && s.url.trim() !== '');
+
+        let servers = [...rawServers];
 
         if (servers.length > 1) {
             this.showServerSelector(servers, seekSeconds);
@@ -672,6 +716,8 @@ export const PLAYER_LOGIC = {
 
             if (smartUrl.includes('facebook.com')) {
                 iframe.setAttribute('referrerpolicy', 'no-referrer');
+            } else if (smartUrl.includes('vimeus.com')) {
+                iframe.setAttribute('referrerpolicy', 'origin');
             } else {
                 iframe.removeAttribute('referrerpolicy');
             }
@@ -681,6 +727,16 @@ export const PLAYER_LOGIC = {
             if (!finalUrl.includes('autoplay=')) {
                 finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1&muted=1';
             }
+
+            iframe.onload = () => {
+                if (iframe.src === '' || iframe.src.includes('about:blank')) return;
+                console.log('[Player] Iframe cargado correctamente. Cancelando timer de error.');
+                if (this.iframeErrorTimer) {
+                    clearTimeout(this.iframeErrorTimer);
+                    this.iframeErrorTimer = null;
+                }
+                if (loader) loader.classList.add('hidden');
+            };
 
             iframe.src = finalUrl;
             this.currentIsIframe = true;
@@ -948,11 +1004,11 @@ export const PLAYER_LOGIC = {
         this._stopProgressTimer();
 
         // DEBOUNCED SAVE (Telemetría eficiente - Alta Precisión: 15s)
-        const doSave = () => {
+        const doSave = (isPeriodicCall = false) => {
             if (video && hasJumped) {
                 const cur = Math.floor(video.currentTime);
                 if (cur !== lastSavedTime && cur > 0) {
-                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase, isPeriodicCall);
                     lastSavedTime = cur;
 
                     // Actualizar Telemetría en Vivo vía app.js
@@ -971,12 +1027,12 @@ export const PLAYER_LOGIC = {
         };
 
         // Backup de salvado cada 5s (Alta Precisión - Solicitud de Usuario)
-        this.progressTimer = setInterval(() => { if (!video.paused) doSave(); }, 5000);
+        this.progressTimer = setInterval(() => { if (!video.paused) doSave(true); }, 5000);
 
         // Visibility & Unload Tracking (Asegura guardar telemetría si cierran ventana o minimizan)
-        this._currentVisHandler = () => { if (document.hidden) doSave(); };
-        this._currentBeforeUnloadHandler = () => { doSave(); };
-        this._currentPageHideHandler = () => { doSave(); };
+        this._currentVisHandler = () => { if (document.hidden) doSave(false); };
+        this._currentBeforeUnloadHandler = () => { doSave(false); };
+        this._currentPageHideHandler = () => { doSave(false); };
         document.addEventListener('visibilitychange', this._currentVisHandler);
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
         window.addEventListener('pagehide', this._currentPageHideHandler);
@@ -986,11 +1042,11 @@ export const PLAYER_LOGIC = {
         // --- EVENTOS WATCH PARTY (Sincronización Instantánea) ---
         const forceSync = () => window.dispatchEvent(new CustomEvent('vivotv:force_party_sync'));
         video.onplay = () => { forceSync(); };
-        video.onpause = () => { doSave(); forceSync(); };
+        video.onpause = () => { doSave(false); forceSync(); };
         video.onseeked = () => { forceSync(); };
 
         video.onended = () => {
-            doSave();
+            doSave(false);
             this._stopProgressTimer();
 
             if (this.currentType === 'tv') {
@@ -1044,7 +1100,8 @@ export const PLAYER_LOGIC = {
 
         // Guardar progreso al pausar video nativo
         video.onpause = () => {
-            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(video.currentTime), _supabase);
+            doSave(false);
+            forceSync();
         };
     },
 
@@ -1060,13 +1117,13 @@ export const PLAYER_LOGIC = {
         }
 
         const url = iframe.src;
-        let elapsed = seekSeconds;
+        this.iframeElapsed = seekSeconds;
         let lastSavedElapsed = -1;
 
-        const doSaveProgress = (currentSecs) => {
+        const doSaveProgress = (currentSecs, isPeriodicCall = false) => {
             // Umbral reducido de 10s a 2s para precisión "Netflix Style"
             if (currentSecs > 0 && Math.abs(currentSecs - lastSavedElapsed) >= 2) {
-                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(currentSecs), _supabase);
+                this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(currentSecs), _supabase, isPeriodicCall);
                 lastSavedElapsed = currentSecs;
 
                 if (window.updateGlobalPlaybackStatus) {
@@ -1089,22 +1146,22 @@ export const PLAYER_LOGIC = {
                     events: {
                         'onStateChange': (event) => {
                             if (event.data === YT.PlayerState.PAUSED) {
-                                doSaveProgress(this.ytPlayer.getCurrentTime());
+                                doSaveProgress(this.ytPlayer.getCurrentTime(), false);
                             }
                         }
                     }
                 });
                 this.progressTimer = setInterval(() => {
-            if (this.ytPlayer && this.ytPlayer.getPlayerState) {
-                if (this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                    elapsed = this.ytPlayer.getCurrentTime();
-                    doSaveProgress(elapsed);
-                    
-                    const duration = this.ytPlayer.getDuration();
-                    this._checkBingeWatch(elapsed, duration);
-                }
-            }
-        }, 5000);
+                    if (this.ytPlayer && this.ytPlayer.getPlayerState) {
+                        if (this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                            this.iframeElapsed = this.ytPlayer.getCurrentTime();
+                            doSaveProgress(this.iframeElapsed, true);
+                            
+                            const duration = this.ytPlayer.getDuration();
+                            this._checkBingeWatch(this.iframeElapsed, duration);
+                        }
+                    }
+                }, 5000);
             };
             if (typeof YT !== 'undefined' && YT.Player) initYT();
             else window.onYouTubeIframeAPIReady = initYT;
@@ -1112,14 +1169,14 @@ export const PLAYER_LOGIC = {
         // --- OPCIÓN B: VIMEO SDK ---
         else if (url.includes('vimeo.com')) {
             this.vimeoPlayer = new Vimeo.Player(iframe);
-            this.vimeoPlayer.on('pause', (data) => doSaveProgress(data.seconds));
+            this.vimeoPlayer.on('pause', (data) => doSaveProgress(data.seconds, false));
             this.progressTimer = setInterval(() => {
                 this.vimeoPlayer.getCurrentTime().then(secs => {
-                    elapsed = secs;
-                    doSaveProgress(elapsed);
+                    this.iframeElapsed = secs;
+                    doSaveProgress(this.iframeElapsed, true);
                     
                     this.vimeoPlayer.getDuration().then(duration => {
-                        this._checkBingeWatch(elapsed, duration);
+                        this._checkBingeWatch(this.iframeElapsed, duration);
                     });
                 });
             }, 5000);
@@ -1143,26 +1200,26 @@ export const PLAYER_LOGIC = {
             window.addEventListener('message', this._iframePauseHandler);
 
             this.progressTimer = setInterval(() => {
-                const isPlayerActive = document.getElementById('playerModal')?.classList.contains('active');
+                const isPlayerActive = !document.getElementById('playerContainer')?.classList.contains('hidden');
                 const isVisible = document.visibilityState === 'visible';
                 // No contar si el iframe envió señal de pausa o la pestaña no es visible
                 if (!isPlayerActive || !isVisible || this._isPausedEst) return;
-                elapsed += 5;
-                doSaveProgress(elapsed);
+                this.iframeElapsed += 5;
+                doSaveProgress(this.iframeElapsed, true);
             }, 5000);
         }
 
         this._currentVisHandler = () => {
             if (document.hidden) {
-                doSaveProgress(elapsed);
+                doSaveProgress(this.iframeElapsed, false);
                 // Si va a segundo plano, pausar el estimador del iframe
                 if (this._isPausedEst !== undefined) this._isPausedEst = true;
             } else {
                 if (this._isPausedEst !== undefined) this._isPausedEst = false;
             }
         };
-        this._currentBeforeUnloadHandler = () => { doSaveProgress(elapsed); };
-        this._currentPageHideHandler = () => { doSaveProgress(elapsed); };
+        this._currentBeforeUnloadHandler = () => { doSaveProgress(this.iframeElapsed, false); };
+        this._currentPageHideHandler = () => { doSaveProgress(this.iframeElapsed, false); };
         document.addEventListener('visibilitychange', this._currentVisHandler);
         window.addEventListener('beforeunload', this._currentBeforeUnloadHandler);
         window.addEventListener('pagehide', this._currentPageHideHandler);
@@ -1261,7 +1318,14 @@ export const PLAYER_LOGIC = {
     _stopProgressTimer() {
         if (this.progressTimer) clearInterval(this.progressTimer);
         this.progressTimer = null;
+        this.iframeElapsed = 0;
         this._bingePromptShown = false;
+
+        // Limpiar timer de error de iframe
+        if (this.iframeErrorTimer) {
+            clearTimeout(this.iframeErrorTimer);
+            this.iframeErrorTimer = null;
+        }
 
         // Limpiar listener de pausa de iframes (Option C)
         if (this._iframePauseHandler) {
@@ -1289,7 +1353,7 @@ export const PLAYER_LOGIC = {
         }
     },
 
-    async _saveProgress(tmdbId, type, season, episode, seconds, supabaseClient) {
+    async _saveProgress(tmdbId, type, season, episode, seconds, supabaseClient, isPeriodic = false) {
         if (!supabaseClient || !this.currentUserId) return;
         
         const profile = JSON.parse(localStorage.getItem('vivotv_current_profile'));
@@ -1320,7 +1384,7 @@ export const PLAYER_LOGIC = {
             isWatched = seconds >= threshold;
         }
 
-        console.log(`[Player] Guardando progreso: ${finalTmdbId} -> ${seconds}s | visto: ${isWatched}`);
+        console.log(`[Player] Guardando progreso: ${finalTmdbId} -> ${seconds}s | visto: ${isWatched} | isPeriodic: ${isPeriodic}`);
 
         const { error } = await supabaseClient.from('watch_history').upsert({
             user_id: this.currentUserId,
@@ -1338,6 +1402,11 @@ export const PLAYER_LOGIC = {
 
         if (error) {
             console.error('[Player] Error al guardar progreso:', error);
+        } else {
+            if (!isPeriodic) {
+                console.log('[Player] Despachando evento update-recent');
+                window.dispatchEvent(new CustomEvent('update-recent'));
+            }
         }
 
         // Si quedó marcado como visto, actualizar el badge en la UI sin recargar
@@ -1394,19 +1463,37 @@ export const PLAYER_LOGIC = {
 
     async resumeLastEpisode(seasonNum, epNum, seekSecs, supabaseClient) {
         // En lugar de navegar el DOM, pedimos el stream_url directo para reproducir de inmediato
-        const { data: epData } = await supabaseClient.from('series_episodes')
-            .select('stream_url')
+        const { data: dbData } = await supabaseClient.from('series_episodes')
+            .select('stream_url, stream_url_vidsrc, stream_url_2embed, stream_url_superembed')
             .eq('tmdb_id', String(this.currentTmdbId))
             .eq('season_number', seasonNum)
             .eq('episode_number', epNum)
             .maybeSingle();
 
-        if (epData) {
-            this.currentSeason = seasonNum;
-            this.currentEpisode = epNum;
-            this._playEpisode(this.currentTmdbId, seasonNum, epData, supabaseClient, seekSecs);
-            // También movemos la pestaña de temporada en el modal para UI coherente
-            const pills = document.getElementById('seasonsPills');
+        const isAnime = this.seriesData?.genres?.some(g => g.id === 16) && (this.seriesData?.original_language === 'ja' || this.seriesData?.origin_country?.includes('JP'));
+        const endpoint = isAnime ? 'anime' : 'serie';
+
+        let epData = dbData;
+        if (!epData) {
+            epData = {
+                stream_url: `https://vimeus.com/e/${endpoint}?tmdb=${this.currentTmdbId}&se=${seasonNum}&ep=${epNum}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`,
+                stream_url_vidsrc: `https://vidsrc.xyz/embed/tv?tmdb=${this.currentTmdbId}&season=${seasonNum}&episode=${epNum}`,
+                stream_url_2embed: `https://www.2embed.cc/embedtv/${this.currentTmdbId}&s=${seasonNum}&e=${epNum}`,
+                stream_url_superembed: `https://multiembed.mov/?video_id=${this.currentTmdbId}&tmdb=1&s=${seasonNum}&e=${epNum}`
+            };
+        } else {
+            if (!epData.stream_url) epData.stream_url = `https://vimeus.com/e/${endpoint}?tmdb=${this.currentTmdbId}&se=${seasonNum}&ep=${epNum}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`;
+            if (!epData.stream_url_vidsrc) epData.stream_url_vidsrc = `https://vidsrc.xyz/embed/tv?tmdb=${this.currentTmdbId}&season=${seasonNum}&episode=${epNum}`;
+            if (!epData.stream_url_2embed) epData.stream_url_2embed = `https://www.2embed.cc/embedtv/${this.currentTmdbId}&s=${seasonNum}&e=${epNum}`;
+            if (!epData.stream_url_superembed) epData.stream_url_superembed = `https://multiembed.mov/?video_id=${this.currentTmdbId}&tmdb=1&s=${seasonNum}&e=${epNum}`;
+        }
+
+        this.currentSeason = seasonNum;
+        this.currentEpisode = epNum;
+        this._playEpisode(this.currentTmdbId, seasonNum, epData, supabaseClient, seekSecs);
+        // También movemos la pestaña de temporada en el modal para UI coherente
+        const pills = document.getElementById('seasonsPills');
+        if (pills) {
             const pill = Array.from(pills.querySelectorAll('.season-pill')).find(p => p.textContent.includes(`Temporada ${seasonNum}`));
             if (pill) {
                 pills.querySelectorAll('.season-pill').forEach(p => p.classList.remove('active'));
@@ -1562,8 +1649,8 @@ export const PLAYER_LOGIC = {
 
     async playNextEpisodeFrom(seasonNum, epNum, supabase) {
         // Buscar el siguiente episodio en la base de datos
-        const { data: nextData } = await supabase.from('series_episodes')
-            .select('season_number, episode_number, stream_url')
+        const { data: dbData } = await supabase.from('series_episodes')
+            .select('season_number, episode_number, stream_url, stream_url_vidsrc, stream_url_2embed, stream_url_superembed')
             .eq('tmdb_id', Number(this.currentTmdbId))
             .or(`and(season_number.eq.${seasonNum},episode_number.gt.${epNum}),season_number.gt.${seasonNum}`)
             .order('season_number', { ascending: true })
@@ -1571,13 +1658,52 @@ export const PLAYER_LOGIC = {
             .limit(1)
             .maybeSingle();
 
-        if (nextData && nextData.stream_url) {
-            this.currentSeason = nextData.season_number;
-            this.currentEpisode = nextData.episode_number;
-            this._playEpisode(this.currentTmdbId, nextData.season_number, nextData, supabase, 0);
+        const isAnime = this.seriesData?.genres?.some(g => g.id === 16) && (this.seriesData?.original_language === 'ja' || this.seriesData?.origin_country?.includes('JP'));
+        const endpoint = isAnime ? 'anime' : 'serie';
+
+        let nextEp = null;
+
+        if (dbData && dbData.stream_url) {
+            if (!dbData.stream_url_vidsrc) dbData.stream_url_vidsrc = `https://vidsrc.xyz/embed/tv?tmdb=${this.currentTmdbId}&season=${dbData.season_number}&episode=${dbData.episode_number}`;
+            if (!dbData.stream_url_2embed) dbData.stream_url_2embed = `https://www.2embed.cc/embedtv/${this.currentTmdbId}&s=${dbData.season_number}&e=${dbData.episode_number}`;
+            if (!dbData.stream_url_superembed) dbData.stream_url_superembed = `https://multiembed.mov/?video_id=${this.currentTmdbId}&tmdb=1&s=${dbData.season_number}&e=${dbData.episode_number}`;
+            nextEp = dbData;
+        } else if (this.seriesData) {
+            const currentSeasonNum = Number(seasonNum);
+            const currentEpNum = Number(epNum);
+            const seasons = this.seriesData.seasons || [];
+            const currentSeasonMeta = seasons.find(s => s.season_number === currentSeasonNum);
+
+            if (currentSeasonMeta) {
+                let nextSeasonNum = currentSeasonNum;
+                let nextEpNum = currentEpNum + 1;
+
+                if (nextEpNum > currentSeasonMeta.episode_count) {
+                    nextSeasonNum = currentSeasonNum + 1;
+                    nextEpNum = 1;
+                }
+
+                const nextSeasonMeta = seasons.find(s => s.season_number === nextSeasonNum);
+                if (nextSeasonMeta && nextEpNum <= nextSeasonMeta.episode_count) {
+                    nextEp = {
+                        season_number: nextSeasonNum,
+                        episode_number: nextEpNum,
+                        stream_url: `https://vimeus.com/e/${endpoint}?tmdb=${this.currentTmdbId}&se=${nextSeasonNum}&ep=${nextEpNum}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`,
+                        stream_url_vidsrc: `https://vidsrc.xyz/embed/tv?tmdb=${this.currentTmdbId}&season=${nextSeasonNum}&episode=${nextEpNum}`,
+                        stream_url_2embed: `https://www.2embed.cc/embedtv/${this.currentTmdbId}&s=${nextSeasonNum}&e=${nextEpNum}`,
+                        stream_url_superembed: `https://multiembed.mov/?video_id=${this.currentTmdbId}&tmdb=1&s=${nextSeasonNum}&e=${nextEpNum}`
+                    };
+                }
+            }
+        }
+
+        if (nextEp) {
+            this.currentSeason = nextEp.season_number;
+            this.currentEpisode = nextEp.episode_number;
+            this._playEpisode(this.currentTmdbId, nextEp.season_number, nextEp, supabase, 0);
             
             // Actualizar UI del modal en segundo plano si está abierto
-            this.switchSeason(nextData.season_number, supabase);
+            this.switchSeason(nextEp.season_number, supabase);
         } else {
             showToast('Has llegado al final de los episodios disponibles.');
             this._hideNextEpisodeButton();
@@ -1603,22 +1729,25 @@ export const PLAYER_LOGIC = {
                 }
             }
 
-            if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
-                const cur = Math.floor(this.ytPlayer.getCurrentTime());
-                if (cur > 0) {
-                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
-                    console.log('[Player] Forzado salvado - YouTube:', cur);
-                }
-            }
-
-            if (this.vimeoPlayer && typeof this.vimeoPlayer.getCurrentTime === 'function') {
-                this.vimeoPlayer.getCurrentTime().then(cur => {
-                    const secs = Math.floor(cur);
-                    if (secs > 0) {
-                        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, secs, _supabase);
-                        console.log('[Player] Forzado salvado - Vimeo:', secs);
+            if (this.currentIsIframe) {
+                if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+                    const cur = Math.floor(this.ytPlayer.getCurrentTime());
+                    if (cur > 0) {
+                        this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, cur, _supabase);
+                        console.log('[Player] Forzado salvado - YouTube:', cur);
                     }
-                });
+                } else if (this.vimeoPlayer && typeof this.vimeoPlayer.getCurrentTime === 'function') {
+                    this.vimeoPlayer.getCurrentTime().then(cur => {
+                        const secs = Math.floor(cur);
+                        if (secs > 0) {
+                            this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, secs, _supabase);
+                            console.log('[Player] Forzado salvado - Vimeo:', secs);
+                        }
+                    });
+                } else if (this.iframeElapsed > 0) {
+                    this._saveProgress(this.currentTmdbId, this.currentType, this.currentSeason, this.currentEpisode, Math.floor(this.iframeElapsed), _supabase);
+                    console.log('[Player] Forzado salvado - Iframe Genérico (Opción C):', this.iframeElapsed);
+                }
             }
         } catch (e) {
             console.warn('[Player] Error al forzar salvado:', e);
@@ -1634,8 +1763,13 @@ export const PLAYER_LOGIC = {
         this._cancelMarathon();
         document.getElementById('detailModal').classList.add('hidden');
         document.getElementById('playerContainer').classList.add('hidden');
+        document.getElementById('serverSelector')?.classList.remove('visible');
         document.getElementById('videoPlayer').pause();
-        document.getElementById('videoIframe').src = '';
+        const iframe = document.getElementById('videoIframe');
+        if (iframe) {
+            iframe.src = '';
+            iframe.onload = null;
+        }
         document.documentElement.classList.remove('no-scroll');
         document.body.classList.remove('no-scroll');
     },
@@ -1756,7 +1890,7 @@ export const PLAYER_LOGIC = {
         
         // Buscar el siguiente episodio en la base de datos (Fase Marathon PRO)
         const { data: nextData } = await _supabase.from('series_episodes')
-            .select('season_number, episode_number, stream_url')
+            .select('season_number, episode_number, stream_url, stream_url_vidsrc, stream_url_2embed, stream_url_superembed')
             .eq('tmdb_id', Number(this.currentTmdbId))
             .or(`and(season_number.eq.${this.currentSeason},episode_number.gt.${this.currentEpisode}),season_number.gt.${this.currentSeason}`)
             .order('season_number', { ascending: true })
@@ -1764,11 +1898,48 @@ export const PLAYER_LOGIC = {
             .limit(1)
             .maybeSingle();
 
+        const isAnime = this.seriesData?.genres?.some(g => g.id === 16) && (this.seriesData?.original_language === 'ja' || this.seriesData?.origin_country?.includes('JP'));
+        const endpoint = isAnime ? 'anime' : 'serie';
+
         if (nextData && nextData.stream_url) {
+            if (!nextData.stream_url_vidsrc) nextData.stream_url_vidsrc = `https://vidsrc.xyz/embed/tv?tmdb=${this.currentTmdbId}&season=${nextData.season_number}&episode=${nextData.episode_number}`;
+            if (!nextData.stream_url_2embed) nextData.stream_url_2embed = `https://www.2embed.cc/embedtv/${this.currentTmdbId}&s=${nextData.season_number}&e=${nextData.episode_number}`;
+            if (!nextData.stream_url_superembed) nextData.stream_url_superembed = `https://multiembed.mov/?video_id=${this.currentTmdbId}&tmdb=1&s=${nextData.season_number}&e=${nextData.episode_number}`;
             return {
                 season: nextData.season_number,
                 data: nextData
             };
+        } else if (this.seriesData) {
+            const currentSeasonNum = Number(this.currentSeason);
+            const currentEpNum = Number(this.currentEpisode);
+            const seasons = this.seriesData.seasons || [];
+            const currentSeasonMeta = seasons.find(s => s.season_number === currentSeasonNum);
+
+            if (currentSeasonMeta) {
+                let nextSeasonNum = currentSeasonNum;
+                let nextEpNum = currentEpNum + 1;
+
+                if (nextEpNum > currentSeasonMeta.episode_count) {
+                    nextSeasonNum = currentSeasonNum + 1;
+                    nextEpNum = 1;
+                }
+
+                const nextSeasonMeta = seasons.find(s => s.season_number === nextSeasonNum);
+                if (nextSeasonMeta && nextEpNum <= nextSeasonMeta.episode_count) {
+                    const autogeneratedData = {
+                        season_number: nextSeasonNum,
+                        episode_number: nextEpNum,
+                        stream_url: `https://vimeus.com/e/${endpoint}?tmdb=${this.currentTmdbId}&se=${nextSeasonNum}&ep=${nextEpNum}&view_key=${CONFIG.VIMEUS_VIEW_KEY}`,
+                        stream_url_vidsrc: `https://vidsrc.xyz/embed/tv?tmdb=${this.currentTmdbId}&season=${nextSeasonNum}&episode=${nextEpNum}`,
+                        stream_url_2embed: `https://www.2embed.cc/embedtv/${this.currentTmdbId}&s=${nextSeasonNum}&e=${nextEpNum}`,
+                        stream_url_superembed: `https://multiembed.mov/?video_id=${this.currentTmdbId}&tmdb=1&s=${nextSeasonNum}&e=${nextEpNum}`
+                    };
+                    return {
+                        season: nextSeasonNum,
+                        data: autogeneratedData
+                    };
+                }
+            }
         }
         return null;
     },
@@ -1832,6 +2003,21 @@ export const PLAYER_LOGIC = {
         // Overlay de error desactivado por petición del usuario
         console.warn(`[Player] Error de carga para ${type}, pero el overlay está desactivado.`);
         
+        if (this.currentTmdbId) {
+            const idStr = this.currentTmdbId.toString();
+            const failedArray = JSON.parse(localStorage.getItem('vivotv_failed_ids') || '[]');
+            if (!failedArray.includes(idStr)) {
+                failedArray.push(idStr);
+                localStorage.setItem('vivotv_failed_ids', JSON.stringify(failedArray));
+            }
+            if (window.failedIds) {
+                window.failedIds.add(idStr);
+            } else {
+                window.failedIds = new Set(failedArray);
+            }
+            window.dispatchEvent(new CustomEvent('update-ui-availability'));
+        }
+
         // Mantener la lógica de limpieza crítica
         this._stopProgressTimer();
         const loader = document.getElementById('playerLoader');
@@ -1865,3 +2051,5 @@ export const PLAYER_LOGIC = {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') PLAYER_LOGIC.closeModal();
 });
+
+window.PLAYER_LOGIC = PLAYER_LOGIC;

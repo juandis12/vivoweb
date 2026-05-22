@@ -20,6 +20,10 @@ export const CONFIG = {
     },
     TMDB_API_KEY: '743275e25bcea0a320b87d2af271a136', // Fallback para desarrollo local (sacada de Flutter)
     
+    // Vimeus API Credentials
+    VIMEUS_API_KEY: 'ak_aSaOz4kOfLoPC7PRh4IqWJYI19nueiY2',
+    VIMEUS_VIEW_KEY: 'YHUpCG-4uZ76qN--neZnLvmYhkyBAp-qraJEDkgP4O0',
+    
     // SEGURIDAD: Control de logs en consola
     DEBUG: false
 };

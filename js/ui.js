@@ -1,6 +1,48 @@
 import { CONFIG } from './config.js';
 import { TMDB_SERVICE } from './tmdb.js';
 
+window.failedIds = window.failedIds || new Set(JSON.parse(localStorage.getItem('vivotv_failed_ids') || '[]'));
+
+window.addEventListener('update-ui-availability', () => {
+    window.failedIds = new Set(JSON.parse(localStorage.getItem('vivotv_failed_ids') || '[]'));
+    const cards = document.querySelectorAll('.movie-card');
+    cards.forEach(card => {
+        const id = card.dataset.tmdbId;
+        if (!id) return;
+        const isMaintenance = (window.maintenanceIds || new Set()).has(id);
+        const isFailed = window.failedIds.has(id);
+        const isDbAvailable = card.dataset.dbAvailable === 'true';
+        const isActuallyAvailable = isDbAvailable || (!isFailed && !isMaintenance);
+
+        card.classList.toggle('is-available', isActuallyAvailable && !isMaintenance);
+        card.classList.toggle('in-maintenance', isMaintenance);
+
+        const badgeContainer = card.querySelector('.badge-container');
+        if (badgeContainer) {
+            if (isMaintenance) {
+                badgeContainer.innerHTML = '<div class="maintenance-badge">EN MANTENIMIENTO</div>';
+            } else {
+                const watchedBadge = card.querySelector('.watched-badge');
+                const isWatched = watchedBadge && !watchedBadge.classList.contains('hidden');
+                badgeContainer.innerHTML = `
+                    <div class="watched-badge watched-premium ${isWatched ? '' : 'hidden'}">
+                        <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                        VISTO
+                    </div>
+                    ${!isWatched ? (isActuallyAvailable ? `
+                        <div class="available-badge">
+                            ${card.classList.contains('ranked') ? '' : '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'} 
+                            ${card.classList.contains('ranked') ? 'RECIÉN AGREGADO' : 'DISPONIBLE'}
+                        </div>
+                    ` : `
+                        <div class="coming-soon-badge">PRÓXIMAMENTE</div>
+                    `) : ''}
+                `;
+            }
+        }
+    });
+});
+
 /**
  * Motor de Renderizado de la UI del Catálogo (Modularizado)
  */
@@ -145,11 +187,15 @@ export const CATALOG_UI = {
         const id = (item.id || item.tmdb_id)?.toString();
         const maintenanceIds = window.maintenanceIds || new Set();
         const isMaintenance = maintenanceIds.has(id);
+        const failedIds = window.failedIds || new Set();
+        const isFailed = failedIds.has(id);
+        const isActuallyAvailable = isAvailable || (!isFailed && !isMaintenance);
         
         const card = document.createElement('div');
-        card.className = `movie-card${isAvailable && !isMaintenance ? ' is-available' : ''}${isMaintenance ? ' in-maintenance' : ''}${rank ? ' ranked' : ''}`;
+        card.className = `movie-card${isActuallyAvailable && !isMaintenance ? ' is-available' : ''}${isMaintenance ? ' in-maintenance' : ''}${rank ? ' ranked' : ''}`;
         card.dataset.tmdbId = id;
         card.dataset.type = type || item.content_type || item.media_type;
+        card.dataset.dbAvailable = isAvailable ? 'true' : 'false';
 
         // Extraer y asignar IDs de géneros para el filtrado en cliente
         const genresArr = item.genres || item.genre_ids || [];
@@ -193,7 +239,7 @@ export const CATALOG_UI = {
                             <svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                             VISTO
                         </div>
-                        ${!isWatched ? (isAvailable ? `
+                        ${!isWatched ? (isActuallyAvailable ? `
                             <div class="available-badge">
                                 ${rank ? '' : '<svg viewBox="0 0 24 24" width="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'} 
                                 ${rank ? 'RECIÉN AGREGADO' : 'DISPONIBLE'}
