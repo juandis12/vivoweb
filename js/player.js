@@ -181,6 +181,7 @@ export const PLAYER_LOGIC = {
         document.documentElement.classList.add('no-scroll');
         document.body.classList.add('no-scroll');
         playerContainer.classList.add('hidden');
+        modal.classList.remove('is-playing-video');
         mainContent.classList.remove('hidden');
         trending.classList.add('hidden');
         seriesInfo.classList.add('hidden');
@@ -295,6 +296,7 @@ export const PLAYER_LOGIC = {
                 if (window.SOCIAL_PULSE) window.SOCIAL_PULSE.detach();
                 this.toggleMiniPlayer(false);
                 playerContainer.classList.add('hidden');
+                modal.classList.remove('is-playing-video');
                 videoPlayer.pause();
                 videoIframe.src = '';
                 videoIframe.onload = null;
@@ -672,6 +674,8 @@ export const PLAYER_LOGIC = {
         }
 
         container.classList.remove('hidden');
+        const dModal = document.getElementById('detailModal');
+        if (dModal) dModal.classList.add('is-playing-video');
         if (container.id === 'playerContainer') {
             const helpBtn = document.getElementById('watchPartyHelpBtn');
             if (helpBtn) helpBtn.style.display = 'none';
@@ -1765,7 +1769,11 @@ export const PLAYER_LOGIC = {
         this._stopProgressTimer();
         this._stopTrailer();
         this._cancelMarathon();
-        document.getElementById('detailModal').classList.add('hidden');
+        const dModalClose = document.getElementById('detailModal');
+        if (dModalClose) {
+            dModalClose.classList.add('hidden');
+            dModalClose.classList.remove('is-playing-video');
+        }
         document.getElementById('playerContainer').classList.add('hidden');
         document.getElementById('serverSelector')?.classList.remove('visible');
         document.getElementById('videoPlayer').pause();
