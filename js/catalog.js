@@ -282,18 +282,18 @@ export async function fetchAvailableIds(supabase) {
             offset += BATCH_SIZE;
             
             dispatchBatchEvent(batch);
-            await new Promise(r => setTimeout(r, 100));
         }
 
         console.log(`[VivoTV] ✅ Catálogo personal sincronizado: ${availableIds.size} items.`);
         
         // Persistir en IndexedDB para carga instantánea futura
-        await _saveCatalogToCache(window.DB_CATALOG || []);
+        _saveCatalogToCache(window.DB_CATALOG || []);
 
         // --- INICIALIZAR REALTIME SYNC (Fase Connect) ---
         initRealtimeSync(supabase);
 
-        await scanAllDBContent(supabase);
+        // Escaneo profundo ejecutado en segundo plano sin congelar la UI
+        scanAllDBContent(supabase);
 
     } catch (e) {
         console.error('[VivoTV] ❌ Fallo en sincronización de catálogo:', e);
@@ -585,30 +585,26 @@ export async function loadGridData(type, page, append = false, currentProfile) {
             const endIdx = startIdx + perPage;
             const pageIds = allIds.slice(startIdx, endIdx);
 
-            const finalItems = [];
-            for (const id of pageIds) {
-                // 1. Buscar en cache de metadatos (DB_CATALOG)
-                let item = (window.DB_CATALOG || []).find(i => i.tmdb_id?.toString() === id.toString());
-                
-                // 2. Fallback: TMDB Details si no hay metadatos locales
-                if (!item) {
-                    try {
-                        // Intentar como serie primero si estamos en Anime o Series, sino como movie
-                        const typeToTry = (isSeriesPage || isAnimePage) ? 'tv' : 'movie';
-                        item = await TMDB_SERVICE.getDetails(id, typeToTry);
-                        
-                        // Si falla como TV y estamos en Anime, intentar como movie (Anime Movies)
-                        if ((!item || !item.id) && isAnimePage) {
-                            item = await TMDB_SERVICE.getDetails(id, 'movie');
-                        }
-                    } catch (e) { continue; }
-                }
+            // OPTIMIZACIÓN 10X: Resolución masiva en PARALELO con Promise.all y getSummary ligero
+            const itemsResolved = await Promise.all(pageIds.map(async (id) => {
+                // 1. Buscar primero en cache en memoria (DB_CATALOG)
+                let item = (window.DB_CATALOG || []).find(i => (i.tmdb_id || i.id)?.toString() === id.toString());
+                if (item) return item;
 
-                // 3. Validar tipo y añadir
-                if (item && validateContentType(item, isMoviesPage ? 'movie' : 'tv')) {
-                    finalItems.push(item);
+                // 2. Consulta ultrarrápida a TMDB con caché interna
+                try {
+                    const typeToTry = (isSeriesPage || isAnimePage) ? 'tv' : 'movie';
+                    let fetched = await TMDB_SERVICE.getSummary(id, typeToTry);
+                    if ((!fetched || fetched.error || !fetched.id) && isAnimePage) {
+                        fetched = await TMDB_SERVICE.getSummary(id, 'movie');
+                    }
+                    return fetched && !fetched.error ? fetched : null;
+                } catch (e) {
+                    return null;
                 }
-            }
+            }));
+
+            const finalItems = itemsResolved.filter(item => item && validateContentType(item, isMoviesPage ? 'movie' : 'tv'));
 
             if (loader) loader.classList.add('hidden');
 

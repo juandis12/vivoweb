@@ -709,10 +709,20 @@ export const PLAYER_LOGIC = {
         const oldError = container.querySelector('.content-error-overlay');
         if (oldError) oldError.remove();
 
+        this.playbackStarted = false;
+
         if (isIframe && !isDirectStream) {
             video.classList.add('hidden');
             iframe.classList.remove('hidden');
             video.pause();
+            // AISLAMIENTO TOTAL: Purgar handlers y src del video nativo para evitar errores fantasmas de anuncios/red
+            video.onerror = null;
+            video.onended = null;
+            video.onpause = null;
+            video.ontimeupdate = null;
+            video.src = '';
+            video.removeAttribute('src');
+            try { video.load(); } catch (e) {}
 
             if (smartUrl.includes('facebook.com')) {
                 iframe.setAttribute('referrerpolicy', 'no-referrer');
@@ -762,12 +772,24 @@ export const PLAYER_LOGIC = {
         } else {
             iframe.classList.add('hidden');
             video.classList.remove('hidden');
-            iframe.src = '';
+            iframe.src = 'about:blank';
+            iframe.onload = null;
             this.currentIsIframe = false;
 
-            // Manejo de Errores en Video Directo
+            // Escuchar inicio de reproducción real
+            video.addEventListener('playing', () => {
+                this.playbackStarted = true;
+            }, { once: true });
+
+            // Manejo Robusto de Errores: NUNCA cambiar de servidor en medio de una película o anuncio
             video.onerror = () => {
-                this._tryNextServer(video.currentTime || seekSeconds).then(success => {
+                if (this.playbackStarted || (video.currentTime > 3)) {
+                    console.warn('[Player] ⚠️ Buffer o anuncio demorado. Manteniendo servidor activo para no reiniciar reproducción.');
+                    showToast('Reanudando contenido... Si no carga, usa "Seleccionar Servidor".', 'warning');
+                    return;
+                }
+                // Solo intentar fallback al inicio si el enlace directo está completamente muerto
+                this._tryNextServer(seekSeconds).then(success => {
                     if (!success) this.showContentError(container, this.currentType);
                 });
             };
@@ -1070,15 +1092,7 @@ export const PLAYER_LOGIC = {
             if (isInIntroZone) {
                 if (skipBtn && !skipBtn.classList.contains('active')) {
                     skipBtn.classList.add('active');
-                    // AUTO-SKIP: Solo salta si el usuario sigue en la zona de intro 8s después
-                    // (no saltar si ya superó los 60s por seek/resume entre tanto)
-                    setTimeout(() => {
-                        const curNow = Math.floor(video.currentTime);
-                        if (skipBtn.classList.contains('active') && curNow < 60) {
-                            skipBtn.click();
-                            showToast("Intro saltada automáticamente", "info");
-                        }
-                    }, 8000);
+                    // El botón se muestra con diseño Netflix/Disney+. No se fuerza salto ciego para no interrumpir anuncios.
                 }
             } else {
                 skipBtn?.classList.remove('active');
@@ -2018,9 +2032,16 @@ export const PLAYER_LOGIC = {
     async _tryNextServer(seekSeconds = 0) {
         if (!this._hasNextServer()) return false;
         
-        // Buscar el servidor actual y saltar al siguiente
-        const currentUrl = document.getElementById('videoIframe').src || document.getElementById('videoPlayer').src;
-        const currentIndex = _currentServers.findIndex(s => s.url === currentUrl);
+        // Normalizar URLs limpiando parámetros para coincidencia exacta
+        const currentRaw = (this.currentIsIframe ?
+            (document.getElementById('videoIframe')?.src || '') :
+            (document.getElementById('videoPlayer')?.src || ''));
+        const currentUrl = currentRaw.split('?')[0].split('#')[0];
+
+        const currentIndex = _currentServers.findIndex(s => {
+            const sClean = (s.url || '').split('?')[0].split('#')[0];
+            return sClean === currentUrl;
+        });
         
         const nextIndex = (currentIndex + 1) % _currentServers.length;
         if (nextIndex === 0 && currentIndex !== -1) {
