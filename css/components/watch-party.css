@@ -1,0 +1,1967 @@
+/* ============================================================================
+   VivoTV - Watch Party, Live Simulcast & Social
+   ============================================================================ */
+/* ---- MARATHON MODE ---- */
+.season-divider {
+    grid-column: 1 / -1;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 40px 0 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-shadow: 0 0 20px rgba(229, 9, 20, 0.3);
+}
+
+/* --- BINGE ENGINE UI (MEJORA 1) --- */
+.binge-control-btn {
+    position: absolute;
+    bottom: 100px;
+    right: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #000;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    z-index: 12000;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(10px);
+}
+
+.binge-control-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    transform: scale(1.05) translateY(-5px);
+}
+
+.binge-control-btn.active {
+    display: flex;
+    animation: bingePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes bingePopIn {
+    from { transform: translateX(100px) scale(0.8); opacity: 0; }
+    to { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+#btnNextEp {
+    bottom: 180px;
+    background: var(--primary);
+    color: white;
+}
+
+/* --- MINI CHAT (MEJORA 3) --- */
+.sp-chat-container {
+    margin-top: 10px;
+    height: 150px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: none;
+}
+
+.sp-chat-msg {
+    font-size: 0.75rem;
+    animation: msgIn 0.3s ease-out;
+}
+
+.sp-chat-user { font-weight: 800; color: var(--primary); margin-right: 5px; }
+.sp-chat-text { color: rgba(255, 255, 255, 0.85); }
+
+@keyframes msgIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* SMART CONTROLS (SKIP INTRO / NEXT EP / PIP) */
+.skip-intro-btn,
+.next-episode-btn {
+    position: absolute;
+    bottom: 80px;
+    right: 30px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #000;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.skip-intro-btn.active {
+    display: flex;
+    animation: slideInRight 0.5s forwards;
+}
+
+.next-episode-btn {
+    bottom: 140px;
+    /* Separado del de skip intro si aparecen juntos */
+}
+
+.pip-btn {
+    position: absolute;
+    top: 30px;
+    right: 80px;
+    width: 45px;
+    height: 45px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pip-btn:hover {
+    background: var(--primary);
+    transform: scale(1.1);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.marathon-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(15px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+.marathon-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.marathon-countdown-w {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marathon-circle-bg {
+    position: absolute;
+    inset: 0;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.marathon-progress {
+    position: absolute;
+    inset: 0;
+    border: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: marathonCircle 10s linear forwards;
+}
+
+@keyframes marathonCircle {
+    from {
+        clip-path: polygon(50% 50%, 50% 0%, 50% 0%, 50% 0%, 50% 0%);
+    }
+
+    25% {
+        clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 0%, 100% 0%);
+    }
+
+    50% {
+        clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 100% 100%);
+    }
+
+    75% {
+        clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%);
+    }
+
+    to {
+        clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%);
+    }
+}
+
+.marathon-text {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #fff;
+    z-index: 2;
+}
+
+.marathon-info {
+    text-align: center;
+    max-width: 400px;
+}
+
+.marathon-info h3 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.marathon-info p {
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+.marathon-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.btn-marathon {
+    padding: 12px 30px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.btn-marathon-next {
+    background: #fff;
+    color: #000;
+    border: none;
+}
+
+.btn-marathon-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-marathon:hover {
+    transform: scale(1.05);
+}
+
+.marathon-loader {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 0;
+    color: var(--text-secondary);
+}
+
+/* ================================================
+   16. OPTIMIZACIÓN UNIVERSAL (iPhone SE & Up) 📱
+   ================================================ */
+@media (max-width: 480px) {
+    :root {
+        --side-padding: 4%;
+        --section-gap: 3rem;
+    }
+
+    .navbar {
+        padding: 15px var(--side-padding);
+        gap: 15px;
+    }
+
+    .logo {
+        font-size: 1.4rem;
+    }
+
+    nav {
+        display: none;
+    }
+
+    .user-profile {
+        width: 38px;
+        height: 38px;
+        font-size: 0.9rem;
+    }
+
+    .hero-banner {
+        height: 85vh;
+        /* Un poco más corto para que se vea el contenido de abajo */
+        align-items: flex-end;
+        padding-bottom: 80px;
+    }
+
+    .hero-content {
+        margin-top: 0;
+        padding-bottom: 20px;
+        width: 100%;
+        gap: 12px;
+        text-align: center;
+        align-items: center;
+        max-width: 100%;
+    }
+
+    .hero-title {
+        font-size: 1.8rem !important;
+        margin-bottom: 10px;
+        line-height: 1.2;
+    }
+
+    .hero-overview {
+        font-size: 0.9rem;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        margin-bottom: 15px;
+        max-width: 90%;
+    }
+
+    .hero-buttons {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .hero-buttons .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+
+    .catalogs-wrapper {
+        margin-top: -20px;
+        /* Reducido drásticamente para evitar solapamiento */
+        padding-top: 20px;
+    }
+
+    .catalog-row {
+        margin-bottom: 1.5rem;
+    }
+
+    .row-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .catalog-grid,
+    #searchResultsGrid,
+    #favoritesGrid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .modal-content {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+    }
+
+    .detail-main-info {
+        flex-direction: column;
+        gap: 20px;
+    }
+}
+
+/* ================================================
+   11. SISTEMA DE NOTIFICACIONES (TOAST STACKING)
+================================================ */
+#toast-container {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    /* Movido a la izquierda para evitar tapar controles de TV */
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 12px;
+    z-index: 10000;
+    pointer-events: none;
+    max-width: 380px;
+    width: calc(100% - 60px);
+}
+
+.toast-premium {
+    background: rgba(18, 18, 25, 0.75);
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    padding: 16px 20px;
+    border-radius: 16px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
+    transform: translateX(-30px);
+    opacity: 0;
+    transition: all 0.5s var(--ease-spring);
+    pointer-events: all;
+    border-left: 4px solid var(--primary);
+}
+
+.toast-premium.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast-premium.hide {
+    opacity: 0;
+    transform: translateX(-30px) scale(0.9);
+}
+
+.toast-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.toast-message {
+    line-height: 1.4;
+}
+
+.toast-success {
+    border-left-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.toast-error {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.toast-warning {
+    border-left-color: #eab308;
+    background: rgba(234, 179, 8, 0.1);
+}
+
+.toast-info {
+    border-left-color: var(--primary);
+}
+
+@media (max-width: 600px) {
+    #toast-container {
+        left: 15px;
+        bottom: 100px;
+        /* Encima de la nav móvil */
+        width: calc(100% - 30px);
+    }
+
+    .toast-premium {
+        padding: 12px 16px;
+        font-size: 0.85rem;
+    }
+}
+
+/* --- REGISTRATION SUCCESS UI (Fase 10X) --- */
+.registration-success-ui {
+    padding: 30px 10px;
+    text-align: center;
+    animation: fadeIn 0.5s ease;
+}
+
+.success-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 15px rgba(37, 99, 235, 0.4));
+}
+
+.registration-success-ui h3 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: #fff;
+}
+
+.registration-success-ui p {
+    color: #94a3b8;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.verification-hint {
+    font-size: 0.85rem;
+    background: rgba(37, 99, 235, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid #2563eb;
+}
+
+/* ================================================
+   15. CANALES EN VIVO (SIMULCAST UI) 📺
+================================================ */
+/* Estilos específicos para evitar solapamiento en Live */
+.page-live .main-content {
+    padding-top: 130px;
+    /* Incrementado para evitar cualquier contacto con el logo */
+}
+
+.live-grid-container {
+    display: grid;
+    grid-template-columns: 310px 1fr;
+    gap: 40px;
+    margin-top: 40px;
+    height: 85vh;
+    /* Ampliado para una experiencia cinematográfica en PC */
+    min-height: 600px;
+}
+
+.live-sidebar {
+    background: rgba(15, 20, 45, 0.4);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 32px;
+    padding: 24px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02);
+}
+
+.live-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.live-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.channels-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.channel-item {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.4s var(--ease-spring);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.channel-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+}
+
+.channel-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(8px);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.channel-item:hover::before {
+    transform: translateX(100%);
+}
+
+.channel-item.active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--ch-color, var(--primary));
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 15px calc(var(--ch-color) + '33');
+}
+
+.channel-icon {
+    font-size: 1.6rem;
+    width: 56px;
+    height: 56px;
+    background: var(--ch-color, #222);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.channel-item:hover .channel-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.channel-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.channel-name {
+    font-weight: 850;
+    font-size: 1.05rem;
+    color: #fff;
+    letter-spacing: -0.01em;
+}
+
+.channel-now {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+/* Barra de progreso en el item del canal */
+.channel-progress-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.channel-progress-fill {
+    height: 100%;
+    background: var(--ch-color, var(--primary));
+    width: 0%;
+    transition: width 1s linear;
+    box-shadow: 0 0 8px var(--ch-color);
+}
+
+.live-player-area {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+    /* Asegurar que el reproductor rellene el grid */
+}
+
+.live-player-wrapper {
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.player-container,
+.video-player,
+.video-iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+    background: #000;
+}
+
+.live-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 25px;
+    color: var(--text-muted);
+    background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+    z-index: 10;
+}
+
+.live-placeholder p {
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.live-now-info {
+    padding: 30px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+    backdrop-filter: blur(20px);
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ef4444;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    width: fit-content;
+}
+
+.live-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    animation: livePulse 1.5s infinite;
+}
+
+@keyframes livePulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+    }
+
+    70% {
+        transform: scale(1.2);
+        opacity: 0.5;
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
+}
+
+#liveTitle {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin: 0;
+    background: linear-gradient(to right, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+#liveNext {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Transición Glitch */
+.channel-glitch {
+    animation: glitchEffect 0.4s ease-out;
+}
+
+@keyframes glitchEffect {
+    0% {
+        transform: scale(1);
+        filter: brightness(1) contrast(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+        filter: brightness(2) contrast(1.5) hue-rotate(90deg);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(1) contrast(1);
+    }
+}
+
+@media (max-width: 1024px) {
+    .live-grid-container {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .live-sidebar {
+        height: 180px;
+        order: 2;
+    }
+
+    .channels-list {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 15px;
+    }
+
+    .channel-item {
+        min-width: 280px;
+    }
+}
+
+
+/* ================================================
+   16. BÚSQUEDA POR VIBRAS (MOOD UI) ✨
+================================================ */
+.header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+}
+
+/* EPG Modal Styles */
+.epg-modal-content {
+    max-width: 900px;
+    width: 90%;
+    max-height: 85vh;
+    padding: 40px;
+    background: rgba(10, 10, 25, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+}
+
+.epg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: 30px;
+    overflow-y: auto;
+    max-height: 50vh;
+    padding-right: 15px;
+}
+
+.epg-grid::-webkit-scrollbar {
+    width: 5px;
+}
+
+.epg-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.epg-channel-col {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.epg-channel-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.epg-show-item {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.epg-show-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: scale(1.02);
+}
+
+.epg-show-item.active {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+}
+
+.epg-time {
+    font-weight: 800;
+    color: var(--primary);
+    background: rgba(37, 99, 235, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+}
+
+.epg-name {
+    flex: 1;
+    margin-left: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 600px) {
+    .header-flex {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .epg-modal-content {
+        padding: 25px 15px;
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .epg-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .mood-chip {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+}
+
+/* --- OPTIMIZACIÓN IPHONE SE Y MÓVILES PEQUEÑOS (6 BOTONES) --- */
+@media (max-width: 400px) {
+    :root {
+        --side-padding: 12px;
+    }
+
+    .mobile-nav {
+        padding: 5px 8px 15px;
+        height: 62px;
+        gap: 2px;
+    }
+
+    .mobile-nav-item {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .mobile-nav-item svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .mobile-nav-item span {
+        font-size: 0.6rem;
+        letter-spacing: -0.03em;
+        margin-top: 2px;
+    }
+
+    .mobile-nav-indicator {
+        width: 35px;
+    }
+
+    /* Grilla de Canales Pro */
+    .live-grid {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+
+    .channel-card {
+        padding: 12px;
+    }
+
+    .channel-icon {
+        font-size: 1.2rem;
+    }
+
+    .unmute-hint {
+        font-size: 14px;
+        padding: 10px 16px;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid var(--primary);
+    }
+}
+
+.unmute-hint {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    z-index: 20;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 15px var(--primary);
+    animation: bounceIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ================================================
+   13. WATCH PARTY EMOTES
+================================================ */
+.floating-emote {
+    position: absolute;
+    bottom: 50px;
+    font-size: 3rem;
+    pointer-events: none;
+    z-index: 10000;
+    animation: floatUpAndFade 3s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.floating-emote span {
+    font-size: 0.9rem;
+    font-family: var(--font-premium);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    color: white;
+}
+
+@keyframes floatUpAndFade {
+    0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+
+    10% {
+        transform: translateY(-20px) scale(1.2);
+        opacity: 1;
+    }
+
+    20% {
+        transform: translateY(-30px) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-300px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* ================================================
+   14. BINGE-WATCH UX (PRÓXIMO EPISODIO)
+================================================ */
+.binge-prompt {
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    background: rgba(11, 18, 43, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 20px 25px;
+    z-index: 9000;
+    width: 350px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: bingeSlideIn 0.5s var(--ease-netflix) forwards;
+}
+
+@keyframes bingeSlideIn {
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.binge-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.binge-subtitle span {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.binge-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.epg-show-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: scale(1.02);
+}
+
+.epg-show-item.active {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+}
+
+.epg-time {
+    font-weight: 800;
+    color: var(--primary);
+    background: rgba(37, 99, 235, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+}
+
+.epg-name {
+    flex: 1;
+    margin-left: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 600px) {
+    .header-flex {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .epg-modal-content {
+        padding: 25px 15px;
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .epg-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .mood-chip {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+}
+
+/* --- OPTIMIZACIÓN IPHONE SE Y MÓVILES PEQUEÑOS (6 BOTONES) --- */
+@media (max-width: 400px) {
+    :root {
+        --side-padding: 12px;
+    }
+
+    .mobile-nav {
+        padding: 5px 8px 15px;
+        height: 62px;
+        gap: 2px;
+    }
+
+    .mobile-nav-item {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .mobile-nav-item svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .mobile-nav-item span {
+        font-size: 0.6rem;
+        letter-spacing: -0.03em;
+        margin-top: 2px;
+    }
+
+    .mobile-nav-indicator {
+        width: 35px;
+    }
+
+    /* Grilla de Canales Pro */
+    .live-grid {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+
+    .channel-card {
+        padding: 12px;
+    }
+
+    .channel-icon {
+        font-size: 1.2rem;
+    }
+
+    .unmute-hint {
+        font-size: 14px;
+        padding: 10px 16px;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid var(--primary);
+    }
+}
+
+.unmute-hint {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    z-index: 20;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 15px var(--primary);
+    animation: bounceIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ================================================
+   13. WATCH PARTY EMOTES
+================================================ */
+.floating-emote {
+    position: absolute;
+    bottom: 50px;
+    font-size: 3rem;
+    pointer-events: none;
+    z-index: 10000;
+    animation: floatUpAndFade 3s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.floating-emote span {
+    font-size: 0.9rem;
+    font-family: var(--font-premium);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    color: white;
+}
+
+@keyframes floatUpAndFade {
+    0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+
+    10% {
+        transform: translateY(-20px) scale(1.2);
+        opacity: 1;
+    }
+
+    20% {
+        transform: translateY(-30px) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-300px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* ================================================
+   14. BINGE-WATCH UX (PRÓXIMO EPISODIO)
+================================================ */
+.binge-prompt {
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    background: rgba(11, 18, 43, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 20px 25px;
+    z-index: 9000;
+    width: 350px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    transform: translateY(20px);
+    opacity: 0;
+    animation: bingeSlideIn 0.5s var(--ease-netflix) forwards;
+}
+
+@keyframes bingeSlideIn {
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.binge-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.binge-subtitle span {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.binge-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.binge-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.binge-prompt.hidden {
+    display: none !important;
+}
+
+/* ================================================
+   15. CONTROLES DE HISTORIAL
+================================================ */
+.btn-remove-history {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 20;
+}
+
+.movie-card:hover .btn-remove-history {
+    opacity: 1;
+}
+
+.btn-remove-history:hover {
+    background: var(--danger, #ff3b30);
+    transform: scale(1.1);
+}
+
+/* ================================================
+   16. EXIT MODAL / LOGOUT PROMPT
+================================================ */
+.exit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.exit-modal-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.exit-modal-content {
+    background: rgba(11, 18, 43, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    padding: 30px;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.exit-modal-overlay.hidden .exit-modal-content {
+    transform: translateY(30px);
+}
+
+.exit-modal-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.exit-modal-text {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 25px;
+}
+
+.exit-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.exit-modal-btn {
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-change-profile {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-change-profile:hover {
+    background: #1d4ed8;
+    transform: scale(1.02);
+}
+
+.btn-logout-final {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-logout-final:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-cancel-exit {
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.btn-cancel-exit:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+/* ================================================
+   X. WATCH PARTY SOCIAL EFFECTS (Emotes) 🎈
+================================================ */
+.party-hud {
+    padding: 20px !important;
+    max-width: 320px !important;
+    text-align: center;
+}
+
+.party-emotes {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    border-radius: 15px;
+    margin-bottom: 20px !important;
+}
+
+.btn-emote:hover {
+    transform: scale(1.4) rotate(10deg) !important;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.floating-emote {
+    position: absolute;
+    bottom: 20%;
+    transform: translateX(-50%);
+    font-size: 2.5rem;
+    pointer-events: none;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    animation: emoteFloatUp 3s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+.floating-emote span {
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: var(--primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+@keyframes emoteFloatUp {
+    0% {
+        transform: translate(-50%, 0) scale(0.5);
+        opacity: 0;
+    }
+
+    10% {
+        transform: translate(-50%, -20px) scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -300px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* ================================================
+   31. TOUR INTERACTIVO (WATCH PARTY GUIDE)
+ ================================================ */
+.guide-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(4, 4, 12, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.guide-modal {
+    background: var(--surface-low);
+    background: linear-gradient(135deg, var(--surface-low) 0%, #131a33 100%);
+    width: 100%;
+    max-width: 420px;
+    border-radius: 24px;
+    position: relative;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 30px var(--primary-glow);
+    overflow: hidden;
+    animation: slideUp 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.guide-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.guide-close:hover {
+    opacity: 1;
+}
+
+.guide-content {
+    padding: 40px 30px 20px;
+    text-align: center;
+}
+
+.guide-img-container {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 30px;
+    background: var(--primary-glow);
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--primary);
+    box-shadow: 0 0 40px var(--primary-glow);
+}
+
+.guide-img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.guide-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+    background: linear-gradient(to bottom, #fff 60%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.guide-text {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.guide-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.guide-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.guide-dot.active {
+    width: 24px;
+    border-radius: 10px;
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.guide-footer {
+    padding: 0 30px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.guide-nav-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-guide {
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-prev {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.btn-next {
+    flex: 2;
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 8px 20px var(--primary-glow);
+}
+
+.btn-next:hover {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+}
+
+.btn-skip {
+    background: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    opacity: 0.7;
+}
+
+.btn-skip:hover {
+    opacity: 1;
+}
+
+.btn-help-floating {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 20px;
+    background: var(--surface-highest);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 900;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.btn-help-floating:hover {
+    transform: scale(1.1) translateY(-5px);
+    border-color: var(--primary);
+    box-shadow: 0 15px 40px var(--primary-glow);
+}
+
+.btn-help-floating img {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-out {
+    animation: fadeIn 0.3s ease reverse forwards;
+}
+
+@media (max-width: 600px) {
+    .btn-help-floating {
+        bottom: 90px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* ================================================
+   FIXES CRÍTICOS PARA MÓVIL (VIVOTV MOBILE FIX)
+   ================================================ */
+@media (max-width: 768px) {
+
+    /* 1. Prevenir solapamiento del Logo con el Hero */
+    .hero-banner {
+        height: 85vh;
+        align-items: flex-end;
+        padding-bottom: 60px;
+    }
+
+    .hero-content {
+        margin-top: 0;
+        padding: 0 5%;
+        text-align: center;
+        align-items: center;
+        max-width: 100%;
+    }
+
+    .hero-title {
+        font-size: 1.8rem !important;
+        margin-bottom: 10px !important;
+        line-height: 1.2;
+    }
+
+    .hero-overview {
+        font-size: 0.9rem;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        margin-bottom: 15px;
+    }
+
+    .hero-buttons {
+        justify-content: center;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .hero-buttons .btn {
+        padding: 10px 18px;
+        font-size: 0.85rem;
+        flex: 1;
+        max-width: 150px;
+    }
+
+    /* 2. Corregir solapamiento de secciones sobre el Hero */
+    .catalogs-wrapper {
+        margin-top: 0 !important;
+        /* Eliminar el margen negativo agresivo */
+        padding-top: 20px;
+    }
+
+    .catalog-row {
+        margin-bottom: 2rem;
+    }
+
+    .row-header {
+        margin-bottom: 15px;
+    }
+
+    .row-header h3 {
+        font-size: 1.1rem;
+    }
+
+    /* 3. Navegación Móvil Inferior (Tab Bar Premium Unificada - Estilo Flotante) */
+    .mobile-nav {
+        display: flex !important;
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 450px !important;
+        height: 65px;
+        background: rgba(10, 10, 15, 0.9) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        justify-content: space-evenly !important;
+        align-items: center;
+        padding: 0 10px !important;
+        z-index: 999999 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.5);
+        text-decoration: none;
+        font-size: 0.55rem;
+        gap: 3px;
+        transition: 0.3s;
+        flex: 1;
+        justify-content: center;
+        min-width: 0;
+    }
+
+    .mobile-nav-item svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+        margin-bottom: 1px;
+    }
+
+    .mobile-nav-item.active {
+        color: white;
+    }
+
+    .mobile-nav-item.active svg {
+        color: var(--primary);
+        transform: scale(1.1);
+    }
+
+    .mobile-nav-item span {
+        font-weight: 700;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mobile-nav-item.active span {
+        opacity: 1;
+    }
+
+    .mobile-nav-indicator {
+        position: absolute;
+        bottom: 8px;
+        height: 3px;
+        background: var(--primary);
+        width: 40px;
+        border-radius: 10px;
+        transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 0 15px var(--primary-glow);
+        display: none;
+        /* Desactivado para simplificar el look flotante */
+    }
+
+    /* Ocultar elementos de escritorio */
+    .navbar nav,
+    .search-box {
+        display: none !important;
+    }
+
+    .navbar {
+        padding: 15px 5%;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent) !important;
+    }
+}

@@ -1,0 +1,120 @@
+/* ============================================================================
+   VivoTV - Hero Billboard & Featured Media
+   ============================================================================ */
+/* ================================================
+   8. HERO BANNER (NETFLIX BILLBOARD)
+================================================ */
+.dashboard-container {
+    padding-bottom: 0;
+}
+
+.hero-banner {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background-size: cover;
+    background-position: center top;
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-base);
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to right, rgba(9, 9, 11, 0.8) 0%, rgba(9, 9, 11, 0) 50%),
+        /* Viñeta inferior gigante de Netflix ajustada al 60% para transición suave */
+        linear-gradient(to top, var(--bg-base) 0%, transparent 60%);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+    padding: 0 var(--side-padding);
+    max-width: 600px;
+    margin-top: 5vh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.hero-genre-badge {
+    display: none;
+}
+
+/* Netflix no usa badge en el Hero */
+
+.hero-content h1 {
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.8);
+    letter-spacing: -1px;
+    color: white;
+}
+
+.hero-overview {
+    font-size: 1.2vw;
+    color: white;
+    line-height: 1.6;
+    max-width: 650px;
+    margin-bottom: 24px;
+    font-weight: 500;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.hero-buttons .btn {
+    font-size: 1.05rem;
+    padding: 14px 34px;
+}
+
+/* Indicadores del Hero (Dots) */
+.hero-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px 0;
+    z-index: 10;
+}
+
+.hero-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-dot.active {
+    width: 30px;
+    border-radius: 10px;
+    background: var(--primary);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+@keyframes heroSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

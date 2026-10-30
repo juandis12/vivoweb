@@ -1,0 +1,52 @@
+/* ============================================================================
+   VivoTV - Design Tokens & Variables
+   ============================================================================ */
+:root {
+    /* Paleta Abyssal Navy & Vivid Primary (Stitch Sync) 🎬 */
+    --bg-base: #060912;
+    /* Abyssal Navy */
+    --bg-surface: #0b122b;
+    --primary: #bb86fc;
+    /* Light Purple */
+    --primary-container: #9d4edd;
+    --primary-glow: rgba(187, 134, 252, 0.4);
+    --primary-dark: #7c3aed;
+    --secondary: #facc15;
+    /* Secondary Highlight (Vivid Yellow) */
+    --tertiary: #7c3aed;
+    /* Creative Violet */
+
+    /* Cinematic Glass & Depth Tokens */
+    --surface-low: #060c25;
+    --surface-container: #131a33;
+    --surface-high: #181e38;
+    --surface-highest: #2d334e;
+
+    --glass-blur: 20px;
+    --glass-surface: rgba(11, 18, 43, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    /* Ghost Border */
+
+    /* Tipografía Premium */
+    --font-premium: 'Inter', system-ui, -apple-system, sans-serif;
+    --text-primary: #dce1ff;
+    /* On Surface */
+    --text-secondary: #c3c6d7;
+    /* On Surface Variant */
+    --text-muted: #8d90a0;
+    /* Outline */
+
+    /* Elevación & Roundness */
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --shadow-premium: 0 40px 80px rgba(0, 0, 0, 0.6);
+
+    /* Spacing Scale (Stitch Inspired) */
+    --side-padding: 5%;
+    --section-gap: 6rem;
+
+    /* Netflix Specific Timings */
+    --ease-netflix: cubic-bezier(0.33, 1, 0.68, 1);
+    --card-expand-delay: 0.3s;
+    --vh: 1vh;
+}

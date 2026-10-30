@@ -1,0 +1,379 @@
+/* ============================================================================
+   VivoTV - Base Styles, Reset & Splash
+   ============================================================================ */
+/* ================================================
+   2. RESET Y BASE (Arquitectura de Scroll Único Cinemático)
+================================================ */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(187, 134, 252, 0.4) #060912;
+}
+
+body {
+    font-family: var(--font-premium);
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    width: 100%;
+    min-height: 100vh;
+    min-height: calc(var(--vh, 1vh) * 100);
+    overflow-x: clip;
+    overflow-y: visible;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar Cinemática Global Unificada (Estilo HBO Max / Netflix) */
+html::-webkit-scrollbar {
+    width: 9px;
+}
+
+html::-webkit-scrollbar-track {
+    background: #060912;
+}
+
+html::-webkit-scrollbar-thumb {
+    background: rgba(187, 134, 252, 0.35);
+    border-radius: 999px;
+    border: 2px solid #060912;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+    background: rgba(187, 134, 252, 0.65);
+}
+
+/* --- SPA TRANSITIONS --- */
+.page-transition-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0b122b;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.075s ease-in-out;
+}
+
+.page-transition-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+    z-index: 99999;
+}
+
+/* Animación de entrada suave (Netflix Style) */
+body {
+    opacity: 0;
+    background-color: var(--bg-base);
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.loaded {
+    opacity: 1;
+}
+
+/* Seguridad: Asegurar que el login siempre sea visible e interactuable */
+.page-auth, .page-auth body {
+    opacity: 1 !important;
+    pointer-events: all !important;
+}
+
+/* Ajuste de contenedor para que el número 1 no se corte */
+#trendingCarousel {
+    padding-left: 80px !important;
+    padding-bottom: 30px;
+    padding-top: 20px;
+    overflow: visible !important;
+}
+
+/* Fix: Bloqueo de scroll cuando el modal está abierto */
+.no-scroll {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
+img {
+    display: block;
+}
+
+a {
+    text-decoration: none;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ================================================
+   X. NETFLIX-VIVOTV HYBRID: PROFILES & CAROUSELS
+================================================ */
+
+.profiles-grid {
+    display: flex;
+    gap: 3vw;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px;
+}
+
+.profile-item {
+    position: relative;
+    width: 150px;
+    text-align: center;
+    transition: transform 0.4s var(--ease-netflix);
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 4px;
+    background-size: cover;
+    background-position: center;
+    border: 3px solid transparent;
+    transition: transform 0.4s var(--ease-netflix), border-color 0.4s ease, box-shadow 0.4s ease;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-item:hover {
+    transform: scale(1.1);
+    z-index: 10;
+}
+
+.profile-item:hover .profile-avatar {
+    border-color: #fff; /* Netflix usa blanco, nosotros usaremos blanco para que resalte sobre el fondo oscuro */
+    box-shadow: 0 0 40px var(--primary-glow);
+}
+
+.profile-name-input {
+    display: block;
+    width: 100%;
+    margin-top: 15px;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    font-weight: 400;
+    transition: color 0.4s ease;
+    text-align: center;
+    border: none;
+    background: transparent;
+    pointer-events: none;
+}
+
+.profile-item:hover .profile-name-input {
+    color: #fff;
+}
+
+/* --- CAROUSEL ZOOM (Netflix-ification) --- */
+
+/* Carousel unificado en la sección 9 */
+
+/* Skeleton Loaders */
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    width: 100%;
+}
+
+.skeleton-card {
+    aspect-ratio: 2/3;
+    background: linear-gradient(90deg, #0b122b 25%, #1d4ed81a 50%, #0b122b 75%);
+    background-size: 200% 100%;
+    border-radius: 12px;
+    animation: skeletonLoading 2s infinite ease-in-out;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+@keyframes skeletonLoading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 100px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 30px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    margin-top: 40px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.empty-state h2 {
+    font-family: 'Epilogue', sans-serif;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    opacity: 0.6;
+    margin-bottom: 30px;
+}
+
+/* Utility de Páginas Secundarias */
+.main-content {
+    min-height: 100vh;
+    padding-top: 100px;
+    overflow: visible;
+}
+
+.section-padding {
+    padding: 0 var(--side-padding) 60px;
+}
+
+.section-header {
+    margin-bottom: 45px;
+}
+
+.section-title {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    letter-spacing: -2px;
+    margin-bottom: 12px;
+    background: linear-gradient(to bottom, #fff 60%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.section-subtitle {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+/* ================================================
+   3. SPLASH SCREEN (REFINED)
+================================================ */
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background-color: #0b122b;
+    background: radial-gradient(circle at center, #131a33 0%, #0b122b 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    animation: splashFadeOut 0.5s ease 3s forwards;
+    pointer-events: all;
+}
+
+.splash-logo {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #dbe1ff 0%, var(--primary) 50%, #1d4ed8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 30px var(--primary-glow));
+    animation: splashZoom 0.6s var(--ease-spring) 0.2s both;
+}
+
+.splash-logo span {
+    color: var(--primary);
+    -webkit-text-fill-color: var(--primary);
+}
+
+.splash-bars {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.splash-bars div {
+    width: 5px;
+    border-radius: 10px;
+    background: var(--primary);
+    animation: splashBar 1s ease-in-out infinite;
+}
+
+.splash-bars div:nth-child(1) {
+    height: 20px;
+    animation-delay: 0s;
+}
+
+.splash-bars div:nth-child(2) {
+    height: 30px;
+    animation-delay: 0.1s;
+}
+
+.splash-bars div:nth-child(3) {
+    height: 40px;
+    animation-delay: 0.2s;
+}
+
+.splash-bars div:nth-child(4) {
+    height: 30px;
+    animation-delay: 0.3s;
+}
+
+.splash-bars div:nth-child(5) {
+    height: 20px;
+    animation-delay: 0.4s;
+}
+
+@keyframes splashBar {
+
+    0%,
+    100% {
+        transform: scaleY(0.5);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+}
+
+@keyframes splashZoom {
+    from {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes splashFadeOut {
+    to {
+        opacity: 0;
+        pointer-events: none;
+        visibility: hidden;
+    }
+}

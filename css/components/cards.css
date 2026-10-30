@@ -1,0 +1,850 @@
+/* ============================================================================
+   VivoTV - Carousels, Cards & Catalog Grids
+   ============================================================================ */
+/* ================================================
+   9. CARRUSELES
+================================================ */
+.catalogs-wrapper {
+    margin-top: -100px;
+    position: relative;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    background: linear-gradient(to bottom, transparent, var(--bg-base) 150px);
+}
+
+.catalog-row {
+    margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 1;
+    transition: z-index 0.3s;
+}
+
+.catalog-row:hover {
+    z-index: 100;
+}
+
+/* Header de fila: título a la izquierda, "Ver más" a la derecha */
+.row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 var(--side-padding);
+}
+
+.row-title {
+    font-size: 1.45rem; /* Más elegante y cercano a la foto */
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    letter-spacing: -0.01em;
+    margin-bottom: 5px;
+}
+
+.row-accent {
+    color: var(--secondary);
+    font-size: 1.4rem;
+}
+
+
+/* Botón Ver Más */
+.btn-ver-mas {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.25s var(--ease-smooth);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-ver-mas span {
+    font-size: 1.2rem;
+    transition: transform 0.2s;
+}
+
+.btn-ver-mas:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+}
+
+.btn-ver-mas:hover span {
+    transform: translateX(3px);
+}
+
+.btn-ver-mas.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Contenedor del carrusel con flechas */
+.carousel-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Innovative Floating Resume Card (Glass Pebble) */
+.glass-floating-card {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 5500;
+    /* Debajo de modales */
+    width: 280px;
+    background: rgba(15, 10, 30, 0.7);
+    backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    animation: floatingPebbleIn 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    pointer-events: all;
+    transition: all 0.3s ease;
+}
+
+.floating-card-thumb {
+    width: 45px;
+    height: 65px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.floating-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.floating-card-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.floating-card-content h3 {
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin-bottom: 2px;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.floating-card-content p {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.floating-card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.float-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+
+.float-btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.float-btn-outline {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+
+
+/* Banner de Error de Contenido (Premium Glass Overlay) */
+.content-error-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 5000;
+    padding: 30px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeInError 0.5s var(--ease-smooth);
+}
+
+.content-error-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.6));
+    animation: iconShake 2s infinite ease-in-out;
+}
+
+.content-error-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 10px;
+    font-family: 'Epilogue', sans-serif;
+}
+
+.content-error-desc {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 400px;
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.content-error-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-error-retry {
+    background: white;
+    color: black;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-error-retry:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.btn-error-report {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+}
+
+@keyframes fadeInError {
+    from {
+        opacity: 0;
+        transform: scale(1.05);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes iconShake {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(-5deg);
+    }
+
+    75% {
+        transform: rotate(5deg);
+    }
+}
+
+
+/* Responsivo para el Pebble */
+@media (max-width: 600px) {
+    .glass-floating-card {
+        bottom: 85px;
+        right: 15px;
+        left: 15px;
+        width: auto;
+        padding: 10px;
+        gap: 10px;
+        z-index: 4000;
+        /* Encima de nav pero debajo de todo lo demás */
+    }
+
+    .floating-card-thumb {
+        width: 35px;
+        height: 50px;
+    }
+
+    .floating-card-content h3 {
+        font-size: 0.8rem;
+    }
+
+    .floating-card-actions {
+        gap: 5px;
+    }
+
+    .float-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+}
+
+/* Flechas de navegación del carrusel */
+.carousel-arrow {
+    position: absolute;
+    z-index: 10;
+    width: 50px;
+    height: 50px;
+    background: rgba(15, 15, 18, 0.6);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1.4rem;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s var(--ease-smooth);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.carousel-wrapper:hover .carousel-arrow {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.carousel-arrow:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-glow);
+    transform: scale(1.15);
+}
+
+.carousel-arrow-left {
+    left: -25px;
+}
+
+.carousel-arrow-right {
+    right: -25px;
+}
+
+.carousel-arrow:disabled {
+    opacity: 0 !important;
+}
+
+.carousel {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 60px var(--side-padding) 140px;
+    /* Incrementado para evitar cortes superiores */
+    margin-bottom: -60px;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    flex: 1;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+    user-select: none;
+    /* HBO Max / Disney+ Edge Gradient Fade Mask */
+    mask-image: linear-gradient(to right, transparent 0%, black 28px, black calc(100% - 28px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 28px, black calc(100% - 28px), transparent 100%);
+}
+
+.carousel.is-dragging {
+    scroll-behavior: auto !important;
+    scroll-snap-type: none !important;
+    cursor: grabbing !important;
+    user-select: none !important;
+}
+
+.carousel.is-dragging .movie-card {
+    pointer-events: none !important;
+}
+
+.carousel:active {
+    cursor: grabbing;
+}
+
+.carousel::-webkit-scrollbar {
+    display: none;
+}
+
+/* --- BLOQUE UNIFICADO DE TARJETAS (NETFLIX PREMIUM) --- */
+.movie-card {
+    flex: 0 0 160px;
+    width: 160px;
+    aspect-ratio: 2/3;
+    border-radius: 6px;
+    background: #141414;
+    transform: scale(1);
+    transition: transform 0.45s var(--ease-netflix), z-index 0.45s;
+    cursor: pointer;
+    position: relative;
+    overflow: visible;
+    will-change: transform;
+}
+
+.movie-card.ranked {
+    margin-left: 95px; /* Ajuste fino de solapamiento */
+    overflow: visible !important;
+    position: relative;
+    box-shadow: -15px 0 30px rgba(0, 0, 0, 0.8); /* Sombra profunda para solapar el número */
+}
+
+.rank-number {
+    position: absolute;
+    left: -105px;
+    bottom: -25px;
+    font-size: 260px; /* Tamaño masivo como en la foto */
+    font-weight: 900;
+    line-height: 1;
+    z-index: -1;
+    color: #0b0d19; /* Relleno oscuro translúcido para integración perfecta con el fondo */
+    -webkit-text-stroke: 5px #4f5b73; /* Borde refinado metálico */
+    text-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    pointer-events: none;
+    font-family: 'Epilogue', sans-serif; /* Tipografía pesada y geométrica premium */
+    letter-spacing: -18px; /* Números más compactos y estilizados */
+    opacity: 0.95;
+}
+
+.movie-card.ranked:hover .rank-number {
+    transform: scale(0.92) translateX(-15px);
+    -webkit-text-stroke-color: #bb86fc; /* Brilla en el acento púrpura icónico en hover */
+    color: #121424;
+    opacity: 1;
+}
+
+/* Badges inferiores específicos para el ranking */
+.movie-card.ranked .badge-container {
+    top: auto;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.movie-card.ranked .available-badge {
+    position: relative;
+    top: 0;
+    left: 0;
+    background: #e50914 !important; /* Rojo vibrante Netflix */
+    border-radius: 2px;
+    width: 100%;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 900; /* Extra bold estilo Netflix */
+    padding: 5px 0;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .movie-card.ranked {
+        margin-left: 55px;
+    }
+    .rank-number {
+        font-size: 150px;
+        left: -60px;
+        bottom: -15px;
+        -webkit-text-stroke: 3px #4f5b73;
+        letter-spacing: -10px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .movie-card {
+        flex: 0 0 200px;
+        width: 200px;
+    }
+}
+
+.movie-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    z-index: 1;
+    background: #141414;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.movie-card-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: none;
+}
+
+.movie-card:hover .movie-card-inner img {
+    filter: brightness(1.1);
+}
+
+.movie-card:hover {
+    transform: scale(1.25) translateY(-8px) !important;
+    z-index: 1000 !important;
+}
+
+.movie-card:hover .movie-card-inner {
+    box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 20px rgba(187, 134, 252, 0.2);
+}
+
+/* Info Mini que aparece en el Hover (Glassmorphism Premium) */
+.movie-info-mini {
+    position: absolute;
+    top: 98%;
+    left: 0;
+    right: 0;
+    background: rgba(15, 15, 20, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 12px;
+    border-radius: 0 0 8px 8px;
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    border-top: none;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    pointer-events: none;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    z-index: 501;
+}
+
+.movie-card:hover .movie-info-mini {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Acciones en el Mini-Hover */
+.mini-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.mini-btn {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: rgba(42, 42, 42, 0.6);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.mini-btn:hover {
+    border-color: white;
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.mini-btn.btn-play {
+    background: white;
+    color: black;
+    border: none;
+}
+
+.mini-btn.btn-play:hover {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.mini-title {
+    color: white;
+    font-weight: 800;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mini-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.btn-more-info {
+    margin-left: auto;
+    font-size: 0.8rem !important;
+}
+
+.match { color: #46d369; font-weight: 800; }
+.year { color: #bcbcbc; }
+.hd-label { 
+    border: 1px solid rgba(255,255,255,0.4); 
+    padding: 0 4px; 
+    border-radius: 3px;
+    font-size: 0.6rem;
+}
+
+.mini-genres {
+    color: white;
+    font-size: 0.7rem;
+    display: flex;
+    gap: 5px;
+}
+/* End of movie-card components */
+
+/* Skeleton Loader Púrpura */
+.skeleton-card {
+    min-width: 195px;
+    height: 290px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, #150f2e 25%, #2a1b5e 50%, #150f2e 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s infinite linear;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.unmute-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Centrado perfecto */
+    background: rgba(139, 92, 246, 0.2);
+    /* Tinted transition */
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 18px 32px;
+    border-radius: 50px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    animation: pulseGlow 2s infinite;
+}
+
+.unmute-hint:hover {
+    background: rgba(139, 92, 246, 0.4);
+    transform: translate(-50%, -50%) scale(1.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 20px 45px rgba(139, 92, 246, 0.3);
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(139, 92, 246, 0);
+    }
+
+    50% {
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 20px 5px rgba(139, 92, 246, 0.3);
+    }
+}
+
+.watched-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    backdrop-filter: blur(8px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(37, 99, 235, 0.85);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.watched-premium {
+    background: rgba(0, 112, 243, 0.9) !important;
+    box-shadow: 0 0 20px rgba(0, 112, 243, 0.5) !important;
+}
+
+.available-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(229, 9, 20, 0.9);
+    /* Netflix Red */
+    color: white;
+    box-shadow: 0 2px 8px rgba(229, 9, 20, 0.5);
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.coming-soon-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    background: rgba(15, 23, 42, 0.8) !important;
+    backdrop-filter: blur(8px);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 10;
+}
+
+.maintenance-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    background: rgba(245, 158, 11, 0.9);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+/* Bloque de badge antiguo eliminado para evitar conflictos */
+
+
+.availability-pop {
+    animation: availabilityPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: rgba(46, 213, 115, 0.9) !important;
+    /* Verde vibrante temporal */
+    color: white !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(46, 213, 115, 0.6);
+}
+
+@keyframes availabilityPop {
+    0% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+        filter: brightness(1.5);
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+}
+
+.card-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    /* Aumentado para mayor impacto visual */
+    background: rgba(0, 0, 0, 0.5);
+    /* Fondo oscuro para contraste premium */
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+    z-index: 20;
+}
+
+.card-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    /* Gradiente vibrante */
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.8);
+    /* Efecto Neon Glow */
+    border-radius: 0 3px 3px 0;
+    transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* --- ESTILOS DE PROGRESO DE EPISODIOS --- */
+.ep-thumb-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #111;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ep-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10;
+}
+
+.ep-progress-bar .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
+}
