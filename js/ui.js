@@ -303,7 +303,6 @@ export const CATALOG_UI = {
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
                 ${mediaMarkup}
-                <div class="movie-card-title">${title}</div>
                 <div class="badge-container">
                     ${isMaintenance ? `
                         <div class="maintenance-badge">EN MANTENIMIENTO</div>
@@ -358,8 +357,7 @@ export const CATALOG_UI = {
                     `<stop offset="0%" stop-color="#131a33"/><stop offset="60%" stop-color="#2a1b5e"/><stop offset="100%" stop-color="#060912"/>` +
                     `</linearGradient></defs>` +
                     `<rect width="100%" height="100%" fill="url(#g)"/>` +
-                    `<text x="50%" y="175" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="800" font-size="24">${cleanT}</text>` +
-                    `<text x="50%" y="210" text-anchor="middle" fill="#bb86fc" font-family="sans-serif" font-weight="700" font-size="15">VIVOTV</text>` +
+                    `<text x="50%" y="188" text-anchor="middle" fill="#bb86fc" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="28" letter-spacing="4">VIVOTV</text>` +
                     `</svg>`
                 );
                 const srcEl = card.querySelector('source');
