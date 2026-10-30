@@ -107,6 +107,27 @@ export const LAYOUT = {
             `;
             body.appendChild(mobNav);
         }
+
+        // 4. Inyectar Modal de Cuenta & Perfil si falta en la página
+        if (!document.getElementById('exitModal') && !body.classList.contains('page-auth')) {
+            const exitModal = document.createElement('div');
+            exitModal.id = 'exitModal';
+            exitModal.className = 'exit-modal-overlay hidden';
+            exitModal.innerHTML = `
+                <div class="exit-modal-content">
+                    <h2 class="exit-modal-title">Mi Cuenta y Perfil</h2>
+                    <p class="exit-modal-text">Gestiona tus preferencias, logros y sesión.</p>
+                    <div class="exit-modal-actions">
+                        <button class="exit-modal-btn" id="btnOpenAchievements" style="background: rgba(187,134,252,0.15); border: 1px solid rgba(187,134,252,0.3); color: #fff;">🏆 Mis Logros (XP &amp; Niveles)</button>
+                        <button class="exit-modal-btn" id="btnOpenVibeDiscovery" style="background: rgba(0,210,255,0.12); border: 1px solid rgba(0,210,255,0.3); color: #fff;">🎭 Descubrir por Vibras</button>
+                        <button class="exit-modal-btn btn-change-profile" id="btnSwitchProfile">Elegir otro perfil</button>
+                        <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">Cerrar sesión de la cuenta</button>
+                        <button class="exit-modal-btn btn-cancel-exit" id="btnCancelExit">Volver</button>
+                    </div>
+                </div>
+            `;
+            body.appendChild(exitModal);
+        }
         
         // Marcar como cargado para animaciones iniciales
         setTimeout(() => body.classList.add('loaded'), 100);

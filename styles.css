@@ -48,16 +48,8 @@
     --vh: 1vh;
 }
 
-/* Fix para altura real en móviles */
-html,
-body {
-    height: 100%;
-    height: calc(var(--vh, 1vh) * 100);
-    overflow-x: hidden;
-}
-
 /* ================================================
-   2. RESET Y BASE
+   2. RESET Y BASE (Arquitectura de Scroll Único Cinemático)
 ================================================ */
 *,
 *::before,
@@ -69,19 +61,44 @@ body {
 
 html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
     width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(187, 134, 252, 0.4) #060912;
 }
 
 body {
     font-family: var(--font-premium);
     background-color: var(--bg-base);
     color: var(--text-primary);
-    overflow-x: hidden;
     width: 100%;
     min-height: 100vh;
+    min-height: calc(var(--vh, 1vh) * 100);
+    overflow-x: clip;
+    overflow-y: visible;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar Cinemática Global Unificada (Estilo HBO Max / Netflix) */
+html::-webkit-scrollbar {
+    width: 9px;
+}
+
+html::-webkit-scrollbar-track {
+    background: #060912;
+}
+
+html::-webkit-scrollbar-thumb {
+    background: rgba(187, 134, 252, 0.35);
+    border-radius: 999px;
+    border: 2px solid #060912;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+    background: rgba(187, 134, 252, 0.65);
 }
 
 /* --- SPA TRANSITIONS --- */
@@ -6257,5 +6274,115 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7) !important;
     font-weight: 600 !important;
+}
+
+
+/* ── 7. LIMPIEZA CINEMÁTICA: WIDGETS INTEGRADOS EN PERFIL (NETFLIX STYLE) ── */
+#achHudBtn,
+#vibeEngineBtn {
+    display: none !important;
+}
+/* ── 8. MICRO-ANIMACIONES DE REPRODUCTOR (NETFLIX & DISNEY+ STYLE) ── */
+.skip-intro-btn {
+    position: absolute;
+    bottom: 85px;
+    right: 28px;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(18, 22, 34, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 10px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(187, 134, 252, 0.25);
+    transform: translateX(130%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.skip-intro-btn.active {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.skip-intro-btn:hover {
+    background: #ffffff;
+    color: #060912;
+    border-color: #ffffff;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(187, 134, 252, 0.5);
+    transform: translateY(-2px);
+}
+
+.skip-intro-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.next-episode-btn, #btnNextEp {
+    position: absolute;
+    bottom: 85px;
+    right: 28px;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.95), rgba(0, 210, 255, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 800;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 210, 255, 0.4);
+    transform: translateX(130%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, filter 0.2s;
+}
+
+.next-episode-btn.active, #btnNextEp.active {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.next-episode-btn:hover, #btnNextEp:hover {
+    filter: brightness(1.15);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 210, 255, 0.6);
+}
+
+.pip-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(11, 18, 43, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pip-btn:hover {
+    background: rgba(187, 134, 252, 0.3);
+    border-color: rgba(187, 134, 252, 0.6);
+    transform: scale(1.08);
 }
 

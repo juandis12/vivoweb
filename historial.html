@@ -45,27 +45,37 @@
     </header>
 
     <!-- Contenido Principal -->
-    <main class="main-content section-padding">
-        <header class="section-header">
+    <main class="main-content section-padding" style="position: relative;">
+        <!-- Ambient Glow Disney+ / HBO Max -->
+        <div class="ambient-glow-header" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 600px; max-width: 90vw; height: 260px; background: radial-gradient(circle, rgba(124, 58, 237, 0.2) 0%, rgba(0, 210, 255, 0.08) 50%, transparent 70%); filter: blur(55px); pointer-events: none; z-index: 0;"></div>
+        
+        <header class="section-header" style="position: relative; z-index: 1;">
             <div class="header-content">
+                <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span class="badge-top10" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);">⏱ CONTINUAR VIENDO</span>
+                    <span class="badge-4k">PROGRESO GUARDADO</span>
+                </div>
                 <h1 class="section-title">Mi Historial</h1>
-                <p class="section-subtitle">Continúa donde lo dejaste. Todo tu contenido en un solo lugar.</p>
+                <p class="section-subtitle">Continúa exactamente donde lo dejaste en todos tus dispositivos.</p>
             </div>
         </header>
 
         <!-- Grid de Historial -->
-        <div class="grid-container" id="historyGrid">
+        <div class="grid-container" id="historyGrid" style="position: relative; z-index: 1;">
             <!-- Carga dinámica -->
             <div class="skeleton-card"></div><div class="skeleton-card"></div>
             <div class="skeleton-card"></div><div class="skeleton-card"></div>
             <div class="skeleton-card"></div><div class="skeleton-card"></div>
         </div>
 
-        <div id="emptyHistoryState" class="empty-state hidden">
-            <div class="empty-icon">📂</div>
-            <h2>Tu historial está vacío</h2>
-            <p>Empieza a ver algo hoy mismo.</p>
-            <a href="index.html" class="btn btn-primary">Explorar Contenido</a>
+        <div id="emptyHistoryState" class="empty-state hidden glass-panel" style="max-width: 520px; margin: 40px auto; padding: 40px 30px; border-radius: 18px; text-align: center; position: relative; z-index: 1;">
+            <div class="empty-icon" style="font-size: 3rem; margin-bottom: 15px;">⏱</div>
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">Tu historial está vacío</h2>
+            <p style="color: #94a3b8; margin-bottom: 25px; line-height: 1.5;">Empieza a disfrutar de una película o serie para sincronizar tu progreso automáticamente.</p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <a href="index.html" class="btn btn-primary">Ir al Inicio</a>
+                <a href="series.html" class="btn btn-secondary">Ver Series</a>
+            </div>
         </div>
     </main>
 
@@ -128,21 +138,17 @@
         </a>
     </nav>
 
-    <!-- Modal de Salida (Híbrido) -->
-    <div id="exitModal" class="exit-modal-overlay">
+    <!-- Modal de Cuenta & Perfil (Híbrido) -->
+    <div id="exitModal" class="exit-modal-overlay hidden">
         <div class="exit-modal-content">
-            <h2 class="exit-modal-title">¿A dónde quieres ir?</h2>
-            <p class="exit-modal-text">Selecciona una opción para continuar.</p>
+            <h2 class="exit-modal-title">Mi Cuenta y Perfil</h2>
+            <p class="exit-modal-text">Gestiona tus preferencias, logros y sesión.</p>
             <div class="exit-modal-actions">
-                <button class="exit-modal-btn btn-change-profile" id="btnSwitchProfile">
-                    Elegir otro perfil
-                </button>
-                <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">
-                    Cerrar sesión de la cuenta
-                </button>
-                <button class="exit-modal-btn btn-cancel-exit" id="btnCancelExit">
-                    Volver
-                </button>
+                <button class="exit-modal-btn" id="btnOpenAchievements" style="background: rgba(187,134,252,0.15); border: 1px solid rgba(187,134,252,0.3); color: #fff;">🏆 Mis Logros (XP &amp; Niveles)</button>
+                <button class="exit-modal-btn" id="btnOpenVibeDiscovery" style="background: rgba(0,210,255,0.12); border: 1px solid rgba(0,210,255,0.3); color: #fff;">🎭 Descubrir por Vibras</button>
+                <button class="exit-modal-btn btn-change-profile" id="btnSwitchProfile">Elegir otro perfil</button>
+                <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">Cerrar sesión de la cuenta</button>
+                <button class="exit-modal-btn btn-cancel-exit" id="btnCancelExit">Volver</button>
             </div>
         </div>
     </div>

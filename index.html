@@ -204,6 +204,10 @@
                 <p class="auth-toggle">
                     ¿No tienes cuenta? <a href="registro.html" id="toggleAuthMode">Regístrate gratis</a>
                 </p>
+                <div class="auth-security-badge" style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; color: #94a3b8; margin-top: 20px; opacity: 0.85;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="color: #00d2ff;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                    <span>Acceso protegido con cifrado SSL &amp; Better-Auth</span>
+                </div>
             </form>
         </div>
     </div>
@@ -211,36 +215,45 @@
     <!-- Dashboard Principal -->
     <main id="dashboardSection" class="dashboard-container hidden">
 
-        <!-- Hero Banner Dinámico -->
+        <!-- Hero Banner Dinámico (HBO Max + Netflix + Disney+ Style) -->
         <section class="hero-banner" id="heroBanner">
             <div class="hero-overlay"></div>
+            <div class="hero-vignette"></div>
             <div class="hero-genre-badge" id="heroGenre"></div>
             <div class="hero-content">
-                <div class="hero-badge">EL ESTRENO MÁS ESPERADO</div>
-                <h1 id="heroTitle">Cargando...</h1>
+                <div class="hero-badges-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <span class="hero-badge">EL ESTRENO MÁS ESPERADO</span>
+                    <span class="badge-top10">TOP 10 HOY</span>
+                    <span class="badge-4k">4K ULTRA HD</span>
+                </div>
+                <h1 id="heroTitle" class="hero-title">Cargando...</h1>
                 <div class="hero-meta-row">
                     <span id="heroYear" class="meta-item">2024</span>
                     <span class="meta-divider"></span>
                     <span id="heroDuration" class="meta-item">130 min</span>
                     <span class="meta-divider"></span>
                     <span id="heroRating" class="meta-item rating-accent">★ 8.5</span>
+                    <span class="meta-divider"></span>
+                    <span class="badge-hd">HDR10+</span>
+                    <span class="meta-divider"></span>
+                    <span class="badge-hd">DOLBY ATMOS</span>
                 </div>
                 <p id="heroOverview" class="hero-overview"></p>
                 <!-- Indicadores del Hero aquí dentro para que no floten -->
                 <div class="hero-indicators" id="heroIndicators"></div>
                 <div class="hero-buttons">
-                    <button class="btn btn-primary" id="btnHeroPlay">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <button class="btn btn-primary hero-btn-play" id="btnHeroPlay">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                             <path d="M8 5v14l11-7z" />
                         </svg>
-                        Ver Ahora
+                        <span>Ver Ahora</span>
                     </button>
-                    <button class="btn btn-secondary" id="btnHeroInfo">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <button class="btn btn-secondary hero-btn-info" id="btnHeroInfo">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                             <path
                                 d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
                         </svg>
-                        Información
+                        <span>Más Información</span>
                     </button>
                 </div>
             </div>
@@ -320,17 +333,6 @@
                 </div>
             </section>
 
-            <!-- Recomendados para ti (Fase Personalización) -->
-            <section class="catalog-row hidden" id="recommendedSection" data-section="recommended">
-                <div class="row-header">
-                    <h3 class="row-title"><span class="row-accent">✨</span> Recomendados para ti</h3>
-                </div>
-                <div class="carousel-wrapper">
-                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="recommendedCarousel"></div>
-                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
-                </div>
-            </section>
 
             <!-- Tendencias -->
             <section class="catalog-row" id="trendingSection" data-section="trending">
@@ -581,15 +583,16 @@
         </div>
     </div>
 
-    <!-- Modal de Salida (Híbrido) -->
+    <!-- Modal de Cuenta & Perfil (Híbrido) -->
     <div id="exitModal" class="exit-modal-overlay hidden">
         <div class="exit-modal-content">
-            <h2 class="exit-modal-title">¿A dónde quieres ir?</h2>
-            <p class="exit-modal-text">Selecciona una opción para continuar.</p>
+            <h2 class="exit-modal-title">Mi Cuenta y Perfil</h2>
+            <p class="exit-modal-text">Gestiona tus preferencias, logros y sesión.</p>
             <div class="exit-modal-actions">
+                <button class="exit-modal-btn" id="btnOpenAchievements" style="background: rgba(187,134,252,0.15); border: 1px solid rgba(187,134,252,0.3); color: #fff;">🏆 Mis Logros (XP &amp; Niveles)</button>
+                <button class="exit-modal-btn" id="btnOpenVibeDiscovery" style="background: rgba(0,210,255,0.12); border: 1px solid rgba(0,210,255,0.3); color: #fff;">🎭 Descubrir por Vibras</button>
                 <button class="exit-modal-btn btn-change-profile" id="btnSwitchProfile">Elegir otro perfil</button>
-                <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">Cerrar sesión de la
-                    cuenta</button>
+                <button class="exit-modal-btn btn-logout-final" id="btnLogoutConfirm">Cerrar sesión de la cuenta</button>
                 <button class="exit-modal-btn btn-cancel-exit" id="btnCancelExit">Volver</button>
             </div>
         </div>

@@ -27,19 +27,36 @@
       "broadcastDisplayName": "VIVOTV En Vivo"
     }
     </script>
+    <style>
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(0.8); }
+        }
+    </style>
 </head>
 <body class="page-live">
     <main id="dashboardSection" class="main-content">
-        <div class="section-padding">
-            <div class="section-header">
-                <div class="header-flex">
+        <div class="section-padding" style="position: relative;">
+            <!-- Ambient Glow Disney+ / HBO Max -->
+            <div class="ambient-glow-header" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 650px; max-width: 90vw; height: 260px; background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, rgba(124, 58, 237, 0.15) 45%, transparent 70%); filter: blur(60px); pointer-events: none; z-index: 0;"></div>
+            
+            <div class="section-header" style="position: relative; z-index: 1;">
+                <div class="header-flex" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <h1 class="section-title">Canales <span>En Vivo</span></h1>
-                        <p class="section-subtitle">Programación simultánea para todos los usuarios. Disfruta de una experiencia de TV tradicional.</p>
+                        <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <span class="badge-top10" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 0 14px rgba(239, 68, 68, 0.6);">
+                                <span style="display: inline-block; width: 7px; height: 7px; background: #fff; border-radius: 50%; animation: pulse-live 1.5s infinite;"></span>
+                                EN DIRECTO
+                            </span>
+                            <span class="badge-4k">SEÑAL HD 24/7</span>
+                            <span class="badge-hd">SIN CORTES</span>
+                        </div>
+                        <h1 class="section-title">Canales <span style="background: linear-gradient(90deg, #ef4444, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">En Vivo</span></h1>
+                        <p class="section-subtitle">Programación simultánea para todos los usuarios. Disfruta de la mejor televisión en directo.</p>
                     </div>
-                    <button id="btnOpenEPG" class="btn btn-outline btn-sm">
+                    <button id="btnOpenEPG" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; backdrop-filter: blur(12px); border-color: rgba(255,255,255,0.2);">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-                        Guía de TV
+                        <span>Guía de TV</span>
                     </button>
                 </div>
             </div>

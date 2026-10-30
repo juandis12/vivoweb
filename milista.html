@@ -26,22 +26,32 @@
     <!-- Componentes UI inyectados dinámicamente -->
 
     <!-- Contenido Principal -->
-    <main class="main-content section-padding">
-        <header class="section-header">
+    <main class="main-content section-padding" style="position: relative;">
+        <!-- Ambient Glow Disney+ / HBO Max -->
+        <div class="ambient-glow-header" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 600px; max-width: 90vw; height: 260px; background: radial-gradient(circle, rgba(124, 58, 237, 0.2) 0%, rgba(0, 210, 255, 0.08) 50%, transparent 70%); filter: blur(55px); pointer-events: none; z-index: 0;"></div>
+        
+        <header class="section-header" style="position: relative; z-index: 1;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span class="badge-top10" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);">★ MI COLECCIÓN</span>
+                <span class="badge-4k">SINCRONIZADO</span>
+            </div>
             <h1 class="section-title">Mi Lista Personalizada</h1>
-            <p class="section-subtitle">Tus favoritos en un solo lugar premium.</p>
+            <p class="section-subtitle">Tus películas, series y animes favoritos guardados para ver cuando quieras.</p>
         </header>
 
         <!-- Grid de Favoritos -->
-        <div class="grid-container" id="favoritesGrid">
+        <div class="grid-container" id="favoritesGrid" style="position: relative; z-index: 1;">
             <!-- Skeleton Loaders -->
         </div>
 
-        <div id="emptyListState" class="empty-state hidden">
-            <div class="empty-icon">📂</div>
-            <h2>Tu lista está vacía</h2>
-            <p>Añade contenido usando el botón "Mi Lista" en los detalles.</p>
-            <a href="index.html" class="btn btn-primary">Explorar Contenido</a>
+        <div id="emptyListState" class="empty-state hidden glass-panel" style="max-width: 520px; margin: 40px auto; padding: 40px 30px; border-radius: 18px; text-align: center; position: relative; z-index: 1;">
+            <div class="empty-icon" style="font-size: 3rem; margin-bottom: 15px;">★</div>
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 10px;">Tu lista está esperando</h2>
+            <p style="color: #94a3b8; margin-bottom: 25px; line-height: 1.5;">Explora los estrenos y agrega tus títulos preferidos con el botón "+ Mi Lista".</p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <a href="index.html" class="btn btn-primary">Descubrir Tendencias</a>
+                <a href="peliculas.html" class="btn btn-secondary">Ver Películas</a>
+            </div>
         </div>
     </main>
 

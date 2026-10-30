@@ -67,28 +67,42 @@
             <div class="mesh-circle circle-2"></div>
             <div class="mesh-circle circle-3"></div>
         </div>
-        <!-- Hero Banner Dinámico -->
+        <!-- Hero Banner Dinámico (HBO Max + Netflix + Disney+ Style) -->
         <section class="hero-banner" id="heroBanner">
             <div class="hero-overlay"></div>
+            <div class="hero-vignette"></div>
             <div class="hero-genre-badge" id="heroGenre"></div>
             <div class="hero-content">
-                <div class="hero-badge">SERIE DESTACADA</div>
-                <h1 id="heroTitle">Series Premium</h1>
+                <div class="hero-badges-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <span class="hero-badge">SERIE DESTACADA</span>
+                    <span class="badge-top10">TOP MARATÓN</span>
+                    <span class="badge-4k">4K ULTRA HD</span>
+                </div>
+                <h1 id="heroTitle" class="hero-title">Series Premium</h1>
                 <div class="hero-meta-row">
                     <span id="heroYear" class="meta-item">2024</span>
                     <span class="meta-divider"></span>
                     <span id="heroDuration" class="meta-item">130 min</span>
                     <span class="meta-divider"></span>
                     <span id="heroRating" class="meta-item rating-accent">★ 8.5</span>
+                    <span class="meta-divider"></span>
+                    <span class="badge-hd">TEMPORADAS COMPLETAS</span>
+                    <span class="meta-divider"></span>
+                    <span class="badge-hd">DOLBY VISION</span>
                 </div>
                 <p id="heroOverview" class="hero-overview">Las mejores historias, capítulo a capítulo.</p>
                 <div class="hero-indicators" id="heroIndicators"></div>
                 <div class="hero-buttons">
-                    <button class="btn btn-primary" id="btnHeroPlay">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                        Reproducir
+                    <button class="btn btn-primary hero-btn-play" id="btnHeroPlay">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        <span>Ver Ahora</span>
                     </button>
-                    <button class="btn btn-secondary" id="btnHeroInfo">Información</button>
+                    <button class="btn btn-secondary hero-btn-info" id="btnHeroInfo">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                        </svg>
+                        <span>Más Información</span>
+                    </button>
                 </div>
             </div>
         </section>

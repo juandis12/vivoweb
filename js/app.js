@@ -1299,6 +1299,32 @@ function setupExitModalListeners() {
     const btnSwitchProfile = document.getElementById('btnSwitchProfile');
     const btnLogoutConfirm = document.getElementById('btnLogoutConfirm');
     const btnCancelExit = document.getElementById('btnCancelExit');
+    const btnOpenAchievements = document.getElementById('btnOpenAchievements');
+    const btnOpenVibeDiscovery = document.getElementById('btnOpenVibeDiscovery');
+
+    if (btnOpenAchievements) {
+        btnOpenAchievements.onclick = () => {
+            if (exitModal) exitModal.classList.add('hidden');
+            if (window.ACHIEVEMENTS && typeof window.ACHIEVEMENTS._togglePanel === 'function') {
+                window.ACHIEVEMENTS._togglePanel();
+            } else {
+                const achPanel = document.getElementById('achPanel');
+                if (achPanel) achPanel.classList.toggle('open');
+            }
+        };
+    }
+
+    if (btnOpenVibeDiscovery) {
+        btnOpenVibeDiscovery.onclick = () => {
+            if (exitModal) exitModal.classList.add('hidden');
+            const vibeContainer = document.getElementById('vibeEngineContainer');
+            if (vibeContainer) {
+                vibeContainer.classList.add('open');
+            } else if (window.vibeEngine && typeof window.vibeEngine._toggle === 'function') {
+                window.vibeEngine._toggle();
+            }
+        };
+    }
 
     if (btnSwitchProfile) {
         btnSwitchProfile.onclick = () => {
