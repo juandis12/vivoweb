@@ -724,6 +724,9 @@ export const PLAYER_LOGIC = {
             video.removeAttribute('src');
             try { video.load(); } catch (e) {}
 
+            // ESCUDO ANTI-POPUPS: Bloquea ventanas emergentes, redirecciones y pestañas comerciales
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+
             if (smartUrl.includes('facebook.com')) {
                 iframe.setAttribute('referrerpolicy', 'no-referrer');
             } else if (smartUrl.includes('vimeus.com')) {
