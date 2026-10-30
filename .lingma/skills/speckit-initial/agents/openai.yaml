@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Initial"
+  short_description: "Run specify init in the current or target directory to…"
+  default_prompt: "Use $speckit-initial to help with my current task: Run specify init in the current or target directory to bootstrap a Spec Kit project (pull .specify/ and slash commands); supports multiple AI agents and --script sh/ps."

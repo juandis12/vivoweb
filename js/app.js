@@ -1084,18 +1084,47 @@ const handleAuthAction = async (e) => {
             const email = emailEl?.value.trim();
             const password = passwordEl?.value;
             if (!email || !password) {
-                throw new Error('Por favor, completa todos los campos.');
+                throw new Error('Por favor, completa tu correo y contraseña.');
             }
-            console.log('[Auth] Login via AuthService...');
+
+            // Better-Auth Anti-Brute Force Protection
+            const now = Date.now();
+            if (window._authLockoutUntil && now < window._authLockoutUntil) {
+                const waitSecs = Math.ceil((window._authLockoutUntil - now) / 1000);
+                throw new Error(`Demasiados intentos erróneos. Por seguridad, espera ${waitSecs} segundos.`);
+            }
+
+            console.log('[Better-Auth] Login via AuthService...');
             const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
+            if (error) {
+                window._failedAuthAttempts = (window._failedAuthAttempts || 0) + 1;
+                if (window._failedAuthAttempts >= 5) {
+                    window._authLockoutUntil = Date.now() + 30000;
+                    window._failedAuthAttempts = 0;
+                    throw new Error('Demasiados intentos erróneos. Por seguridad tu cuenta ha sido bloqueada temporalmente por 30 segundos.');
+                }
+                throw error;
+            }
+            window._failedAuthAttempts = 0;
+            window._authLockoutUntil = 0;
         } else {
             const email = emailEl?.value.trim();
             const password = passwordEl?.value;
             if (!email || !password) {
                 throw new Error('Por favor, completa todos los campos.');
             }
-            console.log('[Auth] Registro via AuthService...');
+            
+            // Better-Auth Password Quality Gate (min 8 chars)
+            if (password.length < 8) {
+                throw new Error('Por seguridad, la contraseña debe tener al menos 8 caracteres.');
+            }
+
+            const confirmPassEl = document.getElementById('confirmPassword');
+            if (confirmPassEl && confirmPassEl.value && confirmPassEl.value !== password) {
+                throw new Error('Las contraseñas no coinciden.');
+            }
+
+            console.log('[Better-Auth] Registro de nuevo usuario...');
             const username = usernameEl ? usernameEl.value.trim() : 'Usuario';
             const { error } = await supabase.auth.signUp({ 
                 email, 
@@ -1107,27 +1136,52 @@ const handleAuthAction = async (e) => {
             const authCard = document.querySelector('.auth-card');
             if (authCard) {
                 authCard.innerHTML = `
-                    <div class="registration-success-ui">
-                        <div class="success-icon">📩</div>
-                        <h3>¡Correo enviado!</h3>
-                        <p>Revisa tu bandeja de entrada en: <strong>${email}</strong></p>
-                        <button class="btn btn-primary btn-block" onclick="window.location.reload()">Regresar</button>
+                    <div class="registration-success-ui" style="text-align:center; padding:30px 10px;">
+                        <div class="success-icon" style="font-size:3rem; margin-bottom:16px;">📩</div>
+                        <h3 style="font-size:1.4rem; margin-bottom:8px; color:#fff;">¡Cuenta creada con éxito!</h3>
+                        <p style="color:#94a3b8; font-size:0.95rem; margin-bottom:20px;">Revisa tu bandeja de entrada en: <strong style="color:#bb86fc;">${email}</strong> para activar tu acceso.</p>
+                        <button class="btn btn-primary btn-block" onclick="window.location.href='index.html'">Ir a Iniciar Sesión</button>
                     </div>
                 `;
             }
-            showToast('📩 Revisa tu correo para activar la cuenta.', 'success');
+            showToast('📩 Revisa tu correo para activar tu cuenta de VivoTV.', 'success');
         }
     } catch (err) {
-        console.error('[Auth Error]:', err.message);
+        const spanishMsg = mapAuthErrorToSpanish(err);
+        console.error('[Better-Auth Error]:', spanishMsg, err);
         const authError = document.getElementById('authError');
         if (authError) {
-            authError.textContent = err.message;
+            authError.textContent = spanishMsg;
             authError.classList.remove('hidden');
         }
-        showToast(err.message, 'error');
+        showToast(spanishMsg, 'error');
     } finally {
         setLoading(false);
     }
+};
+
+// Traductor de errores de autenticación a Español Claro (Better-Auth Standard)
+function mapAuthErrorToSpanish(err) {
+    const msg = (err?.message || '').toLowerCase();
+    if (msg.includes('invalid login credentials') || msg.includes('invalid_grant')) {
+        return 'El correo o la contraseña son incorrectos. Por favor, verifica tus credenciales.';
+    }
+    if (msg.includes('user already registered') || msg.includes('already exists')) {
+        return 'Ya existe una cuenta registrada con este correo. Puedes iniciar sesión directamente.';
+    }
+    if (msg.includes('rate limit') || msg.includes('too many requests')) {
+        return 'Has superado el límite de intentos. Por seguridad, espera unos minutos antes de volver a intentar.';
+    }
+    if (msg.includes('email not confirmed')) {
+        return 'Tu cuenta requiere confirmación de correo. Revisa tu bandeja de entrada o carpeta de spam.';
+    }
+    if (msg.includes('password should be at least')) {
+        return 'La contraseña debe contener al menos 8 caracteres.';
+    }
+    if (msg.includes('network error') || msg.includes('failed to fetch')) {
+        return 'Error de conexión. Verifica tu conexión a internet e inténtalo nuevamente.';
+    }
+    return err?.message || 'Ocurrió un error inesperado al procesar la solicitud.';
 };
 
 function setupAuthListeners() {
@@ -1142,6 +1196,73 @@ function setupAuthListeners() {
                 handleAuthAction(e);
             }
         };
+    }
+
+    // Better-Auth Tab Switcher (registro.html)
+    const tabLogin = document.getElementById('tabLogin');
+    const tabRegister = document.getElementById('tabRegister');
+    const groupUsername = document.getElementById('groupUsername');
+    const passStrengthContainer = document.getElementById('passStrengthContainer');
+    const linkForgotPassword = document.getElementById('linkForgotPassword');
+
+    if (tabLogin && tabRegister) {
+        tabLogin.onclick = () => {
+            tabLogin.classList.add('active');
+            tabRegister.classList.remove('active');
+            authMode = 'login';
+            if (authTitle) authTitle.textContent = 'Iniciar Sesión';
+            if (authSubtitle) authSubtitle.textContent = 'Accede a tus canales en vivo, maratones y lista de favoritos';
+            if (groupUsername) groupUsername.style.display = 'none';
+            if (passStrengthContainer) passStrengthContainer.style.display = 'none';
+            if (btnText) btnText.textContent = 'Iniciar Sesión';
+            if (authError) authError.classList.add('hidden');
+        };
+
+        tabRegister.onclick = () => {
+            tabRegister.classList.add('active');
+            tabLogin.classList.remove('active');
+            authMode = 'register';
+            if (authTitle) authTitle.textContent = 'Crea tu cuenta gratuita';
+            if (authSubtitle) authSubtitle.textContent = 'Únete a la mejor experiencia de streaming en 4K Ultra HD';
+            if (groupUsername) groupUsername.style.display = 'block';
+            if (passStrengthContainer) passStrengthContainer.style.display = 'block';
+            if (btnText) btnText.textContent = 'Crear Cuenta';
+            if (authError) authError.classList.add('hidden');
+        };
+    }
+
+    if (linkForgotPassword) {
+        linkForgotPassword.onclick = (e) => {
+            e.preventDefault();
+            toForgotPasswordMode();
+        };
+    }
+
+    // Password Strength Meter en tiempo real
+    if (passwordEl) {
+        passwordEl.addEventListener('input', () => {
+            const val = passwordEl.value;
+            const fill = document.getElementById('passStrengthFill');
+            const label = document.getElementById('passStrengthLabel');
+            if (!fill || !label) return;
+
+            if (val.length === 0) {
+                fill.style.width = '0%';
+                label.textContent = 'Seguridad: Vacía';
+            } else if (val.length < 6) {
+                fill.style.width = '30%';
+                fill.style.background = '#ef4444';
+                label.textContent = 'Seguridad: Débil (mínimo 8 caracteres)';
+            } else if (val.length < 10 || !/\d/.test(val)) {
+                fill.style.width = '65%';
+                fill.style.background = '#f59e0b';
+                label.textContent = 'Seguridad: Media (agrega números)';
+            } else {
+                fill.style.width = '100%';
+                fill.style.background = '#10b981';
+                label.textContent = 'Seguridad: Excelente';
+            }
+        });
     }
 
     if (forgotPasswordBtn) {

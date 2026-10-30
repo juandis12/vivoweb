@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Check"
+  short_description: "Run specify check to verify that Spec Kit required tools (git…"
+  default_prompt: "Use $speckit-check to help with my current task: Run specify check to verify that Spec Kit required tools (git, claude, gemini, code, cursor-agent, windsurf, qwen, opencode, codex, shai, qoder, etc.) are installed and…"

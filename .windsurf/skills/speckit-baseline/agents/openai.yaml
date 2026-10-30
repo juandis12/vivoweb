@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Baseline"
+  short_description: "从现有源代码反向生成功能规格说明（spec）。当需要为遗留代码补写需求文档、在重构或迁移前固化现有行为、或接手无文档的代码库时…"
+  default_prompt: "使用 $speckit-baseline，围绕“从现有源代码反向生成功能规格说明（spec）。当需要为遗留代码补写需求文档、在重构或迁移前固化现有行为、或接手无文档的代码库时”处理我的当前需求。"

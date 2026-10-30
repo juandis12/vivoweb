@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Plan"
+  short_description: "Execute the implementation planning workflow using the plan…"
+  default_prompt: "Use $speckit-plan to help with my current task: Execute the implementation planning workflow using the plan template to generate design artifacts."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Specify"
+  short_description: "Create or update the feature specification from a natural…"
+  default_prompt: "Use $speckit-specify to help with my current task: Create or update the feature specification from a natural language feature description."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Install"
+  short_description: "Install the Specify CLI on the host machine (uv tool install…"
+  default_prompt: "Use $speckit-install to help with my current task: Install the Specify CLI on the host machine (uv tool install or uvx one-time); supports multiple OS, persistent or one-time install, and corporate or restricted-network…"

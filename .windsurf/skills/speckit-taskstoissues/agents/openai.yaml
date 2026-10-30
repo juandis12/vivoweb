@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Taskstoissues"
+  short_description: "Convert existing tasks into actionable, dependency-ordered…"
+  default_prompt: "Use $speckit-taskstoissues to help with my current task: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts."

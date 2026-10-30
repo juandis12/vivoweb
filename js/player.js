@@ -743,26 +743,21 @@ export const PLAYER_LOGIC = {
             this._startIframeTracking(seekSeconds, iframe);
             
             // Limpiar timers previos si existen
-            if (this.iframeErrorTimer) clearTimeout(this.iframeErrorTimer);
-
-            if (loader) {
-                // Aumentado a 15 segundos para dar margen a servidores lentos (vidsrc, streamtape, etc)
-                // y evitar el "falso error" que reporta el usuario.
-                this.iframeErrorTimer = setTimeout(() => {
-                    if (this.currentIsIframe && !iframe.src.includes('about:blank')) {
-                        console.warn('[VivoTV] El contenido tarda demasiado o falló. Intentando servidor alternativo.');
-                        this._tryNextServer(seekSeconds).then(success => {
-                            if (!success) this.showContentError(container, this.currentType);
-                        });
-                    }
-                }, 15000); 
+            if (this.iframeErrorTimer) {
+                clearTimeout(this.iframeErrorTimer);
+                this.iframeErrorTimer = null;
             }
 
+            // FIX: Ya NO cambiamos de servidor en automático con un temporizador rígido.
+            // Los anuncios de iframes (pre-roll) duran entre 15 y 30 segundos.
+            // Si el temporizador forzaba el cambio a los 15s, reiniciaba el reproductor
+            // e interrumpía la película o el anuncio en un bucle infinito.
+            // En su lugar, ocultamos el loader a los 3-4 segundos para que el usuario pueda
+            // interactuar con el reproductor y saltar el anuncio normalmente.
             if (loader) {
-                // Ocultar loader tras un tiempo razonable para permitir ver el reproductor del iframe
                 setTimeout(() => {
                     if (loader) loader.classList.add('hidden');
-                }, 4000);
+                }, 3500);
             }
         } else {
             iframe.classList.add('hidden');
@@ -875,26 +870,18 @@ export const PLAYER_LOGIC = {
                     }
                 }, { once: true });
 
-                // TV BOX SAFE MODE WEB: Si el video se estanca por > 6 segundos
-                // (stalled/waiting), intentar el siguiente servidor automáticamente.
-                // Causa principal de pantalla negra en TV Box: codec no soportado
-                // o buffer insuficiente con el decodificador de hardware.
+                // TV BOX & WEB SAFE BUFFERING: No cambiar de servidor apresuradamente.
+                // El buffering normal o pausas de anuncios pueden durar entre 10 y 20s.
                 let _stallTimer = null;
                 const _onStall = () => {
                     if (_stallTimer) clearTimeout(_stallTimer);
                     _stallTimer = setTimeout(() => {
-                        if (video.readyState < 3 && !video.ended) {
-                            console.warn('[Player] 📺 TV Box: Stream estancado > 6s. Intentando servidor alternativo...');
-                            this._tryNextServer(video.currentTime || seekSeconds).then(success => {
-                                if (!success) {
-                                    // Si no hay más servidores, recargamos el mismo con parámetros limpios
-                                    console.warn('[Player] Sin más servidores, recargando stream...');
-                                    video.load();
-                                    video.play().catch(() => {});
-                                }
-                            });
+                        if (video.readyState < 3 && !video.ended && !video.paused) {
+                            console.warn('[Player] Stream estancado > 25s. Intentando recargar buffer...');
+                            video.load();
+                            video.play().catch(() => {});
                         }
-                    }, 6000);
+                    }, 25000);
                 };
                 video.addEventListener('stalled', _onStall);
                 video.addEventListener('waiting', _onStall);

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Kit Implement"
+  short_description: "Execute the implementation plan by processing and executing…"
+  default_prompt: "Use $speckit-implement to help with my current task: Execute the implementation plan by processing and executing all tasks defined in tasks.md."
