@@ -17,11 +17,109 @@
 
 :root {
     --nf-side: 4%;
-    --nf-card-gap: 0.42vw;
-    --nf-row-gap: 2.8vw;
-    --nf-radius: 4px;
+    --nf-card-gap: 0.45vw;
+    --nf-row-gap: 2.6vw;
+    --nf-radius: 6px;
     --nf-ease: cubic-bezier(0.5, 0, 0.1, 1);
+    --nf-ease-hawkins: cubic-bezier(0.32, 0.94, 0.6, 1);
     --nf-ease-bob: cubic-bezier(0.21, 0, 0.07, 1);
+    --nf-ease-button: cubic-bezier(0.86, 0, 0.07, 1);
+    --nf-ease-billboard: cubic-bezier(0.165, 0.84, 0.44, 1);
+    --nf-ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* ============================================================================
+   0. NETFLIX PRODUCTION KEYFRAMES (Extracted from Netflix /browse & Hawkins)
+   ============================================================================ */
+@keyframes billboardOpacityFadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+@keyframes billboardScaleFadeIn {
+    0% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+}
+
+@keyframes logoTreatment {
+    0% {
+        opacity: 0;
+        transform: scale(0.94) translateY(1.1em);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes popInAnimation {
+    0% {
+        opacity: 0;
+        transform: scale(0.97) translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes bob-burnsEffectLeft {
+    0% {
+        transform: translateZ(0) scale(1);
+    }
+    100% {
+        transform: translate3d(-8px, 5px, 0) scale(1.06);
+    }
+}
+
+@keyframes jaw-burnsEffectLeft {
+    0% {
+        transform: translateZ(0) scale(1);
+    }
+    100% {
+        transform: translate3d(-14px, 8px, 0) scale(1.05);
+    }
+}
+
+@keyframes buttonFlash {
+    0% {
+        background: rgba(11, 18, 43, 0.75);
+    }
+    15% {
+        background: rgba(187, 134, 252, 0.78);
+    }
+    100% {
+        background: rgba(11, 18, 43, 0.75);
+    }
+}
+
+@keyframes nfModalEnter {
+    0% {
+        opacity: 0;
+        transform: scale(0.88);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes animateProfileGate {
+    0% {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulsateAnimation {
+    0% { background-color: #0b122b; }
+    25% { background-color: #1e2540; }
+    50% { background-color: #0b122b; }
+    100% { background-color: #0b122b; }
 }
 
 @media (max-width: 740px) {
@@ -83,13 +181,13 @@ header.navbar.scrolled,
     align-items: center !important;
 }
 
-/* Left-aligned primary links next to logo (Netflix desktop pattern) */
+/* Left-aligned primary links next to logo (Netflix 2026 Hawkins pill pattern) */
 .navbar nav,
 #mainNav {
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 20px !important;
+    gap: 6px !important;
     flex: 1 1 auto !important;
     margin-left: 8px !important;
 }
@@ -104,25 +202,36 @@ header.navbar.scrolled,
     font-family: var(--font-body), sans-serif !important;
     font-size: 0.875rem !important; /* 14px exact Netflix nav size */
     font-weight: 400 !important;
-    color: #e5e5e5 !important;
+    color: rgba(255, 255, 255, 0.78) !important;
     text-decoration: none !important;
-    padding: 4px 0 !important;
+    padding: 7px 14px !important;
+    border-radius: 9999px !important;
     letter-spacing: 0 !important;
-    transition: color 250ms ease !important;
+    transition:
+        background-color 200ms var(--nf-ease-hawkins),
+        color 200ms var(--nf-ease-hawkins),
+        transform 160ms var(--nf-ease-out-strong) !important;
     position: relative !important;
     white-space: nowrap !important;
 }
 
 .navbar nav a:hover,
 #mainNav a:hover {
-    color: #b3b3b3 !important;
+    color: #ffffff !important;
+    background: rgba(187, 134, 252, 0.14) !important;
     text-shadow: none !important;
+}
+
+.navbar nav a:active,
+#mainNav a:active {
+    transform: scale(0.97) !important;
 }
 
 .navbar nav a.active,
 #mainNav a.active {
     color: #ffffff !important;
     font-weight: 700 !important;
+    background: rgba(255, 255, 255, 0.14) !important;
     text-shadow: none !important;
     cursor: default !important;
 }
@@ -133,22 +242,26 @@ header.navbar.scrolled,
     display: none !important;
 }
 
-/* Surprise button styled as subtle Netflix nav item */
+/* Surprise button styled as subtle Netflix nav pill */
 .navbar nav a.btn-surprise-nav,
 #btnSurprise {
-    background: rgba(187, 134, 252, 0.12) !important;
+    background: rgba(187, 134, 252, 0.14) !important;
     border: 1px solid rgba(187, 134, 252, 0.35) !important;
-    border-radius: 4px !important;
-    padding: 4px 10px !important;
-    font-size: 0.8rem !important;
+    border-radius: 9999px !important;
+    padding: 6px 14px !important;
+    font-size: 0.82rem !important;
     font-weight: 600 !important;
     color: var(--primary) !important;
+    transition:
+        background-color 250ms var(--nf-ease-hawkins),
+        transform 350ms var(--nf-ease-button) !important;
 }
 
 .navbar nav a.btn-surprise-nav:hover,
 #btnSurprise:hover {
-    background: rgba(187, 134, 252, 0.22) !important;
+    background: rgba(187, 134, 252, 0.25) !important;
     color: #ffffff !important;
+    transform: scale(1.05) !important;
 }
 
 /* Right cluster: Search + Profile Avatar + Caret */
@@ -267,27 +380,42 @@ header.navbar.scrolled,
 }
 
 /* ============================================================================
-   2. DESKTOP BILLBOARD / HERO (#heroBanner / .hero-banner)
+   2. DESKTOP BILLBOARD / HERO (#heroBanner / .hero-banner — 2026 Framed Card)
    ============================================================================ */
 @media (min-width: 741px) {
     .hero-banner,
     #heroBanner {
         position: relative !important;
-        width: 100% !important;
-        height: 56.25vw !important;
-        max-height: 86vh !important;
-        min-height: 520px !important;
-        margin: 0 !important;
-        padding: 0 var(--nf-side) 10.5vw !important;
-        border-radius: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
+        width: calc(100% - (2 * var(--nf-side))) !important;
+        height: clamp(460px, 46vw, 720px) !important;
+        max-height: 80vh !important;
+        min-height: 450px !important;
+        margin: 72px auto 26px !important;
+        padding: 0 3.2vw 3.2vw !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        box-shadow:
+            0 24px 64px rgba(0, 0, 0, 0.78),
+            0 0 90px rgba(157, 78, 221, 0.14) !important;
         display: flex !important;
         align-items: flex-end !important;
         justify-content: flex-start !important;
         background-size: cover !important;
         background-position: center 18% !important;
         overflow: hidden !important;
+        animation:
+            billboardOpacityFadeIn 0.35s linear,
+            billboardScaleFadeIn 0.65s var(--nf-ease-out-strong) !important;
+        transition:
+            background-image 0.45s cubic-bezier(0.665, 0.235, 0.265, 0.8),
+            opacity 0.4s cubic-bezier(0.665, 0.235, 0.265, 0.8) !important;
+    }
+
+    .hero-banner.nf-billboard-enter,
+    #heroBanner.nf-billboard-enter {
+        animation:
+            billboardOpacityFadeIn 0.3s linear,
+            billboardScaleFadeIn 0.6s var(--nf-ease-out-strong) !important;
     }
 
     .hero-banner .hero-overlay {
@@ -296,19 +424,19 @@ header.navbar.scrolled,
         background:
             linear-gradient(
                 77deg,
-                rgba(6, 9, 18, 0.92) 0%,
-                rgba(6, 9, 18, 0.58) 38%,
-                rgba(6, 9, 18, 0.12) 68%,
-                transparent 88%
+                rgba(6, 9, 18, 0.88) 0%,
+                rgba(6, 9, 18, 0.52) 38%,
+                rgba(6, 9, 18, 0.10) 68%,
+                transparent 85%
             ),
             linear-gradient(
                 180deg,
-                rgba(6, 9, 18, 0.45) 0%,
-                transparent 18%,
-                transparent 58%,
-                rgba(6, 9, 18, 0.68) 80%,
-                var(--bg-base) 100%
+                rgba(6, 9, 18, 0.22) 0%,
+                transparent 28%,
+                rgba(6, 9, 18, 0.55) 75%,
+                rgba(6, 9, 18, 0.92) 100%
             ) !important;
+        transition: opacity 0.5s ease !important;
         z-index: 1 !important;
     }
 
@@ -316,15 +444,14 @@ header.navbar.scrolled,
         position: absolute !important;
         left: 0 !important;
         right: 0 !important;
-        bottom: -2px !important;
-        height: 14vw !important;
-        min-height: 110px !important;
+        bottom: 0 !important;
+        height: 9vw !important;
+        min-height: 80px !important;
         background: linear-gradient(
             180deg,
             transparent 0%,
-            rgba(6, 9, 18, 0.45) 38%,
-            rgba(6, 9, 18, 0.88) 74%,
-            var(--bg-base) 100%
+            rgba(6, 9, 18, 0.45) 48%,
+            rgba(6, 9, 18, 0.86) 100%
         ) !important;
         z-index: 2 !important;
         pointer-events: none !important;
@@ -333,9 +460,9 @@ header.navbar.scrolled,
     .hero-banner .hero-content {
         position: relative !important;
         z-index: 10 !important;
-        width: 42% !important;
+        width: 46% !important;
         min-width: 380px !important;
-        max-width: 600px !important;
+        max-width: 620px !important;
         margin: 0 !important;
         padding: 0 !important;
         display: flex !important;
@@ -343,6 +470,7 @@ header.navbar.scrolled,
         align-items: flex-start !important;
         text-align: left !important;
         gap: 10px !important;
+        transition: transform 1.2s var(--nf-ease-billboard) !important;
     }
 
     .hero-banner .hero-badges-group {
@@ -351,39 +479,44 @@ header.navbar.scrolled,
         flex-wrap: wrap !important;
         gap: 8px !important;
         margin-bottom: 2px !important;
+        animation: logoTreatment 0.7s var(--nf-ease-billboard) both !important;
     }
 
     .hero-banner #heroTitle {
         font-family: var(--font-display), sans-serif !important;
-        font-size: clamp(2.1rem, 3.6vw, 3.9rem) !important;
+        font-size: clamp(2.2rem, 3.8vw, 4.1rem) !important;
         font-weight: 900 !important;
-        line-height: 1.04 !important;
+        line-height: 1.02 !important;
         letter-spacing: -0.025em !important;
         color: #ffffff !important;
         margin: 0 !important;
+        transform-origin: left bottom !important;
         text-shadow: 0 4px 18px rgba(0, 0, 0, 0.75) !important;
+        animation: logoTreatment 0.85s var(--nf-ease-billboard) 40ms both !important;
     }
 
     .hero-banner .hero-meta-row {
         margin: 2px 0 !important;
-        font-size: 0.92rem !important;
+        font-size: 0.94rem !important;
         font-weight: 700 !important;
         gap: 10px !important;
+        animation: logoTreatment 0.85s var(--nf-ease-billboard) 90ms both !important;
     }
 
     .hero-banner #heroOverview,
     .hero-banner .hero-overview {
-        font-size: clamp(0.95rem, 1.12vw, 1.2rem) !important;
+        font-size: clamp(0.95rem, 1.1vw, 1.16rem) !important;
         line-height: 1.45 !important;
         font-weight: 400 !important;
         color: rgba(255, 255, 255, 0.92) !important;
-        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85) !important;
+        text-shadow: rgba(0, 0, 0, 0.45) 2px 2px 4px !important;
         display: -webkit-box !important;
         -webkit-line-clamp: 3 !important;
         -webkit-box-orient: vertical !important;
         overflow: hidden !important;
         margin: 0 0 6px 0 !important;
-        max-width: 540px !important;
+        max-width: 560px !important;
+        animation: logoTreatment 0.9s var(--nf-ease-billboard) 140ms both !important;
     }
 
     .hero-banner .hero-buttons {
@@ -392,11 +525,12 @@ header.navbar.scrolled,
         flex-wrap: nowrap !important;
         align-items: center !important;
         gap: 12px !important;
-        margin-top: 8px !important;
+        margin-top: 6px !important;
         width: auto !important;
+        animation: logoTreatment 0.95s var(--nf-ease-billboard) 190ms both !important;
     }
 
-    /* Netflix Play button (solid white, black text, 4px radius) */
+    /* Netflix 2026 Hawkins Play button (solid white pill, black text, scale(1.05) hover) */
     .hero-banner .hero-btn-play,
     #btnHeroPlay {
         width: auto !important;
@@ -405,93 +539,113 @@ header.navbar.scrolled,
         background: #ffffff !important;
         color: #000000 !important;
         border: none !important;
-        border-radius: var(--nf-radius) !important;
-        padding: 0.68rem 1.75rem 0.68rem 1.45rem !important;
-        font-size: clamp(0.95rem, 1.08vw, 1.15rem) !important;
+        border-radius: 9999px !important;
+        height: 44px !important;
+        padding: 0 24px 0 20px !important;
+        font-size: 1rem !important;
         font-weight: 700 !important;
         display: inline-flex !important;
         align-items: center !important;
         gap: 10px !important;
-        box-shadow: none !important;
-        transition: background-color 180ms ease, opacity 180ms ease !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+        transition:
+            transform 350ms var(--nf-ease-button),
+            background-color 250ms var(--nf-ease-hawkins),
+            opacity 200ms ease !important;
     }
 
     .hero-banner .hero-btn-play:hover,
     #btnHeroPlay:hover {
-        background: rgba(255, 255, 255, 0.78) !important;
-        transform: none !important;
-        box-shadow: none !important;
+        background: rgba(255, 255, 255, 0.86) !important;
+        transform: scale(1.05) !important;
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45) !important;
     }
 
-    /* Netflix More Info button (translucent slate/navy, white text, 4px radius) */
+    .hero-banner .hero-btn-play:active,
+    #btnHeroPlay:active {
+        transform: scale(0.97) !important;
+        transition-duration: 100ms !important;
+    }
+
+    /* Netflix 2026 Hawkins More Info button (translucent navy glass pill, white text) */
     .hero-banner .hero-btn-info,
     #btnHeroInfo {
         width: auto !important;
         flex: 0 0 auto !important;
         white-space: nowrap !important;
-        background: rgba(45, 51, 78, 0.75) !important;
+        background: rgba(45, 51, 78, 0.72) !important;
         color: #ffffff !important;
-        border: none !important;
-        border-radius: var(--nf-radius) !important;
-        padding: 0.68rem 1.75rem 0.68rem 1.45rem !important;
-        font-size: clamp(0.95rem, 1.08vw, 1.15rem) !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        border-radius: 9999px !important;
+        height: 44px !important;
+        padding: 0 24px !important;
+        font-size: 1rem !important;
         font-weight: 700 !important;
         display: inline-flex !important;
         align-items: center !important;
         gap: 10px !important;
-        backdrop-filter: blur(8px) !important;
-        -webkit-backdrop-filter: blur(8px) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
         box-shadow: none !important;
-        transition: background-color 180ms ease !important;
+        transition:
+            transform 350ms var(--nf-ease-button),
+            background-color 250ms var(--nf-ease-hawkins) !important;
     }
 
     .hero-banner .hero-btn-info:hover,
     #btnHeroInfo:hover {
-        background: rgba(45, 51, 78, 0.48) !important;
-        transform: none !important;
+        background: rgba(45, 51, 78, 0.52) !important;
+        transform: scale(1.05) !important;
+    }
+
+    .hero-banner .hero-btn-info:active,
+    #btnHeroInfo:active {
+        transform: scale(0.97) !important;
+        transition-duration: 100ms !important;
     }
 
     /* Position hero indicators on the right above maturity badge */
     .hero-banner .hero-indicators,
     #heroIndicators {
         position: absolute !important;
-        right: var(--nf-side) !important;
-        bottom: 15vw !important;
+        right: 2.8vw !important;
+        bottom: 6.2vw !important;
         left: auto !important;
         width: auto !important;
         z-index: 15 !important;
         margin: 0 !important;
     }
 
-    /* Right-edge Netflix maturity badge (e.g., "16+") */
+    /* Bottom-right Netflix badge (e.g., "16+") */
     .hero-maturity-tag {
         position: absolute !important;
-        right: 0 !important;
-        bottom: 10.5vw !important;
+        right: 2.8vw !important;
+        bottom: 2.8vw !important;
         z-index: 15 !important;
         display: flex !important;
         align-items: center !important;
-        height: 2.3vw !important;
-        min-height: 30px !important;
-        padding: 0 3.2vw 0 14px !important;
-        background: rgba(11, 18, 43, 0.72) !important;
+        height: 32px !important;
+        padding: 0 14px !important;
+        background: rgba(6, 9, 18, 0.78) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
         border-left: 3px solid var(--primary) !important;
+        border-radius: 6px !important;
         color: #ffffff !important;
         font-family: var(--font-body), sans-serif !important;
-        font-size: clamp(0.8rem, 0.98vw, 1.05rem) !important;
+        font-size: 0.85rem !important;
         font-weight: 700 !important;
         letter-spacing: 0.03em !important;
-        backdrop-filter: blur(6px) !important;
+        backdrop-filter: blur(8px) !important;
         pointer-events: none !important;
     }
 }
 
-/* Pull first catalog row into the bottom vignette of the billboard on desktop */
+/* Catalog rows wrapper below framed billboard on desktop */
 @media (min-width: 741px) {
     .catalogs-wrapper {
         position: relative !important;
         z-index: 20 !important;
-        margin-top: clamp(-125px, -7vw, -55px) !important;
+        margin-top: 0 !important;
         padding-top: 0 !important;
         padding-bottom: 40px !important;
         display: flex !important;
@@ -508,6 +662,7 @@ header.navbar.scrolled,
     margin: 0 0 var(--nf-row-gap) 0 !important;
     padding: 0 !important;
     z-index: 2 !important;
+    transition: transform 0.54s var(--nf-ease) !important;
 }
 
 .catalog-row:hover,
@@ -534,7 +689,7 @@ header.navbar.scrolled,
     display: inline-flex !important;
     align-items: center !important;
     gap: 8px !important;
-    transition: color 200ms ease !important;
+    transition: color 200ms var(--nf-ease-hawkins) !important;
     cursor: pointer !important;
 }
 
@@ -542,24 +697,30 @@ header.navbar.scrolled,
     color: #ffffff !important;
 }
 
-/* Netflix "Explorar todo ›" reveal on row hover */
+/* Netflix "Explorar todo ›" (.see-all-link) slide-and-fade reveal on row hover */
 @media (min-width: 741px) {
     .catalog-row .row-title::after {
         content: 'Explorar todo ›' !important;
         font-family: var(--font-body), sans-serif !important;
-        font-size: 0.78rem !important;
+        font-size: 0.82rem !important;
         font-weight: 700 !important;
         color: var(--primary) !important;
-        margin-left: 8px !important;
+        margin-left: 4px !important;
+        max-width: 0 !important;
         opacity: 0 !important;
-        transform: translateX(-8px) !important;
-        transition: opacity 280ms ease, transform 280ms ease !important;
+        overflow: hidden !important;
+        transform: translateX(0) !important;
+        transition:
+            max-width 0.75s var(--nf-ease-hawkins),
+            opacity 0.75s var(--nf-ease-hawkins),
+            transform 0.54s var(--nf-ease) !important;
         white-space: nowrap !important;
     }
 
     .catalog-row:hover .row-title::after {
+        max-width: 200px !important;
         opacity: 1 !important;
-        transform: translateX(0) !important;
+        transform: translateX(0.6vw) !important;
     }
 }
 
@@ -569,7 +730,7 @@ header.navbar.scrolled,
     align-items: center !important;
     gap: 2px !important;
     opacity: 0 !important;
-    transition: opacity 220ms ease !important;
+    transition: opacity 220ms var(--nf-ease-hawkins) !important;
     margin-left: auto !important;
 }
 
@@ -581,11 +742,12 @@ header.navbar.scrolled,
     width: 12px !important;
     height: 2px !important;
     background: rgba(255, 255, 255, 0.28) !important;
-    transition: background-color 200ms ease !important;
+    transition: background-color 200ms var(--nf-ease-hawkins), transform 200ms var(--nf-ease-hawkins) !important;
 }
 
 .row-pagination-dash.active {
     background: var(--primary) !important;
+    transform: scaleY(1.35) !important;
 }
 
 .carousel-wrapper {
@@ -626,7 +788,7 @@ header.navbar.scrolled,
         background: rgba(6, 9, 18, 0.55) !important;
         border: none !important;
         color: #ffffff !important;
-        font-size: 1.8rem !important;
+        font-size: 2rem !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -635,16 +797,21 @@ header.navbar.scrolled,
         z-index: 70 !important;
         box-shadow: none !important;
         backdrop-filter: none !important;
-        transition: opacity 200ms ease, background-color 200ms ease !important;
+        transition:
+            opacity 200ms var(--nf-ease-hawkins),
+            background-color 200ms var(--nf-ease-hawkins),
+            transform 100ms ease-out !important;
     }
 
     .carousel-arrow-left {
         left: 0 !important;
+        transform-origin: 55% 50% !important;
         border-radius: 0 var(--nf-radius) var(--nf-radius) 0 !important;
     }
 
     .carousel-arrow-right {
         right: 0 !important;
+        transform-origin: 45% 50% !important;
         border-radius: var(--nf-radius) 0 0 var(--nf-radius) !important;
     }
 
@@ -654,8 +821,8 @@ header.navbar.scrolled,
     }
 
     .carousel-arrow:hover {
-        background: rgba(6, 9, 18, 0.82) !important;
-        transform: none !important;
+        background: rgba(6, 9, 18, 0.85) !important;
+        transform: scale(1.25) !important;
         color: var(--primary) !important;
     }
 }
@@ -812,6 +979,9 @@ header.navbar.scrolled,
 @media (hover: hover) and (pointer: fine) and (min-width: 741px) {
     .movie-card {
         transform-origin: center center !important;
+        transition:
+            transform 220ms var(--nf-ease-hawkins) 0ms,
+            z-index 0ms 220ms !important;
     }
 
     .carousel .movie-card:first-child {
@@ -823,14 +993,21 @@ header.navbar.scrolled,
     }
 
     .movie-card:hover {
-        transform: scale(1.34) translateY(-10%) !important;
+        transform: scale(1.36) translateY(-10%) !important;
         z-index: 800 !important;
-        transition: transform 280ms var(--nf-ease-bob) 320ms, z-index 0ms 320ms !important;
+        transition:
+            transform 360ms var(--nf-ease-hawkins) 300ms,
+            z-index 0ms 300ms !important;
     }
 
     .movie-card:hover .movie-card-inner {
         border-radius: var(--nf-radius) var(--nf-radius) 0 0 !important;
-        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.85) !important;
+        box-shadow: 0 16px 38px rgba(0, 0, 0, 0.88) !important;
+    }
+
+    /* Netflix Ken Burns slow pan/zoom on hovered card artwork (bob-burnsEffectLeft) */
+    .movie-card:hover .movie-card-inner img {
+        animation: bob-burnsEffectLeft 6s ease-out 300ms forwards !important;
     }
 
     .movie-card .movie-info-mini {
@@ -848,7 +1025,10 @@ header.navbar.scrolled,
         visibility: hidden !important;
         transform: translateY(-4px) !important;
         pointer-events: none !important;
-        transition: opacity 200ms ease 0ms, transform 200ms ease 0ms, visibility 0ms 200ms !important;
+        transition:
+            opacity 180ms var(--nf-ease-hawkins) 0ms,
+            transform 180ms var(--nf-ease-hawkins) 0ms,
+            visibility 0ms 180ms !important;
         z-index: 801 !important;
     }
 
@@ -857,7 +1037,10 @@ header.navbar.scrolled,
         visibility: visible !important;
         transform: translateY(0) !important;
         pointer-events: auto !important;
-        transition: opacity 240ms ease 320ms, transform 240ms ease 320ms, visibility 0ms 320ms !important;
+        transition:
+            opacity 260ms var(--nf-ease-hawkins) 300ms,
+            transform 260ms var(--nf-ease-hawkins) 300ms,
+            visibility 0ms 300ms !important;
     }
 
     .movie-info-mini .mini-title {
@@ -877,6 +1060,7 @@ header.navbar.scrolled,
         margin-bottom: 8px !important;
     }
 
+    /* Netflix .nf-svg-button circular controls with scale(1.13) & buttonFlash */
     .movie-info-mini .btn-mini,
     .movie-info-mini .mini-btn {
         width: 28px !important;
@@ -890,6 +1074,28 @@ header.navbar.scrolled,
         border: 1.5px solid rgba(255, 255, 255, 0.55) !important;
         background: rgba(11, 18, 43, 0.75) !important;
         color: #ffffff !important;
+        transition:
+            transform 350ms var(--nf-ease-button),
+            border-color 200ms var(--nf-ease-hawkins),
+            background-color 200ms var(--nf-ease-hawkins) !important;
+    }
+
+    .movie-info-mini .btn-mini:hover,
+    .movie-info-mini .mini-btn:hover {
+        transform: scale(1.13) !important;
+        border-color: #ffffff !important;
+        background: rgba(30, 37, 64, 0.92) !important;
+    }
+
+    .movie-info-mini .btn-mini:active,
+    .movie-info-mini .mini-btn:active {
+        transform: scale(0.95) !important;
+        transition-duration: 100ms !important;
+    }
+
+    .movie-info-mini .btn-mini.clicked,
+    .movie-info-mini .mini-btn.clicked {
+        animation: buttonFlash 0.4s linear 1 !important;
     }
 
     .movie-info-mini .btn-mini.btn-play,
@@ -897,6 +1103,12 @@ header.navbar.scrolled,
         background: #ffffff !important;
         color: #000000 !important;
         border: none !important;
+    }
+
+    .movie-info-mini .btn-mini.btn-play:hover,
+    .movie-info-mini .mini-btn.btn-play:hover {
+        background: rgba(255, 255, 255, 0.85) !important;
+        transform: scale(1.13) !important;
     }
 
     .movie-info-mini .btn-mini.btn-more-info,
@@ -1018,6 +1230,7 @@ header.navbar.scrolled,
     align-items: flex-start !important;
     justify-content: center !important;
     padding: 32px 0 64px !important;
+    transition: opacity 250ms var(--nf-ease-hawkins) 67ms !important;
 }
 
 #detailModal .modal-content.glass-panel {
@@ -1027,10 +1240,15 @@ header.navbar.scrolled,
     max-height: none !important;
     margin: 0 auto !important;
     background: var(--bg-surface) !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.92) !important;
     overflow: hidden !important;
+    animation: nfModalEnter 533ms var(--nf-ease-hawkins) both !important;
+}
+
+#detailModal .modal-backdrop-img {
+    animation: jaw-burnsEffectLeft 8s ease-out forwards !important;
 }
 
 #detailModal .close-modal {
@@ -1043,6 +1261,11 @@ header.navbar.scrolled,
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     color: #ffffff !important;
     font-size: 1.35rem !important;
+    transition: transform 350ms var(--nf-ease-button), background-color 200ms var(--nf-ease-hawkins) !important;
+}
+
+#detailModal .close-modal:hover {
+    transform: scale(1.13) !important;
 }
 
 #detailModal .modal-viewport {
@@ -1067,15 +1290,27 @@ header.navbar.scrolled,
     letter-spacing: -0.02em !important;
     text-transform: none !important;
     margin-bottom: 14px !important;
+    animation: logoTreatment 0.75s var(--nf-ease-billboard) 80ms both !important;
 }
 
 #detailModal .btn-modal-play {
     background: #ffffff !important;
     color: #000000 !important;
-    border-radius: var(--nf-radius) !important;
+    border-radius: 9999px !important;
     padding: 10px 28px !important;
     font-size: 1rem !important;
     font-weight: 700 !important;
+    transition: transform 350ms var(--nf-ease-button), background-color 200ms var(--nf-ease-hawkins) !important;
+}
+
+#detailModal .btn-modal-play:hover {
+    transform: scale(1.05) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+}
+
+#detailModal .btn-modal-play:active {
+    transform: scale(0.97) !important;
+    transition-duration: 100ms !important;
 }
 
 #detailModal .modal-details-grid {
@@ -1131,10 +1366,44 @@ header.navbar.scrolled,
 }
 
 /* ============================================================================
-   10. PROFILES PAGE ("¿QUIÉN ESTÁ VIENDO AHORA?")
+   10. PROFILES PAGE ("¿QUIÉN ESTÁ VIENDO AHORA?" — Netflix 2026 Hawkins Gate)
    ============================================================================ */
+.profiles-container {
+    animation: animateProfileGate 0.45s var(--nf-ease-hawkins) forwards !important;
+}
+
+.profiles-container .profile-card {
+    padding: 12px !important;
+    border-radius: 12px !important;
+    transition:
+        background-color 220ms var(--nf-ease-hawkins),
+        transform 220ms var(--nf-ease-hawkins) !important;
+}
+
+.profiles-container .profile-card:hover,
+.profiles-container .profile-card:focus-visible {
+    background: rgba(187, 134, 252, 0.1) !important;
+    transform: translateY(-2px) !important;
+}
+
 .profiles-container .profile-avatar {
-    border-radius: 6px !important;
+    border-radius: 8px !important;
+}
+
+.profiles-container .btn-manage-profiles {
+    border-radius: 9999px !important;
+    padding: 10px 26px !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    transition:
+        border-color 220ms var(--nf-ease-hawkins),
+        background-color 220ms var(--nf-ease-hawkins),
+        transform 350ms var(--nf-ease-button) !important;
+}
+
+.profiles-container .btn-manage-profiles:hover {
+    border-color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    transform: scale(1.04) !important;
 }
 
 /* ============================================================================
@@ -1501,10 +1770,21 @@ header.navbar.scrolled,
 }
 
 @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after,
     .movie-card,
     .movie-card:hover,
     .movie-card .movie-info-mini,
+    .movie-card:hover .movie-card-inner img,
+    .hero-banner,
+    .hero-content > *,
+    #detailModal .modal-content.glass-panel,
+    #detailModal .modal-backdrop-img,
+    .profiles-grid,
     .carousel {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         transition-delay: 0ms !important;
         scroll-behavior: auto !important;

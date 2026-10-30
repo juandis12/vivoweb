@@ -62,6 +62,15 @@ export const CATALOG_UI = {
         heroBanner.style.opacity = '0';
         
         const updateUI = () => {
+            const heroContent = heroBanner.querySelector('.hero-content');
+            if (heroContent) {
+                heroContent.style.animation = 'none';
+                Array.from(heroContent.children).forEach(el => {
+                    el.style.animation = 'none';
+                    void el.offsetWidth;
+                    el.style.animation = '';
+                });
+            }
             const backdrop = movie.backdrop_url || (movie.backdrop_path ? `${CONFIG.TMDB_IMAGE_HERO}${movie.backdrop_path}` : '');
             if (backdrop) {
                 // Pre-carga agresiva para evitar parpadeo blanco
@@ -380,6 +389,15 @@ export const CATALOG_UI = {
         });
         card.addEventListener('mouseleave', () => {
             if (prefetchTimer) clearTimeout(prefetchTimer);
+        });
+
+        card.querySelectorAll('.mini-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.remove('clicked');
+                void btn.offsetWidth;
+                btn.classList.add('clicked');
+                setTimeout(() => btn.classList.remove('clicked'), 420);
+            });
         });
 
         card.addEventListener('click', openDetail);
