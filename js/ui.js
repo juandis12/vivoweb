@@ -71,6 +71,10 @@ export const CATALOG_UI = {
                     heroBanner.style.backgroundImage = `url('${backdrop}')`;
                     heroBanner.style.opacity = '1';
                 };
+                img.onerror = () => {
+                    heroBanner.style.backgroundImage = 'radial-gradient(ellipse at 70% 25%, rgba(157, 78, 221, 0.42) 0%, rgba(19, 26, 51, 0.88) 55%, #060912 100%)';
+                    heroBanner.style.opacity = '1';
+                };
             } else {
                 heroBanner.style.opacity = '1';
             }
@@ -81,6 +85,8 @@ export const CATALOG_UI = {
             const year   = (movie.release_date || movie.first_air_date || '').split('-')[0];
             const rating = movie.vote_average ? movie.vote_average.toFixed(1) : (movie.rating || '9.5');
             const badge  = document.querySelector('.hero-badge');
+            const maturityEl = document.getElementById('heroMaturity');
+            if (maturityEl) maturityEl.textContent = movie.adult ? '18+' : '16+';
             
             const type = movie.content_type || movie.media_type || (movie.first_air_date ? 'tv' : 'movie');
             if (badge) badge.textContent = (type === 'tv' ? 'SERIE DESTACADA' : 'PELÍCULA DESTACADA');
@@ -148,6 +154,59 @@ export const CATALOG_UI = {
         container.appendChild(skeletonWrap);
     },
 
+    setupRowPaginationAndArrows(container) {
+        if (!container) return;
+        const section = container.closest('.catalog-row');
+        const header = section?.querySelector('.row-header');
+        const wrapper = container.closest('.carousel-wrapper');
+
+        if (header) {
+            let pag = header.querySelector('.row-pagination');
+            if (!pag) {
+                pag = document.createElement('div');
+                pag.className = 'row-pagination';
+                header.appendChild(pag);
+            }
+            const totalItems = container.children.length;
+            const pageCount = Math.max(2, Math.min(6, Math.ceil(totalItems / 5)));
+            pag.innerHTML = Array.from({ length: pageCount }, (_, i) =>
+                `<span class="row-pagination-dash${i === 0 ? ' active' : ''}"></span>`
+            ).join('');
+
+            const updateDashes = () => {
+                const maxScroll = Math.max(1, container.scrollWidth - container.clientWidth);
+                const ratio = Math.min(1, Math.max(0, container.scrollLeft / maxScroll));
+                const activeIdx = Math.min(pageCount - 1, Math.round(ratio * (pageCount - 1)));
+                pag.querySelectorAll('.row-pagination-dash').forEach((d, idx) => {
+                    d.classList.toggle('active', idx === activeIdx);
+                });
+            };
+
+            if (!container.dataset.pagBound) {
+                container.addEventListener('scroll', updateDashes, { passive: true });
+                container.dataset.pagBound = 'true';
+            }
+        }
+
+        if (wrapper && !wrapper.dataset.arrowsBound) {
+            const leftBtn = wrapper.querySelector('.carousel-arrow-left');
+            const rightBtn = wrapper.querySelector('.carousel-arrow-right');
+            if (leftBtn) {
+                leftBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    container.scrollBy({ left: -Math.round(container.clientWidth * 0.9), behavior: 'smooth' });
+                };
+            }
+            if (rightBtn) {
+                rightBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    container.scrollBy({ left: Math.round(container.clientWidth * 0.9), behavior: 'smooth' });
+                };
+            }
+            wrapper.dataset.arrowsBound = 'true';
+        }
+    },
+
     renderCarousel(containerId, items, typeOverride = null, availableIds = new Set(), titleOverride = null) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -170,7 +229,7 @@ export const CATALOG_UI = {
         const isRankedSection = containerId === 'trendingCarousel';
         
         items.forEach((item, index) => {
-            if (!item.poster_path && !item.poster_url) return;
+            if (!item.poster_path && !item.poster_url && !item.backdrop_path && !item.backdrop_url) return;
             const type = typeOverride || item.content_type || item.media_type || (containerId.toLowerCase().includes('tv') ? 'tv' : 'movie');
             const id = item.id || item.tmdb_id;
             const isAvail = id ? _ids.has(id.toString()) : false;
@@ -181,6 +240,7 @@ export const CATALOG_UI = {
             fragment.appendChild(card);
         });
         container.appendChild(fragment);
+        this.setupRowPaginationAndArrows(container);
     },
 
     createMovieCard(item, type, isAvailable = false, rank = null, progress = null) {
@@ -196,6 +256,7 @@ export const CATALOG_UI = {
         card.dataset.tmdbId = id;
         card.dataset.type = type || item.content_type || item.media_type;
         card.dataset.dbAvailable = isAvailable ? 'true' : 'false';
+        card.tabIndex = 0;
 
         // Extraer y asignar IDs de géneros para el filtrado en cliente
         const genresArr = item.genres || item.genre_ids || [];
@@ -209,27 +270,30 @@ export const CATALOG_UI = {
 
         const year   = (item.release_date || item.first_air_date || '').split('-')[0];
         const rating = item.vote_average ? item.vote_average.toFixed(1) : (item.rating || '9.5');
-        const title  = (item.title || item.name || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        const matchPct = Math.min(99, Math.max(78, Math.round(parseFloat(rating) * 10)));
+        const rawTitle = item.title || item.name || 'VivoTV';
+        const title  = rawTitle.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
         const posterImg = item.poster_url || (item.poster_path ? `${CONFIG.TMDB_IMAGE_CARD}${item.poster_path}` : 'assets/no-poster.png');
-        const genresList = (item.genre_ids || []).slice(0, 3).map(id => this.getGenreName(id)).filter(Boolean).join(' • ');
+        const backdropImg = item.backdrop_url || (item.backdrop_path ? `https://image.tmdb.org/t/p/w780${item.backdrop_path}` : posterImg);
+        const genresList = (item.genre_ids || []).slice(0, 3).map(gid => this.getGenreName(gid)).filter(Boolean).join(' • ') || (type === 'tv' ? 'Serie de TV' : 'Película');
         const isWatched = progress && progress >= 95;
 
         const isFav = window.VIVOTV_FAVORITES?.has(id);
         const altText = `Ver ${type === 'tv' ? 'serie' : 'película'} ${title} online gratis en HD - VIVOTV`;
+
+        const mediaMarkup = rank
+            ? `<img src="${posterImg}" alt="${altText}" loading="lazy">`
+            : `<picture>
+                   <source media="(min-width: 741px)" srcset="${backdropImg}">
+                   <img src="${posterImg}" alt="${altText}" loading="lazy">
+               </picture>
+               <div class="card-backdrop-title">${title}</div>`;
+
         card.innerHTML = `
             ${rank ? `<div class="rank-number">${rank}</div>` : ''}
             <div class="movie-card-inner">
-                <img src="${posterImg}" alt="${altText}" loading="lazy" 
-                     onerror="if(window.reportMaintenanceId){ 
-                        const id = this.closest('.movie-card').dataset.tmdbId;
-                        this.closest('.movie-card').classList.add('in-maintenance');
-                        this.closest('.movie-card').classList.remove('is-available');
-                        const b = this.closest('.movie-card').querySelector('.badge-container');
-                        if(b) b.innerHTML = '<div class=\'maintenance-badge\'>EN MANTENIMIENTO</div>';
-                        window.reportMaintenanceId(id);
-                        this.src='https://images.weserv.nl/?url=ssl:placehold.jp/24/2a1b5e/ffffff/300x450.png?text=VIVO+TV+MANTENIMIENTO';
-                     }">
+                ${mediaMarkup}
                 <div class="movie-card-title">${title}</div>
                 <div class="badge-container">
                     ${isMaintenance ? `
@@ -252,25 +316,48 @@ export const CATALOG_UI = {
                         <div class="card-progress-fill" style="width: ${progress}%"></div>
                     </div>
                 ` : ''}
-                
-                <!-- Netflix-style Hover Info -->
-                <div class="movie-info-mini">
-                    <div class="mini-actions">
-                        <button class="mini-btn btn-play">${isMaintenance ? '🔧' : '▶'}</button>
-                        <button class="mini-btn btn-add-fav ${isFav ? 'added-to-list' : ''}" 
-                                onclick="event.stopPropagation(); window.VIVOTV_TOGGLE_FAVORITE('${id}', '${type}', this)">
-                            ${isFav ? '✓' : '+'}
-                        </button>
-                        <button class="mini-btn btn-more-info">▼</button>
-                    </div>
-                    <div class="mini-meta">
-                        <span class="match">${rating} Match</span>
-                        <span class="year">${year}</span>
-                        <span class="hd-label">HD</span>
-                    </div>
-                    <div class="mini-genres">${genresList}</div>
+            </div>
+            <!-- Netflix-style Hover Info Drawer (Direct child of .movie-card so it is never clipped) -->
+            <div class="movie-info-mini">
+                <div class="mini-title">${title}</div>
+                <div class="mini-actions">
+                    <button class="mini-btn btn-mini btn-play" title="Reproducir">${isMaintenance ? '🔧' : '▶'}</button>
+                    <button class="mini-btn btn-mini btn-add-fav ${isFav ? 'added-to-list' : ''}" title="Mi Lista">
+                        ${isFav ? '✓' : '+'}
+                    </button>
+                    <button class="mini-btn btn-mini btn-like" title="Me gusta">👍</button>
+                    <button class="mini-btn btn-mini btn-more-info" title="Más información">⌄</button>
                 </div>
+                <div class="mini-meta">
+                    <span class="match">${matchPct}% para ti</span>
+                    <span class="age-badge">16+</span>
+                    <span class="year">${year}</span>
+                    <span class="hd-label">HD</span>
+                </div>
+                <div class="mini-genres">${genresList}</div>
             </div>`;
+
+        const imgEl = card.querySelector('img');
+        if (imgEl) {
+            imgEl.addEventListener('error', () => {
+                if (imgEl.dataset.fallbackApplied) return;
+                imgEl.dataset.fallbackApplied = 'true';
+                const cleanT = rawTitle.replace(/[&<>'"]/g, '').slice(0, 20);
+                const fallbackSvg = `data:image/svg+xml;charset=UTF-8,` + encodeURIComponent(
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">` +
+                    `<defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">` +
+                    `<stop offset="0%" stop-color="#131a33"/><stop offset="60%" stop-color="#2a1b5e"/><stop offset="100%" stop-color="#060912"/>` +
+                    `</linearGradient></defs>` +
+                    `<rect width="100%" height="100%" fill="url(#g)"/>` +
+                    `<text x="50%" y="175" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="800" font-size="24">${cleanT}</text>` +
+                    `<text x="50%" y="210" text-anchor="middle" fill="#bb86fc" font-family="sans-serif" font-weight="700" font-size="15">VIVOTV</text>` +
+                    `</svg>`
+                );
+                const srcEl = card.querySelector('source');
+                if (srcEl) srcEl.srcset = fallbackSvg;
+                imgEl.src = fallbackSvg;
+            }, { once: true });
+        }
 
         const openDetail = () => {
             if (isMaintenance) {
@@ -296,6 +383,22 @@ export const CATALOG_UI = {
         });
 
         card.addEventListener('click', openDetail);
+        const favBtn = card.querySelector('.btn-add-fav');
+        if (favBtn) {
+            favBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.VIVOTV_TOGGLE_FAVORITE) {
+                    window.VIVOTV_TOGGLE_FAVORITE(id, type, favBtn);
+                }
+            });
+        }
+        const likeBtn = card.querySelector('.btn-like');
+        if (likeBtn) {
+            likeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                likeBtn.classList.toggle('liked');
+            });
+        }
         const moreInfoBtn = card.querySelector('.btn-more-info');
         if (moreInfoBtn) {
             moreInfoBtn.addEventListener('click', (e) => { 
@@ -339,6 +442,7 @@ export const CATALOG_UI = {
             fragment.appendChild(card);
         });
         container.appendChild(fragment);
+        this.setupRowPaginationAndArrows(container);
     },
 
     async renderSimilar(id, type, availableIds) {
@@ -364,7 +468,7 @@ export const CATALOG_UI = {
             const data = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${id}/similar`);
             grid.innerHTML = '';
             
-            const results = (data.results || []).slice(0, 12);
+            const results = (data.results || []).slice(0, 9);
             if (results.length === 0) {
                 similarSection.classList.add('hidden');
                 return;
@@ -434,15 +538,10 @@ export const UI_EFFECTS = {
         const navbar = document.getElementById('navbar');
         if (!navbar) return;
         window.addEventListener('scroll', () => {
-            const scrolled = window.scrollY > 100;
+            const scrolled = window.scrollY > 15;
             navbar.classList.toggle('scrolled', scrolled);
-            if (scrolled) {
-                const opacity = Math.min(0.95, 0.4 + (window.scrollY - 100) / 800);
-                navbar.style.background = `rgba(9, 9, 11, ${opacity})`;
-            } else {
-                navbar.style.background = '';
-            }
-        });
+            navbar.style.background = '';
+        }, { passive: true });
     },
 
     initMobileNavIndicator() {

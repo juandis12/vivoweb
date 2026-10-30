@@ -75,6 +75,7 @@
 
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <link rel="stylesheet" href="styles.css?v=1.0.1">
+    <link rel="stylesheet" href="./netflix-layout.css?v=1.0.0">
 
     <!-- Pre-conexiones de alto rendimiento -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -216,9 +217,16 @@
     <main id="dashboardSection" class="dashboard-container hidden">
 
         <!-- Hero Banner Dinámico (HBO Max + Netflix + Disney+ Style) -->
+        <div class="mobile-category-pills" id="mobileCategoryPills">
+            <a href="series.html" class="mobile-category-pill">Series</a>
+            <a href="peliculas.html" class="mobile-category-pill">Películas</a>
+            <a href="anime.html" class="mobile-category-pill">Anime</a>
+            <a href="milista.html" class="mobile-category-pill">Mi Lista</a>
+        </div>
         <section class="hero-banner" id="heroBanner">
             <div class="hero-overlay"></div>
             <div class="hero-vignette"></div>
+            <div class="hero-maturity-tag" id="heroMaturity">16+</div>
             <div class="hero-genre-badge" id="heroGenre"></div>
             <div class="hero-content">
                 <div class="hero-badges-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
@@ -678,9 +686,6 @@
             </div>
         </div>
     </div>
-
-    <!-- App principal (catálogo, carruseles, búsqueda) -->
-    <script src="./js/app.js?v=wp5" type="module"></script>
     <!-- Registro de PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {

@@ -116,15 +116,10 @@ function initNavbarScroll() {
     const navbar = document.getElementById('navbar');
     if (!navbar) return;
     window.addEventListener('scroll', () => {
-        const scrolled = window.scrollY > 100;
+        const scrolled = window.scrollY > 15;
         navbar.classList.toggle('scrolled', scrolled);
-        if (scrolled) {
-            const opacity = Math.min(0.95, 0.4 + (window.scrollY - 100) / 800);
-            navbar.style.background = `rgba(9, 9, 11, ${opacity})`;
-        } else {
-            navbar.style.background = '';
-        }
-    });
+        navbar.style.background = '';
+    }, { passive: true });
 }
 
 // ================================================
