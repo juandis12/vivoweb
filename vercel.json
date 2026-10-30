@@ -1,0 +1,25 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-src 'self' https://vimeus.com https://*.vimeus.com https://vimeos.net https://*.vimeos.net https://vidsrc.xyz https://*.vidsrc.xyz https://vidsrc.to https://*.vidsrc.to https://vidsrc.me https://*.vidsrc.me https://www.2embed.cc https://*.2embed.cc https://2embed.to https://*.2embed.to https://multiembed.mov https://*.multiembed.mov https://www.youtube.com https://player.vimeo.com https://www.facebook.com;"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}
