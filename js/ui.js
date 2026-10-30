@@ -282,6 +282,19 @@ export const CATALOG_UI = {
             );
         };
 
+        // Prefetch inteligente tipo SPA (Netflix / Disney+) en hover/focus
+        let prefetchTimer = null;
+        card.addEventListener('mouseenter', () => {
+            prefetchTimer = setTimeout(() => {
+                if (window.TMDB_SERVICE && typeof window.TMDB_SERVICE.getDetails === 'function') {
+                    window.TMDB_SERVICE.getDetails(id, type).catch(() => {});
+                }
+            }, 120);
+        });
+        card.addEventListener('mouseleave', () => {
+            if (prefetchTimer) clearTimeout(prefetchTimer);
+        });
+
         card.addEventListener('click', openDetail);
         const moreInfoBtn = card.querySelector('.btn-more-info');
         if (moreInfoBtn) {

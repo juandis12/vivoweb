@@ -1095,8 +1095,10 @@ const handleAuthAction = async (e) => {
             }
 
             console.log('[Better-Auth] Login via AuthService...');
+            if (btnSubmit) btnSubmit.classList.add('btn-loading');
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
+                if (btnSubmit) btnSubmit.classList.remove('btn-loading');
                 window._failedAuthAttempts = (window._failedAuthAttempts || 0) + 1;
                 if (window._failedAuthAttempts >= 5) {
                     window._authLockoutUntil = Date.now() + 30000;
@@ -1107,6 +1109,11 @@ const handleAuthAction = async (e) => {
             }
             window._failedAuthAttempts = 0;
             window._authLockoutUntil = 0;
+            // Transición suave estilo Netflix hacia perfiles
+            document.body.classList.add('page-exit-fade');
+            setTimeout(() => {
+                window.location.href = 'profiles.html';
+            }, 300);
         } else {
             const email = emailEl?.value.trim();
             const password = passwordEl?.value;
@@ -1196,6 +1203,23 @@ function setupAuthListeners() {
                 handleAuthAction(e);
             }
         };
+    }
+
+    // Validación en tiempo real de email (Better-Auth / Netflix standard)
+    if (emailEl) {
+        emailEl.addEventListener('input', () => {
+            const val = emailEl.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (val.length > 0 && !emailRegex.test(val)) {
+                emailEl.style.borderColor = 'rgba(239, 68, 68, 0.7)';
+            } else if (emailRegex.test(val)) {
+                emailEl.style.borderColor = 'rgba(16, 185, 129, 0.7)';
+                const authError = document.getElementById('authError');
+                if (authError) authError.classList.add('hidden');
+            } else {
+                emailEl.style.borderColor = '';
+            }
+        });
     }
 
     // Better-Auth Tab Switcher (registro.html)
@@ -2258,6 +2282,104 @@ document.addEventListener('scroll', (e) => {
     }
 }, true);
 
+// ─── DESPLAZAMIENTO POR INERCIA EN CAROUSELS (HBO MAX / DISNEY+) ──────────
+function initCarouselInertia() {
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let activeCarousel = null;
+    let hasMoved = false;
+    let velocity = 0;
+    let lastX = 0;
+    let lastTime = 0;
+    let momentumId = null;
+
+    document.addEventListener('mousedown', (e) => {
+        const carousel = e.target.closest('.carousel');
+        if (!carousel) return;
+        if (e.target.closest('button, a, input, select, textarea')) return;
+
+        isDown = true;
+        activeCarousel = carousel;
+        startX = e.pageX - carousel.offsetLeft;
+        scrollLeft = carousel.scrollLeft;
+        hasMoved = false;
+        velocity = 0;
+        lastX = e.pageX;
+        lastTime = performance.now();
+        if (momentumId) cancelAnimationFrame(momentumId);
+        carousel.style.scrollBehavior = 'auto';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDown || !activeCarousel) return;
+        const x = e.pageX - activeCarousel.offsetLeft;
+        const walk = x - startX;
+
+        if (Math.abs(walk) > 6) {
+            hasMoved = true;
+            activeCarousel.classList.add('is-dragging');
+        }
+
+        if (hasMoved) {
+            e.preventDefault();
+            activeCarousel.scrollLeft = scrollLeft - walk;
+
+            const now = performance.now();
+            const dt = now - lastTime;
+            if (dt > 0) {
+                velocity = (e.pageX - lastX) / dt;
+            }
+            lastX = e.pageX;
+            lastTime = now;
+        }
+    });
+
+    const endDrag = () => {
+        if (!isDown || !activeCarousel) return;
+        isDown = false;
+        const carousel = activeCarousel;
+        activeCarousel = null;
+
+        if (hasMoved) {
+            let currentVelocity = velocity * 18;
+            const applyMomentum = () => {
+                if (Math.abs(currentVelocity) > 0.5) {
+                    carousel.scrollLeft -= currentVelocity;
+                    currentVelocity *= 0.92;
+                    momentumId = requestAnimationFrame(applyMomentum);
+                } else {
+                    carousel.style.scrollBehavior = 'smooth';
+                    carousel.classList.remove('is-dragging');
+                    updateCarouselArrows(carousel);
+                }
+            };
+            momentumId = requestAnimationFrame(applyMomentum);
+
+            setTimeout(() => {
+                carousel.classList.remove('is-dragging');
+            }, 80);
+        } else {
+            carousel.style.scrollBehavior = 'smooth';
+        }
+    };
+
+    document.addEventListener('mouseup', endDrag);
+    document.addEventListener('mouseleave', endDrag);
+
+    // Evitar clics accidentales en tarjetas si hubo arrastre
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.movie-card');
+        if (card) {
+            const carousel = card.closest('.carousel');
+            if (carousel && carousel.classList.contains('is-dragging')) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }
+    }, true);
+}
+
 
 
 // ================================================
@@ -2352,6 +2474,7 @@ window.addEventListener('vivotv:page-changed', async (e) => {
         initNavbarScroll();
         initMobileNavIndicator();
         initMagicSlide();
+        initCarouselInertia();
         setupExitModalListeners();
 
         // 4. Vincular eventos de Auth si estamos en la sección de login

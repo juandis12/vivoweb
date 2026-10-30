@@ -785,7 +785,7 @@ export const PLAYER_LOGIC = {
             video.onerror = () => {
                 if (this.playbackStarted || (video.currentTime > 3)) {
                     console.warn('[Player] ⚠️ Buffer o anuncio demorado. Manteniendo servidor activo para no reiniciar reproducción.');
-                    showToast('Reanudando contenido... Si no carga, usa "Seleccionar Servidor".', 'warning');
+                    this._showServerIssuePrompt(seekSeconds);
                     return;
                 }
                 // Solo intentar fallback al inicio si el enlace directo está completamente muerto
@@ -2053,6 +2053,89 @@ export const PLAYER_LOGIC = {
         showToast(`Reintentando con: ${nextServer.name}...`, 'warning');
         this._playSource(nextServer.url, seekSeconds);
         return true;
+    },
+
+    /**
+     * Muestra notificación flotante interactiva estilo Netflix / Disney+ si hay problemas con el servidor
+     */
+    _showServerIssuePrompt(seekSeconds = 0) {
+        let existing = document.getElementById('playerServerPrompt');
+        if (existing) return;
+
+        const container = document.getElementById('playerContainer') || document.querySelector('.player-container');
+        if (!container) return;
+
+        const prompt = document.createElement('div');
+        prompt.id = 'playerServerPrompt';
+        prompt.className = 'player-server-prompt glass-panel';
+        prompt.innerHTML = `
+            <div class="server-prompt-header">
+                <span class="server-prompt-icon">⚠️</span>
+                <div class="server-prompt-texts">
+                    <h4>¿Problemas con el servidor actual?</h4>
+                    <p>La reproducción parece demorada o con anuncios prolongados.</p>
+                </div>
+            </div>
+            <div class="server-prompt-actions">
+                <button type="button" class="btn btn-sm btn-primary" id="btnPromptSwitch">
+                    Cambiar Servidor
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" id="btnPromptSelector">
+                    Ver Servidores
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" id="btnPromptDismiss">
+                    Continuar Esperando
+                </button>
+            </div>
+        `;
+
+        container.appendChild(prompt);
+        requestAnimationFrame(() => prompt.classList.add('show'));
+
+        const btnSwitch = prompt.querySelector('#btnPromptSwitch');
+        if (btnSwitch) {
+            btnSwitch.onclick = () => {
+                prompt.remove();
+                this._tryNextServer(seekSeconds);
+            };
+        }
+
+        const btnSelector = prompt.querySelector('#btnPromptSelector');
+        if (btnSelector) {
+            btnSelector.onclick = () => {
+                prompt.remove();
+                if (_currentServers && _currentServers.length > 0) {
+                    this.showServerSelector(_currentServers, seekSeconds);
+                } else {
+                    this._tryNextServer(seekSeconds);
+                }
+            };
+        }
+
+        const btnDismiss = prompt.querySelector('#btnPromptDismiss');
+        if (btnDismiss) {
+            btnDismiss.onclick = () => {
+                prompt.classList.remove('show');
+                setTimeout(() => prompt.remove(), 400);
+            };
+        }
+
+        setTimeout(() => {
+            if (prompt.parentNode) {
+                prompt.classList.remove('show');
+                setTimeout(() => prompt.remove(), 400);
+            }
+        }, 14000);
+    },
+
+    /**
+     * Muestra tarjeta de siguiente episodio (estilo Netflix / Disney+)
+     */
+    _showNextEpisodePrompt(nextEp) {
+        if (!nextEp) return;
+        if (typeof this._showMarathonCountdown === 'function') {
+            this._showMarathonCountdown(nextEp, _supabase);
+        }
     }
 };
 
