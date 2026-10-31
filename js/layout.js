@@ -1,3 +1,4 @@
+import './update-notifier.js';
 /**
  * VivoWeb Layout Engine v3.0 (SPA-Hybrid)
  * Este módulo centraliza todos los componentes comunes de la UI y maneja

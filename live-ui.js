@@ -3,9 +3,9 @@
  */
 
 import { LIVE_CHANNELS, getCurrentShow, buildLiveCatalog, findSimilarAvailable, setServerOffset } from './live-engine.js';
-import { supabase } from './config.js';
-import { PLAYER_LOGIC } from './player.js';
-import { fetchAvailableIds } from './catalog.js';
+import { supabase } from './js/config.js';
+import { PLAYER_LOGIC } from './js/player.js';
+import { fetchAvailableIds } from './js/catalog.js';
 
 let activeChannelId = 'risa'; 
 let streamsCache = {};
@@ -33,6 +33,14 @@ async function initLive() {
 
     // 1. Render UI Inicial (con placeholders)
     renderChannelsList();
+    const unmuteBtn = document.getElementById('unmuteHint');
+    if (unmuteBtn) {
+        unmuteBtn.onclick = () => {
+            const video = document.getElementById('liveVideoPlayer');
+            if (video) video.muted = false;
+            unmuteBtn.classList.add('hidden');
+        };
+    }
 
     // 2. Sincronizar Reloj con Servidor (Anti-Drift)
     await syncClock();
@@ -77,6 +85,9 @@ async function waitForCatalog() {
     return new Promise((resolve) => {
         const check = async () => {
             attempts++;
+            if (attempts === 2 && (!window.DB_CATALOG || window.DB_CATALOG.length === 0)) {
+                fetchAvailableIds(supabase).catch(err => console.warn('[Live] Sincronización proactiva de catálogo:', err));
+            }
             // Buscar en window o en el set exportado de catalog.js
             const catalog = window.DB_CATALOG || [];
             
