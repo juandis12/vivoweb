@@ -764,11 +764,23 @@ header.navbar.scrolled,
     padding: 8px var(--nf-side) 14px !important;
     margin-bottom: 0 !important;
     overflow-x: auto !important;
-    overflow-y: visible !important;
+    overflow-y: hidden !important;
     scroll-behavior: smooth !important;
-    scroll-snap-type: x mandatory !important;
+    scroll-snap-type: x proximity !important;
+    touch-action: pan-x pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
     mask-image: none !important;
     -webkit-mask-image: none !important;
+}
+
+.carousel.is-dragging {
+    scroll-behavior: auto !important;
+    scroll-snap-type: none !important;
+    cursor: grabbing !important;
+}
+
+.carousel .movie-card {
+    scroll-snap-align: start;
 }
 
 /* Full-height Netflix edge arrow handles & unclipped hover room on desktop */
@@ -1159,7 +1171,14 @@ header.navbar.scrolled,
 /* ============================================================================
    6. TOP 10 ROW (#trendingCarousel / .movie-card.ranked)
    ============================================================================ */
-#trendingCarousel {
+#trendingCarousel,
+#top10MoviesCarousel,
+.ranked-carousel {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y !important;
     padding-left: calc(var(--nf-side) + 55px) !important;
     gap: 65px !important;
 }
@@ -1637,7 +1656,9 @@ header.navbar.scrolled,
     }
 
     /* Mobile Top 10 cards */
-    #trendingCarousel {
+    #trendingCarousel,
+    #top10MoviesCarousel,
+    .ranked-carousel {
         padding-left: 48px !important;
         gap: 38px !important;
     }

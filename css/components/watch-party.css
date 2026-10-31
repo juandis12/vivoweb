@@ -1875,7 +1875,7 @@
     }
 
     /* 3. Navegación Móvil Inferior (Tab Bar Premium Unificada - Estilo Flotante) */
-    .mobile-nav {
+    .mobile-nav:not(.hidden) {
         display: flex !important;
         position: fixed !important;
         bottom: 20px !important;
@@ -1895,6 +1895,15 @@
         border-radius: 20px !important;
         box-sizing: border-box !important;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .mobile-nav.hidden,
+    body:has(#authSection:not(.hidden)) .mobile-nav,
+    .page-auth .mobile-nav {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
     }
 
     .mobile-nav-item {

@@ -1,20 +1,16 @@
 /* ============================================================================
-   VivoTV - Design Tokens & Variables
+   VivoTV - Design Tokens & Variables (Motion & Liquid Morph Enabled)
    ============================================================================ */
 :root {
     /* Paleta Abyssal Navy & Vivid Primary (Stitch Sync) 🎬 */
     --bg-base: #060912;
-    /* Abyssal Navy */
     --bg-surface: #0b122b;
     --primary: #bb86fc;
-    /* Light Purple */
     --primary-container: #9d4edd;
     --primary-glow: rgba(187, 134, 252, 0.4);
     --primary-dark: #7c3aed;
     --secondary: #facc15;
-    /* Secondary Highlight (Vivid Yellow) */
     --tertiary: #7c3aed;
-    /* Creative Violet */
 
     /* Cinematic Glass & Depth Tokens */
     --surface-low: #060c25;
@@ -25,28 +21,40 @@
     --glass-blur: 20px;
     --glass-surface: rgba(11, 18, 43, 0.6);
     --glass-border: rgba(255, 255, 255, 0.08);
-    /* Ghost Border */
 
     /* Tipografía Premium */
     --font-premium: 'Inter', system-ui, -apple-system, sans-serif;
     --text-primary: #dce1ff;
-    /* On Surface */
     --text-secondary: #c3c6d7;
-    /* On Surface Variant */
     --text-muted: #8d90a0;
-    /* Outline */
 
     /* Elevación & Roundness */
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
     --shadow-premium: 0 40px 80px rgba(0, 0, 0, 0.6);
+    --shadow-liquid: 0 20px 50px -10px rgba(187, 134, 252, 0.4), 0 0 30px -5px rgba(124, 58, 237, 0.3);
 
-    /* Spacing Scale (Stitch Inspired) */
+    /* Spacing Scale */
     --side-padding: 5%;
     --section-gap: 6rem;
 
-    /* Netflix Specific Timings */
+    /* Motion Foundations Tokens (60 FPS Performance Layer) ⚡ */
+    --ease-liquid: cubic-bezier(0.34, 1.56, 0.64, 1);    /* Bouncy / Liquid Spring */
+    --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);      /* Smooth deceleration */
+    --ease-morph: cubic-bezier(0.4, 0, 0.2, 1);         /* Sharp organic morph */
     --ease-netflix: cubic-bezier(0.33, 1, 0.68, 1);
+
+    --motion-duration-instant: 0.08s;
+    --motion-duration-fast: 0.18s;
+    --motion-duration-normal: 0.35s;
+    --motion-duration-slow: 0.6s;
+    --motion-duration-liquid-loop: 18s;
+
+    /* Liquid Morph Radii Shapes */
+    --liquid-shape-1: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    --liquid-shape-2: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    --liquid-shape-3: 70% 30% 50% 50% / 30% 30% 70% 70%;
+
     --card-expand-delay: 0.3s;
     --vh: 1vh;
 }

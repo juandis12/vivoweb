@@ -57,9 +57,18 @@
         display: none;
     }
 
-    /* Ocultamos nav superior */
-    .mobile-nav {
+    /* Mostramos nav inferior solo si no está oculta */
+    .mobile-nav:not(.hidden) {
         display: flex !important;
+    }
+
+    .mobile-nav.hidden,
+    body:has(#authSection:not(.hidden)) .mobile-nav,
+    .page-auth .mobile-nav {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
     }
 
     /* Mostramos nav inferior */
@@ -184,10 +193,22 @@
     .auth-card {
         padding: 30px 20px;
         border-radius: 0;
-        height: 100vh;
+        min-height: 100vh;
+        height: auto;
         display: flex;
         flex-direction: column;
         justify-content: center;
+        position: relative;
+        z-index: 100;
+        overflow-y: auto;
+    }
+
+    #btnSubmit {
+        position: relative;
+        z-index: 110;
+        touch-action: manipulation;
+        pointer-events: auto !important;
+        cursor: pointer;
     }
 
     .auth-bg-grid {

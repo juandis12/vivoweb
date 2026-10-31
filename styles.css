@@ -29,3 +29,6 @@
 
 /* 9. Responsive Breakpoints & Cinematic Overrides */
 @import url('./css/components/responsive.css');
+
+/* 10. High-Performance Liquid Morph Engine (Motion Foundations 60 FPS) */
+@import url('./css/components/liquid-morph.css');

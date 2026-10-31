@@ -443,7 +443,7 @@ async function populatePageContent() {
 
         // --- LIMPIEZA: Limpiar carouseles residuales ---
         const carouselIds = [
-            'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
+            'top10MoviesCarousel', 'trendingCarousel', 'popularMoviesCarousel', 'topRatedCarousel', 'popularTVCarousel',
             'actionCarousel', 'comedyCarousel', 'dramaCarousel', 'horrorCarousel',
             'popularCarousel', 'genre1Carousel', 'genre2Carousel', 'genre3Carousel', 'genre4Carousel',
             'recommendedCarousel'
@@ -454,7 +454,7 @@ async function populatePageContent() {
         });
 
         // 3. Ocultar secciones antes de repoblar
-        const allSections = ['trendingSection', 'popularSection', 'topRatedSection', 'actionSection', 'comedySection', 'horrorSection', 'scifiSection', 'recommendedSection', 'recentSection', 'myListSection', 'popularMoviesSection', 'popularTVSection'];
+        const allSections = ['top10MoviesSection', 'trendingSection', 'popularSection', 'topRatedSection', 'actionSection', 'comedySection', 'horrorSection', 'scifiSection', 'recommendedSection', 'recentSection', 'myListSection', 'popularMoviesSection', 'popularTVSection'];
         allSections.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
@@ -536,10 +536,21 @@ async function populatePageContent() {
 
         if (pageType === 'all') {
             await Promise.all([
+                // 1. Las 10 películas más populares en Colombia hoy
                 (async () => {
-                    const data = await TMDB_SERVICE.getTrending();
+                    const data = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/day', { region: 'CO' });
+                    let filtered = filterItemsByProfile(data.results || []);
+                    CATALOG_UI.renderTop10('top10MoviesCarousel', filtered.slice(0, 10), availableIds, window.DB_CATALOG);
+                    const sec = document.getElementById('top10MoviesSection');
+                    if (sec && filtered.length > 0) sec.classList.remove('hidden');
+                })(),
+                // 2. Las 10 series más populares en Colombia hoy
+                (async () => {
+                    const data = await TMDB_SERVICE.fetchFromTMDB('/trending/tv/day', { region: 'CO' });
                     let filtered = filterItemsByProfile(data.results || []);
                     CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds, window.DB_CATALOG);
+                    const sec = document.getElementById('trendingSection');
+                    if (sec && filtered.length > 0) sec.classList.remove('hidden');
                 })(),
                 loadRecommendedItems(),
                 renderRow('actionCarousel', () => TMDB_SERVICE.fetchFromTMDB('/discover/movie', { with_genres: 28 }), 'movie'),
@@ -557,7 +568,24 @@ async function populatePageContent() {
                 ? TMDB_SERVICE.fetchFromTMDB('/tv/top_rated') 
                 : TMDB_SERVICE.getTopRated();
             
+            const renderDedicatedTop10 = async () => {
+                if (pageType === 'movie' && document.getElementById('top10MoviesCarousel')) {
+                    const data = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/day', { region: 'CO' });
+                    let filtered = filterItemsByProfile(data.results || []);
+                    CATALOG_UI.renderTop10('top10MoviesCarousel', filtered.slice(0, 10), availableIds, window.DB_CATALOG);
+                    const sec = document.getElementById('top10MoviesSection');
+                    if (sec && filtered.length > 0) sec.classList.remove('hidden');
+                } else if (pageType === 'tv' && document.getElementById('trendingCarousel')) {
+                    const data = await TMDB_SERVICE.fetchFromTMDB('/trending/tv/day', { region: 'CO' });
+                    let filtered = filterItemsByProfile(data.results || []);
+                    CATALOG_UI.renderTop10('trendingCarousel', filtered.slice(0, 10), availableIds, window.DB_CATALOG);
+                    const sec = document.getElementById('trendingSection');
+                    if (sec && filtered.length > 0) sec.classList.remove('hidden');
+                }
+            };
+
             await Promise.all([
+                renderDedicatedTop10(),
                 renderRow('popularCarousel', fetchPopular, pageType),
                 renderRow('topRatedCarousel', fetchTop, pageType),
                 renderRow('genre1Carousel', () => TMDB_SERVICE.fetchFromTMDB(`/discover/${pageType}`, { with_genres: pageType==='tv'?10759:28, ...(pageType==='tv'?{without_genres:16}:{}) }), pageType),
@@ -1189,15 +1217,27 @@ function mapAuthErrorToSpanish(err) {
 function setupAuthListeners() {
     if (btnSubmit) {
         btnSubmit.onclick = handleAuthAction;
+        btnSubmit.addEventListener('click', handleAuthAction);
     }
 
     if (loginForm) {
         loginForm.onsubmit = handleAuthAction;
+        loginForm.addEventListener('submit', handleAuthAction);
         loginForm.onkeydown = (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 handleAuthAction(e);
             }
         };
+    }
+
+    // Delegación global infalible para móviles y eventos táctiles
+    if (!window._authGlobalListenerBound) {
+        window._authGlobalListenerBound = true;
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#btnSubmit')) {
+                handleAuthAction(e);
+            }
+        });
     }
 
     // Validación en tiempo real de email (Better-Auth / Netflix standard)

@@ -91,12 +91,25 @@ body.loaded {
     pointer-events: all !important;
 }
 
-/* Ajuste de contenedor para que el número 1 no se corte */
-#trendingCarousel {
+/* Ajuste de contenedor para que el número 1 no se corte y permita scroll horizontal fluido */
+#trendingCarousel,
+#top10MoviesCarousel,
+.ranked-carousel {
     padding-left: 80px !important;
     padding-bottom: 30px;
     padding-top: 20px;
-    overflow: visible !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+}
+
+#trendingCarousel::-webkit-scrollbar,
+#top10MoviesCarousel::-webkit-scrollbar,
+.ranked-carousel::-webkit-scrollbar {
+    display: none;
 }
 
 /* Fix: Bloqueo de scroll cuando el modal está abierto */

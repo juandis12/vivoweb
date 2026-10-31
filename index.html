@@ -194,7 +194,7 @@
                         ¿Olvidaste tu contraseña?
                     </a>
                 </div>
-                <button type="button" class="btn btn-primary btn-block" id="btnSubmit">
+                <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">
                     <span id="btnText">Iniciar Sesión</span>
                     <span class="loader hidden" id="btnLoader"></span>
                 </button>
@@ -342,6 +342,24 @@
             </section>
 
 
+            <!-- Las 10 películas más populares en Colombia hoy -->
+            <section class="catalog-row" id="top10MoviesSection" data-section="top10movies">
+                <div class="row-header">
+                    <h3 class="row-title">Las 10 películas más populares en Colombia hoy</h3>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
+                    <div class="carousel ranked-carousel" id="top10MoviesCarousel">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                    <button class="carousel-arrow carousel-arrow-right" aria-label="Siguiente">›</button>
+                </div>
+            </section>
+
             <!-- Tendencias -->
             <section class="catalog-row" id="trendingSection" data-section="trending">
                 <div class="row-header">
@@ -349,7 +367,7 @@
                 </div>
                 <div class="carousel-wrapper">
                     <button class="carousel-arrow carousel-arrow-left" aria-label="Anterior">‹</button>
-                    <div class="carousel" id="trendingCarousel">
+                    <div class="carousel ranked-carousel" id="trendingCarousel">
                         <div class="skeleton-card"></div>
                         <div class="skeleton-card"></div>
                         <div class="skeleton-card"></div>

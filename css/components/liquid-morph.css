@@ -1,0 +1,274 @@
+/* ============================================================================
+   VivoTV - Liquid Morph Animation System (High-Performance 60 FPS Engine)
+   Adheres to Motion Foundations & Emil Design Engineering standards:
+   - GPU compositing only (transform & opacity)
+   - Zero layout thrashing (no width/height/margin animations)
+   - Background tab CPU/GPU conservation
+   - Accessibility (prefers-reduced-motion) compliance
+   ============================================================================ */
+
+/* ─── 1. ACCESSIBILITY & PERFORMANCE CONSERVATION ──────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.15s !important;
+        scroll-behavior: auto !important;
+    }
+    .mesh-circle,
+    .liquid-blob,
+    .skeleton-card {
+        animation: none !important;
+        transform: none !important;
+    }
+}
+
+/* Pausa automática de animaciones infinitas cuando la pestaña está en segundo plano */
+body.tab-hidden .mesh-circle,
+body.tab-hidden .skeleton-card,
+body.tab-hidden .liquid-pulse {
+    animation-play-state: paused !important;
+}
+
+/* ─── 2. AMBIENT LIQUID MORPH BLOBS (Fondo Cinemático Orgánico) ────────────── */
+.mesh-circle {
+    border-radius: var(--liquid-shape-1);
+    will-change: transform, border-radius;
+    transform: translate3d(0, 0, 0);
+    animation: liquidBlobMorph var(--motion-duration-liquid-loop) infinite alternate ease-in-out;
+}
+
+.circle-1 {
+    animation-duration: 22s;
+}
+
+.circle-2 {
+    animation-duration: 26s;
+    animation-delay: -7s;
+}
+
+.circle-3 {
+    animation-duration: 30s;
+    animation-delay: -14s;
+}
+
+@keyframes liquidBlobMorph {
+    0% {
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+        transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    }
+    33% {
+        border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+        transform: translate3d(35px, 25px, 0) rotate(60deg) scale(1.08);
+    }
+    66% {
+        border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%;
+        transform: translate3d(-30px, 35px, 0) rotate(120deg) scale(0.96);
+    }
+    100% {
+        border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%;
+        transform: translate3d(15px, -20px, 0) rotate(180deg) scale(1.04);
+    }
+}
+
+/* ─── 3. LIQUID MORPH MOVIE CARDS (Tarjetas con Fluidez Orgánica) ───────────── */
+.movie-card {
+    border-radius: 10px;
+    transition: transform var(--motion-duration-normal) var(--ease-liquid),
+                box-shadow var(--motion-duration-normal) var(--ease-fluid),
+                border-radius var(--motion-duration-normal) ease;
+    will-change: transform;
+}
+
+.movie-card-inner {
+    border-radius: inherit;
+    transition: border-radius var(--motion-duration-normal) ease,
+                box-shadow var(--motion-duration-normal) var(--ease-fluid);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Efecto de destello líquido diagonal al pasar el mouse (0 repaints) */
+.movie-card-inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 20%,
+        rgba(255, 255, 255, 0.12) 45%,
+        rgba(187, 134, 252, 0.25) 50%,
+        rgba(255, 255, 255, 0.12) 55%,
+        transparent 80%
+    );
+    transform: translateX(-150%) skewX(-20deg);
+    transition: transform 0.75s cubic-bezier(0.19, 1, 0.22, 1);
+    pointer-events: none;
+    z-index: 5;
+    border-radius: inherit;
+}
+
+.movie-card:hover {
+    transform: scale(1.18) translateY(-6px) translate3d(0, 0, 0) !important;
+    border-radius: 14px 18px 12px 16px; /* Sutil deformación líquida */
+    box-shadow: var(--shadow-liquid);
+    z-index: 1000 !important;
+}
+
+.movie-card:hover .movie-card-inner::after {
+    transform: translateX(150%) skewX(-20deg);
+}
+
+.movie-card:hover .movie-card-inner {
+    border-radius: 14px 18px 12px 16px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(187, 134, 252, 0.35);
+}
+
+/* ─── 4. LIQUID MORPH BUTTONS & PILLS (Física de Rebote Elástico) ───────────── */
+.btn,
+.btn-ver-mas,
+.genre-filter-chip,
+.mobile-category-pill,
+.btn-circle,
+.float-btn {
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--motion-duration-fast) var(--ease-liquid),
+                background-color var(--motion-duration-fast) ease,
+                box-shadow var(--motion-duration-fast) var(--ease-fluid),
+                border-color var(--motion-duration-fast) ease;
+    will-change: transform;
+}
+
+.btn:active,
+.btn-ver-mas:active,
+.genre-filter-chip:active,
+.mobile-category-pill:active,
+.btn-circle:active {
+    transform: scale(0.94) translate3d(0, 0, 0);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(187, 134, 252, 0.4), 0 0 15px rgba(124, 58, 237, 0.2);
+}
+
+/* Píldoras con morphing orgánico cuando están activas */
+.genre-filter-chip.active,
+.mobile-category-pill.active {
+    border-radius: 20px 24px 18px 22px;
+    animation: chipMorphPulse 6s infinite alternate ease-in-out;
+}
+
+@keyframes chipMorphPulse {
+    0% {
+        border-radius: 22px 18px 24px 20px;
+    }
+    50% {
+        border-radius: 18px 24px 20px 22px;
+    }
+    100% {
+        border-radius: 24px 20px 18px 22px;
+    }
+}
+
+/* ─── 5. ONDA LÍQUIDA REACTIVA AL CLIC (Liquid Ripple Wave) ─────────────────── */
+.liquid-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(187, 134, 252, 0.45) 0%,
+        rgba(124, 58, 237, 0.25) 50%,
+        transparent 80%
+    );
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0);
+    animation: liquidRippleSpread 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    z-index: 10;
+}
+
+@keyframes liquidRippleSpread {
+    0% {
+        width: 0;
+        height: 0;
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(0);
+    }
+    100% {
+        width: 320px;
+        height: 320px;
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* ─── 6. LIQUID UNVEIL MODAL (Apertura Orgánica en Expansión) ───────────────── */
+.modal-overlay:not(.hidden) .modal-content.glass-panel {
+    animation: liquidModalUnveil var(--motion-duration-normal) var(--ease-liquid) forwards;
+    transform-origin: center center;
+    will-change: transform, opacity;
+}
+
+@keyframes liquidModalUnveil {
+    0% {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px) translate3d(0, 0, 0);
+        border-radius: 40px;
+    }
+    60% {
+        border-radius: 24px;
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0) translate3d(0, 0, 0);
+        border-radius: 28px;
+    }
+}
+
+/* ─── 7. LIQUID SHIMMER SKELETONS (Carga Fluida de Alta Gama) ──────────────── */
+.skeleton-card {
+    border-radius: 10px;
+    background: linear-gradient(
+        110deg,
+        rgba(11, 18, 43, 0.8) 20%,
+        rgba(187, 134, 252, 0.12) 40%,
+        rgba(124, 58, 237, 0.18) 50%,
+        rgba(187, 134, 252, 0.12) 60%,
+        rgba(11, 18, 43, 0.8) 80%
+    );
+    background-size: 250% 100%;
+    animation: liquidShimmer 2.2s infinite ease-in-out;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    will-change: background-position;
+}
+
+@keyframes liquidShimmer {
+    0% {
+        background-position: 180% 0;
+    }
+    100% {
+        background-position: -80% 0;
+    }
+}
+
+/* ─── 8. HERO BANNER CINEMATIC LIQUID GLOW ─────────────────────────────────── */
+.hero-banner {
+    position: relative;
+}
+
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    bottom: -15%;
+    left: 10%;
+    width: 60%;
+    height: 40%;
+    background: radial-gradient(circle, rgba(187, 134, 252, 0.12) 0%, transparent 70%);
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 2;
+    animation: liquidBlobMorph 24s infinite alternate ease-in-out;
+}
