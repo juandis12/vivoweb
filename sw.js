@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vivotv-cache-v9';
+const CACHE_NAME = 'vivotv-cache-v10';
 const ASSETS_TO_CACHE = [
     './',
     'index.html',

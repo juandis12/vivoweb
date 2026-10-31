@@ -50,6 +50,7 @@ async openDetail(tmdbId, type = 'movie', supabaseClient, availableIds = new Set(
             const details = await TMDB_SERVICE.getDetails(tmdbId, type);
             const credits = await TMDB_SERVICE.getCredits(tmdbId, type);
             this.updateModalUI(details, credits, availableIds);
+            this.loadTrailers(tmdbId, type);
 
             if (details.popularity > 500) trending.classList.remove('hidden');
 
@@ -695,6 +696,17 @@ _createSmartControls() {
         }
 
         // 2. APPLE TV+: Botón Realce de Diálogo (Dialogue Boost)
+        // 3. DISNEY+: Botón Conmutador de Relación de Aspecto (IMAX Enhanced)
+        if (!document.getElementById('btnAspect')) {
+            const aspectBtn = document.createElement('button');
+            aspectBtn.id = 'btnAspect';
+            aspectBtn.className = 'aspect-ratio-btn';
+            aspectBtn.setAttribute('title', 'Alternar relación de aspecto (IMAX Enhanced 16:9 / Cinemascope 2.39:1)');
+            aspectBtn.innerHTML = `<span>📺 IMAX</span>`;
+            aspectBtn.onclick = () => this.toggleAspectRatio();
+            container.appendChild(aspectBtn);
+        }
+
         if (!document.getElementById('btnAudioBoost')) {
             const audioBtn = document.createElement('button');
             audioBtn.id = 'btnAudioBoost';
