@@ -1,0 +1,456 @@
+/* ============================================================================
+   VivoTV - REA Advanced Features (Netflix, Disney+, Prime Video, Apple TV+)
+   ============================================================================ */
+
+/* ── 1. PRIME VIDEO: X-RAY OVERLAY & CONTROLS ───────────────────────────── */
+.xray-trigger-btn {
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(15, 20, 35, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    color: #facc15;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 12px rgba(245, 158, 11, 0.2);
+    transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.xray-trigger-btn:hover {
+    transform: scale(1.05);
+    background: rgba(245, 158, 11, 0.2);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+.xray-trigger-btn.active {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.3));
+    border-color: #f59e0b;
+}
+
+.player-xray-panel {
+    position: absolute;
+    top: 72px;
+    left: 24px;
+    bottom: 90px;
+    width: 360px;
+    max-width: calc(100vw - 48px);
+    background: rgba(10, 14, 28, 0.94);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.15);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: xraySlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes xraySlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-24px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.xray-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.xray-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.xray-badge {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000;
+    font-size: 0.72rem;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.05em;
+}
+
+.xray-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.xray-close {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.xray-close:hover {
+    color: #fff;
+    transform: scale(1.15);
+}
+
+.xray-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.xray-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 6px;
+}
+
+.xray-cast-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.xray-cast-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.xray-cast-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
+}
+
+.xray-actor-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid rgba(245, 158, 11, 0.6);
+    background: #1e2540;
+    flex-shrink: 0;
+}
+
+.xray-actor-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.xray-actor-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.xray-actor-character {
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.xray-meta-box {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #e2e8f0;
+}
+
+/* ── 2. APPLE TV+: DIALOGUE BOOST (AUDIO CLARITY) ────────────────────────── */
+.audio-boost-btn {
+    position: absolute;
+    top: 20px;
+    left: 145px;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(15, 20, 35, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    transition: all 0.25s ease;
+}
+
+.audio-boost-btn:hover {
+    transform: scale(1.05);
+    border-color: rgba(187, 134, 252, 0.6);
+}
+
+.audio-boost-btn.active {
+    background: linear-gradient(135deg, rgba(187, 134, 252, 0.35), rgba(157, 78, 221, 0.35));
+    border-color: #bb86fc;
+    color: #ffffff;
+    box-shadow: 0 0 18px rgba(187, 134, 252, 0.5);
+}
+
+.audio-boost-indicator {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #64748b;
+    transition: background 0.3s ease;
+}
+
+.audio-boost-btn.active .audio-boost-indicator {
+    background: #a855f7;
+    box-shadow: 0 0 8px #a855f7;
+    animation: pulse-audio 1.4s infinite;
+}
+
+@keyframes pulse-audio {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* ── 3. NETFLIX: SMART AUTO-SKIP & NEXT EPISODE COUNTDOWN ────────────────── */
+.skip-intro-btn {
+    position: absolute;
+    bottom: 85px;
+    right: 28px;
+    background: rgba(18, 24, 44, 0.92);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    z-index: 1000;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(229, 9, 20, 0.25);
+    transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+}
+
+.skip-intro-btn.active {
+    display: flex;
+    animation: skipSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes skipSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.skip-intro-btn:hover {
+    transform: scale(1.05);
+    background: rgba(229, 9, 20, 0.9);
+    border-color: #ff3d47;
+    color: #ffffff;
+}
+
+.skip-countdown-pill {
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 0.76rem;
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 900;
+}
+
+/* Tarjeta Siguiente Episodio estilo Netflix Hawkins */
+.next-episode-card-overlay {
+    position: absolute;
+    bottom: 90px;
+    right: 28px;
+    width: 320px;
+    background: rgba(15, 20, 38, 0.94);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(229, 9, 20, 0.3);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: nextEpEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes nextEpEnter {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.next-ep-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.next-ep-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #ef4444;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.next-ep-countdown-text {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+
+.next-ep-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.next-ep-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ef4444, #f97316);
+    width: 100%;
+    transition: width 1s linear;
+}
+
+.next-ep-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.next-ep-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.btn-next-now {
+    flex: 1;
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.btn-next-now:hover {
+    transform: scale(1.03);
+    filter: brightness(1.1);
+}
+
+.btn-next-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-next-cancel:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile Adjustments for Player Top Bar */
+@media (max-width: 600px) {
+    .xray-trigger-btn {
+        top: 14px;
+        left: 14px;
+        padding: 6px 12px;
+        font-size: 0.74rem;
+    }
+
+    .audio-boost-btn {
+        top: 14px;
+        left: 112px;
+        padding: 6px 12px;
+        font-size: 0.74rem;
+    }
+
+    .player-xray-panel {
+        left: 14px;
+        right: 14px;
+        width: auto;
+        bottom: 75px;
+    }
+
+    .next-episode-card-overlay {
+        right: 14px;
+        left: 14px;
+        width: auto;
+        bottom: 75px;
+    }
+
+    .skip-intro-btn {
+        right: 14px;
+        bottom: 75px;
+        padding: 8px 16px;
+        font-size: 0.8rem;
+    }
+}

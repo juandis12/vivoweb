@@ -537,7 +537,34 @@ async function populatePageContent() {
         if (pageType === 'all') {
             await Promise.all([
                 // 1. Las 10 películas más populares en Colombia hoy
-                (async () => {
+                
+/**
+ * Disney+ Brand Hubs: Maneja la interacción y navegación háptica hacia categorías
+ */
+function initBrandHubs() {
+    const cards = document.querySelectorAll('.brand-hub-card');
+    cards.forEach(card => {
+        card.onclick = () => {
+            const targetId = card.dataset.target;
+            const title = card.dataset.title;
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetSection.classList.add('hub-pulse-highlight');
+                setTimeout(() => targetSection.classList.remove('hub-pulse-highlight'), 1400);
+            }
+            if (window.showToast) {
+                showToast(`Explorando ${title} ✨`, 'info');
+            }
+            if ('vibrate' in navigator) {
+                navigator.vibrate(15);
+            }
+        };
+    });
+}
+
+(async () => {
                     const data = await TMDB_SERVICE.fetchFromTMDB('/trending/movie/day', { region: 'CO' });
                     let filtered = filterItemsByProfile(data.results || []);
                     CATALOG_UI.renderTop10('top10MoviesCarousel', filtered.slice(0, 10), availableIds, window.DB_CATALOG);
@@ -705,6 +732,7 @@ async function toDashboard(user, profile) {
                 exitModal.classList.remove('hidden');
                 // Asegurar que los botones del modal estén conectados
                 setupExitModalListeners();
+        initBrandHubs();
             } else {
                 // Fallback si por alguna razón no existe el modal
                 toAuth();
@@ -2510,6 +2538,7 @@ window.addEventListener('vivotv:page-changed', async (e) => {
         initMobileNavIndicator();
         initMagicSlide();
         initCarouselInertia();
+        initBrandHubs();
         setupExitModalListeners();
 
         // 4. Vincular eventos de Auth si estamos en la sección de login

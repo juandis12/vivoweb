@@ -17,6 +17,8 @@
 
 /* 5. Carousels & Movie Cards */
 @import url('./css/components/cards.css');
+@import url('./css/components/hubs.css');
+@import url('./css/components/rea-features.css');
 
 /* 6. Detail Modal & Episodes */
 @import url('./css/components/modal.css');

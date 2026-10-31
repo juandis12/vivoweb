@@ -137,10 +137,17 @@ _startVideoTracking(video, seek, seekAlreadyApplied = false) {
             if (isInIntroZone) {
                 if (skipBtn && !skipBtn.classList.contains('active')) {
                     skipBtn.classList.add('active');
-                    // El botón se muestra con diseño Netflix/Disney+. No se fuerza salto ciego para no interrumpir anuncios.
+                    if (this._startAutoSkipCountdown) {
+                        this._startAutoSkipCountdown();
+                    }
                 }
             } else {
-                skipBtn?.classList.remove('active');
+                if (skipBtn && skipBtn.classList.contains('active')) {
+                    skipBtn.classList.remove('active');
+                    if (this._cancelAutoSkipCountdown) {
+                        this._cancelAutoSkipCountdown();
+                    }
+                }
             }
         };
 
