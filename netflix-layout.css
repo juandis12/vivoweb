@@ -604,16 +604,23 @@ header.navbar.scrolled,
         transition-duration: 100ms !important;
     }
 
-    /* Position hero indicators on the right above maturity badge */
+    /* Position hero indicators cleanly in-flow below hero buttons */
     .hero-banner .hero-indicators,
+    .hero-content .hero-indicators,
     #heroIndicators {
-        position: absolute !important;
-        right: 2.8vw !important;
-        bottom: 6.2vw !important;
+        position: relative !important;
+        right: auto !important;
+        bottom: auto !important;
         left: auto !important;
+        top: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        margin: 18px 0 0 0 !important;
+        padding: 0 !important;
         width: auto !important;
-        z-index: 15 !important;
-        margin: 0 !important;
+        z-index: 10 !important;
     }
 
     /* Bottom-right Netflix badge (e.g., "16+") */
@@ -1943,4 +1950,67 @@ header.navbar.scrolled,
 body:has(#detailModal.is-playing-video) nav.mobile-nav,
 body:has(#playerContainer:not(.hidden)) nav.mobile-nav {
     display: none !important;
+}
+
+
+/* ============================================================================
+   SUBPAGINAS SIN HERO BANNER (Mi Lista, En Vivo, Búsqueda, Historial)
+   Resuelve colisión visual con el Navbar fijo (68px) y evita solapamientos
+   ============================================================================ */
+body:not(:has(.hero-banner)) #navbar,
+body:not(:has(#heroBanner)) #navbar,
+body.page-live #navbar,
+body.page-milista #navbar,
+body.page-search #navbar,
+body.page-history #navbar,
+body.bg-mesh #navbar,
+#navbar.no-hero,
+header.navbar.no-hero {
+    background: rgba(6, 9, 18, 0.96) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body:not(:has(.hero-banner)) .main-content,
+body:not(:has(#heroBanner)) .main-content,
+body.page-live .main-content,
+body.page-milista .main-content,
+body.page-search .main-content,
+body.page-history .main-content,
+.main-content,
+main.main-content,
+.main-content.section-padding,
+#dashboardSection.main-content {
+    min-height: calc(100vh - 68px) !important;
+    padding-top: clamp(108px, 13vh, 138px) !important;
+    box-sizing: border-box !important;
+}
+
+.section-padding {
+    padding-left: var(--side-padding) !important;
+    padding-right: var(--side-padding) !important;
+    padding-bottom: 60px !important;
+}
+
+.section-header {
+    margin-top: 8px !important;
+    margin-bottom: 35px !important;
+}
+
+@media (max-width: 768px) {
+    body:not(:has(.hero-banner)) .main-content,
+    body:not(:has(#heroBanner)) .main-content,
+    body.page-live .main-content,
+    body.page-milista .main-content,
+    body.page-search .main-content,
+    body.page-history .main-content,
+    .main-content,
+    main.main-content,
+    .main-content.section-padding,
+    #dashboardSection.main-content {
+        padding-top: 92px !important;
+        padding-bottom: 80px !important;
+    }
 }

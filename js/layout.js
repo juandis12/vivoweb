@@ -16,6 +16,11 @@ export const LAYOUT = {
         this.renderShell();
         this.setupNavigation();
         this.setupGlobalEvents();
+        const navEl = document.getElementById('navbar');
+        if (navEl) {
+            const hasHero = !!document.querySelector('.hero-banner, #heroBanner');
+            navEl.classList.toggle('no-hero', !hasHero);
+        }
     },
 
     ensureNoCacheMeta() {
@@ -244,6 +249,14 @@ export const LAYOUT = {
                 document.body.className = doc.body.className;
                 // Asegurarse de mantener 'loaded' para no romper transiciones
                 document.body.classList.add('loaded');
+                if (newMain.className) {
+                    currentMain.className = newMain.className;
+                }
+                const navEl = document.getElementById('navbar');
+                if (navEl) {
+                    const hasHero = !!(currentMain.querySelector('.hero-banner, #heroBanner') || doc.querySelector('.hero-banner, #heroBanner'));
+                    navEl.classList.toggle('no-hero', !hasHero);
+                }
 
                 // 3. Actualizar History API
                 if (pushState) {

@@ -259,7 +259,9 @@ button {
 }
 
 .section-padding {
-    padding: 0 var(--side-padding) 60px;
+    padding-left: var(--side-padding);
+    padding-right: var(--side-padding);
+    padding-bottom: 60px;
 }
 
 .section-header {
