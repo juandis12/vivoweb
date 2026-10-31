@@ -1,18 +1,21 @@
 /* ============================================================================
    VivoTV Player - Controls, Modals & Binge Navigation Module
    ============================================================================ */
-import { getSupabase, getCurrentServers, setCurrentServers } from './state.js';
+import { getSupabase, setSupabaseClient, getCurrentServers, setCurrentServers } from './state.js';
 import { CONFIG } from '../config.js';
 import { TMDB_SERVICE } from '../tmdb.js';
 import { showToast } from '../utils.js';
 import { CATALOG_UI } from '../ui.js';
 import { StreamService } from '../services/StreamService.js';
+import { XRayFeature } from './features/xray.js';
+import { AudioBoostFeature } from './features/audio-boost.js';
+import { createSmartControls } from './features/smart-controls.js';
 
 export const controlMethods = {
 async openDetail(tmdbId, type = 'movie', supabaseClient, availableIds = new Set()) {
         this._stopTrailer(); // Detener tráiler previo si existe
         this.availableIds = availableIds; // Guardar para uso en similares
-        getSupabase() = supabaseClient;
+        if (supabaseClient) setSupabaseClient(supabaseClient);
         this.currentTmdbId = tmdbId;
         this.currentType = type;
         this.currentSeason = null;
@@ -681,210 +684,22 @@ closeModal() {
     },
 
 _createSmartControls() {
-        const container = document.getElementById('playerContainer');
-        if (!container) return;
-
-        // 1. PRIME VIDEO: Botón Trigger de X-Ray
-        if (!document.getElementById('btnXRay')) {
-            const xrayBtn = document.createElement('button');
-            xrayBtn.id = 'btnXRay';
-            xrayBtn.className = 'xray-trigger-btn';
-            xrayBtn.setAttribute('title', 'Ver elenco y ficha en tiempo real (X-Ray)');
-            xrayBtn.innerHTML = `<span>⚡ X-RAY</span>`;
-            xrayBtn.onclick = () => this.toggleXRay();
-            container.appendChild(xrayBtn);
-        }
-
-        // 2. APPLE TV+: Botón Realce de Diálogo (Dialogue Boost)
-        // 3. DISNEY+: Botón Conmutador de Relación de Aspecto (IMAX Enhanced)
-        if (!document.getElementById('btnAspect')) {
-            const aspectBtn = document.createElement('button');
-            aspectBtn.id = 'btnAspect';
-            aspectBtn.className = 'aspect-ratio-btn';
-            aspectBtn.setAttribute('title', 'Alternar relación de aspecto (IMAX Enhanced 16:9 / Cinemascope 2.39:1)');
-            aspectBtn.innerHTML = `<span>📺 IMAX</span>`;
-            aspectBtn.onclick = () => this.toggleAspectRatio();
-            container.appendChild(aspectBtn);
-        }
-
-        if (!document.getElementById('btnAudioBoost')) {
-            const audioBtn = document.createElement('button');
-            audioBtn.id = 'btnAudioBoost';
-            audioBtn.className = 'audio-boost-btn';
-            audioBtn.setAttribute('title', 'Mejora la claridad de las voces atenuando ruidos fuertes');
-            audioBtn.innerHTML = `<span class="audio-boost-indicator"></span> <span>🎙️ Diálogo Nítido</span>`;
-            audioBtn.onclick = () => this.toggleAudioBoost();
-            container.appendChild(audioBtn);
-        }
-
-        // 3. NETFLIX: Botón Saltar Intro con Contador Regresivo
-        if (!document.getElementById('btnSkipIntro')) {
-            const skipBtn = document.createElement('button');
-            skipBtn.id = 'btnSkipIntro';
-            skipBtn.className = 'skip-intro-btn';
-            skipBtn.innerHTML = `<span>Saltar Intro</span> <span id="skipCountdown" class="skip-countdown-pill">5s</span> <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`;
-            skipBtn.onclick = () => {
-                this._cancelAutoSkipCountdown();
-                const video = document.getElementById('videoPlayer');
-                if (video) video.currentTime += 85;
-                skipBtn.classList.remove('active');
-                showToast("Intro saltada ⏩", "info");
-            };
-            container.appendChild(skipBtn);
-        }
-
-        // 4. Botón Picture-in-Picture
-        if (!document.getElementById('btnPiP')) {
-            const pipBtn = document.createElement('div');
-            pipBtn.id = 'btnPiP';
-            pipBtn.className = 'pip-btn';
-            pipBtn.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff" title="Ventana flotante (PiP)"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>`;
-            pipBtn.onclick = () => this.togglePiP();
-            container.appendChild(pipBtn);
-        }
+        createSmartControls(this);
     },
 
     // ── PRIME VIDEO: MOTOR X-RAY ──────────────────────────────────────────
     async toggleXRay() {
-        let overlay = document.getElementById('playerXRayOverlay');
-        const container = document.getElementById('playerContainer');
-        if (!container) return;
-
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'playerXRayOverlay';
-            overlay.className = 'player-xray-panel hidden';
-            container.appendChild(overlay);
-        }
-
-        const isHidden = overlay.classList.contains('hidden');
-        const btn = document.getElementById('btnXRay');
-
-        if (isHidden) {
-            overlay.classList.remove('hidden');
-            if (btn) btn.classList.add('active');
-            await this.loadXRayData();
-        } else {
-            overlay.classList.add('hidden');
-            if (btn) btn.classList.remove('active');
-        }
+        return XRayFeature.toggleXRay(this);
     },
 
     async loadXRayData() {
         const overlay = document.getElementById('playerXRayOverlay');
-        if (!overlay) return;
-
-        overlay.innerHTML = `
-            <div class="xray-header">
-                <div class="xray-title-group">
-                    <span class="xray-badge">⚡ X-RAY</span>
-                    <span class="xray-title">Elenco & Trivia</span>
-                </div>
-                <button class="xray-close" id="btnCloseXRay" aria-label="Cerrar">&times;</button>
-            </div>
-            <div class="xray-body">
-                <div class="xray-section-title">Consultando ficha técnica...</div>
-                <div class="loader-wave" style="margin: 20px auto;"><span></span><span></span><span></span></div>
-            </div>
-        `;
-
-        overlay.querySelector('#btnCloseXRay').onclick = () => this.toggleXRay();
-
-        try {
-            const type = this.currentType === 'tv' ? 'tv' : 'movie';
-            const credits = await TMDB_SERVICE.fetchFromTMDB(`/${type}/${this.currentTmdbId}/credits`);
-            const cast = (credits?.cast || []).slice(0, 10);
-            const director = (credits?.crew || []).find(c => c.job === 'Director')?.name || 'Equipo de Producción';
-
-            const body = overlay.querySelector('.xray-body');
-            if (!body) return;
-
-            body.innerHTML = `
-                <div class="xray-meta-box">
-                    <div><strong>Título:</strong> ${this.currentPlaybackTitle || 'Contenido en VivoTV'}</div>
-                    <div><strong>Dirección:</strong> ${director}</div>
-                    <div><strong>Audio:</strong> Estéreo 48kHz (Dolby Digital Compatible)</div>
-                </div>
-                <div class="xray-section-title">Elenco Principal</div>
-                <div class="xray-cast-scroll">
-                    ${cast.map(a => `
-                        <div class="xray-cast-card">
-                            <img class="xray-actor-img" src="${a.profile_path ? 'https://image.tmdb.org/t/p/w185' + a.profile_path : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(a.name) + '&background=1e2540&color=fff'}" alt="${a.name}" loading="lazy">
-                            <div class="xray-actor-info">
-                                <span class="xray-actor-name">${a.name}</span>
-                                <span class="xray-actor-character">${a.character || 'Personaje'}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } catch (e) {
-            const body = overlay.querySelector('.xray-body');
-            if (body) body.innerHTML = '<p style="color: #94a3b8; font-size: 0.85rem;">Ficha técnica X-Ray no disponible.</p>';
-        }
+        return XRayFeature.loadXRayData(overlay, this);
     },
 
     // ── APPLE TV+: DIALOGUE BOOST (AUDIO CLARITY) ────────────────────────
     toggleAudioBoost() {
-        const video = document.getElementById('videoPlayer');
-        if (!video) {
-            showToast('El Realce de Diálogo requiere video nativo', 'info');
-            return;
-        }
-
-        try {
-            if (!this._audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                this._audioCtx = new AudioContext();
-                this._audioSource = this._audioCtx.createMediaElementSource(video);
-
-                // 1. Filtro Pasa-Altos (Highpass): elimina zumbidos < 85Hz
-                this._highpass = this._audioCtx.createBiquadFilter();
-                this._highpass.type = 'highpass';
-                this._highpass.frequency.value = 85;
-
-                // 2. Filtro Peaking: amplifica frecuencias de voz humana a 2.5 kHz
-                this._voiceBoost = this._audioCtx.createBiquadFilter();
-                this._voiceBoost.type = 'peaking';
-                this._voiceBoost.frequency.value = 2500;
-                this._voiceBoost.Q.value = 1.2;
-                this._voiceBoost.gain.value = 5.0; // +5dB de presencia vocal
-
-                // 3. Compresor dinámico: atenúa explosiones y eleva susurros
-                this._compressor = this._audioCtx.createDynamicsCompressor();
-                this._compressor.threshold.setValueAtTime(-22, this._audioCtx.currentTime);
-                this._compressor.knee.setValueAtTime(25, this._audioCtx.currentTime);
-                this._compressor.ratio.setValueAtTime(8, this._audioCtx.currentTime);
-                this._compressor.attack.setValueAtTime(0.005, this._audioCtx.currentTime);
-                this._compressor.release.setValueAtTime(0.2, this._audioCtx.currentTime);
-
-                this._audioSource.connect(this._highpass);
-                this._highpass.connect(this._voiceBoost);
-                this._voiceBoost.connect(this._compressor);
-                this._compressor.connect(this._audioCtx.destination);
-
-                this._audioBoostActive = true;
-            } else {
-                if (this._audioCtx.state === 'suspended') {
-                    this._audioCtx.resume();
-                }
-                this._audioBoostActive = !this._audioBoostActive;
-                if (this._voiceBoost) {
-                    this._voiceBoost.gain.value = this._audioBoostActive ? 5.0 : 0;
-                }
-                if (this._compressor) {
-                    this._compressor.ratio.setValueAtTime(this._audioBoostActive ? 8 : 1, this._audioCtx.currentTime);
-                }
-            }
-
-            const btn = document.getElementById('btnAudioBoost');
-            if (btn) btn.classList.toggle('active', this._audioBoostActive);
-
-            showToast(this._audioBoostActive ? '🎙️ Diálogo Nítido Activado (Apple TV+ Boost)' : '🎙️ Audio Estándar Restablecido', 'info');
-        } catch (e) {
-            console.warn('[Player] AudioContext error (CORS o política de seguridad):', e);
-            showToast('Audio Boost no disponible en esta fuente directa', 'info');
-        }
+        return AudioBoostFeature.toggleAudioBoost();
     },
 
     // ── NETFLIX: AUTO-SKIP COUNTDOWN & NEXT EPISODE CARD ──────────────────

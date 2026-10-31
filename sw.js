@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vivotv-cache-v10';
+const CACHE_NAME = 'vivotv-cache-v11';
 const ASSETS_TO_CACHE = [
     './',
     'index.html',
@@ -13,6 +13,16 @@ const ASSETS_TO_CACHE = [
     'js/tmdb.js',
     'js/db.js',
     'js/player.js',
+    'js/modules/auth-ui.js',
+    'js/modules/brand-hubs.js',
+    'js/modules/carousel-controller.js',
+    'js/modules/navigation-ui.js',
+    'js/modules/search-controller.js',
+    'js/modules/user-lists.js',
+    'js/player/controls.js',
+    'js/player/features/audio-boost.js',
+    'js/player/features/smart-controls.js',
+    'js/player/features/xray.js',
     'js/watch-party-guide.js',
     'js/achievements.js',
     'js/social-pulse.js',

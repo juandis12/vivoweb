@@ -1,6 +1,6 @@
 {
-  "version": "1.3.0",
-  "buildTime": 1740837000000,
-  "updatedAt": "2026-10-31T10:35:00Z",
-  "description": "Suite REA Completa: Brand Hubs en todas las páginas, IMAX Switcher, HBO Max Trailers & Extras, Prime Video X-Ray, Apple TV+ Audio Boost y Netflix Auto-Skip."
+  "version": "1.4.0",
+  "buildTime": 1740838000000,
+  "updatedAt": "2026-10-31T11:15:00Z",
+  "description": "Refactorización arquitectónica modular completa: desacoplamiento de app.js y player/controls.js en módulos especializados de alta cohesión, eliminación de código duplicado y optimización de carga."
 }
